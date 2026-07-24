@@ -333,6 +333,190 @@ def five_w2h(zh: bool) -> str:
     return svg_shell(w, h, "\n".join(parts), title, corner)
 
 
+def fix_loop(zh: bool) -> str:
+    """Write → check → report → pass/fail → fix & retry or ready to use."""
+    ok = "#1B7A4E"
+    bad = "#B42318"
+    ok_bg = "#F0Faf4"
+    bad_bg = "#FFF5F5"
+    if zh:
+        banner = "自检闭环：写好 → 跑检查 → 看报告 → 不过就改，改完再检"
+        steps = [
+            ("1", "写好 Skill", "按自己的流程先写", False),
+            ("2", "交给 AI / 安装", "把仓库地址发给写 Skill 的 AI", False),
+            ("3", "跑硬门槛", "python hard_gates.py …", True),
+            ("4", "出报告", "分数 + 修改意见", False),
+        ]
+        decision = ("过门槛了吗？", "看 ship floor / Critical")
+        fix = ("按意见改", "先改 Critical，再说「按意见改」")
+        ship = ("可以真用了", "两盏灯都亮再推广")
+        bottom = [
+            ("结构过关", "basic_usable ≥ 4", "绿灯"),
+            ("说清楚查什么", "contract_clarity", "黄灯"),
+            ("有出口证据", "Verification / Done when", "验收"),
+        ]
+        legend = [("主流程", ACCENT), ("通过", ok), ("改完再检", bad)]
+        title = "skill-self-check.app -> docs -> fix-loop.svg"
+        corner = "06 · 改完再检"
+    else:
+        banner = "Self-check loop: write → run gates → report → fix & retry or ship"
+        steps = [
+            ("1", "Write Skill", "Your usual drafting flow", False),
+            ("2", "Hand to AI / install", "Paste the GitHub URL to your AI", False),
+            ("3", "Run hard gates", "python hard_gates.py …", True),
+            ("4", "Read report", "Scores + ranked fixes", False),
+        ]
+        decision = ("Ship floor met?", "Critical count → zero?")
+        fix = ("Apply fixes", "Fix Criticals, then say “apply fixes”")
+        ship = ("Ready to use", "Both lights on before rollout")
+        bottom = [
+            ("Structure OK", "basic_usable ≥ 4", "green light"),
+            ("Scope clear", "contract_clarity", "amber light"),
+            ("Exit evidence", "Verification / Done when", "proof"),
+        ]
+        legend = [("Main flow", ACCENT), ("Success", ok), ("Fix & retry", bad)]
+        title = "skill-self-check.app -> docs -> fix-loop.svg"
+        corner = "06 · fix & retry"
+
+    w, h = 1480, 560
+    parts = [
+        f'<text x="{w/2}" y="32" text-anchor="middle" class="label-sub" font-size="15">{_esc(banner)}</text>',
+    ]
+
+    # Top row of 4 steps (slightly left so the decision row has room)
+    card_w, card_h = 240, 100
+    gap = 28
+    total = 4 * card_w + 3 * gap
+    start = 80
+    y1 = 110
+    centers = []
+    for i, (eye, t, sub, focal) in enumerate(steps):
+        cx = start + card_w / 2 + i * (card_w + gap)
+        centers.append(cx)
+        parts.append(card(cx, y1, card_w, card_h, eye, t, [sub], focal=focal))
+        if i < 3:
+            x1 = cx + card_w / 2
+            x2 = start + card_w / 2 + (i + 1) * (card_w + gap) - card_w / 2
+            parts.append(
+                f'<line x1="{x1:.1f}" y1="{y1}" x2="{x2 - 10:.1f}" y2="{y1}" '
+                f'stroke="{BOX_BORDER}" stroke-width="2"/>'
+                f'<polygon points="{x2:.1f},{y1} {x2 - 12:.1f},{y1 - 5} {x2 - 12:.1f},{y1 + 5}" fill="{ACCENT}"/>'
+            )
+
+    # Decision under step 4, then Fix left / Ship right (no overlap)
+    dx, dy = centers[3], 280
+    size = 64
+    parts.append(
+        f'<line x1="{centers[3]:.1f}" y1="{y1 + card_h / 2:.1f}" x2="{dx}" y2="{dy - size}" '
+        f'stroke="{BOX_BORDER}" stroke-width="2"/>'
+    )
+    parts.append(
+        f'<polygon points="{dx},{dy - size} {dx + size},{dy} {dx},{dy + size} {dx - size},{dy}" '
+        f'fill="{BOX_FOCAL}" stroke="{ACCENT}" stroke-width="1.6"/>'
+    )
+    parts.append(
+        f'<text x="{dx}" y="{dy - 6}" text-anchor="middle" class="label" font-size="13">{_esc(decision[0])}</text>'
+    )
+    parts.append(
+        f'<text x="{dx}" y="{dy + 14}" text-anchor="middle" class="label-tiny" font-size="11">{_esc(decision[1])}</text>'
+    )
+
+    fix_cx, fix_cy = 300, 280
+    fix_w, fix_h = 280, 96
+    parts.append(
+        f'<rect x="{fix_cx - fix_w / 2:.1f}" y="{fix_cy - fix_h / 2:.1f}" width="{fix_w}" height="{fix_h}" rx="2" '
+        f'fill="{bad_bg}" stroke="{bad}" stroke-width="1.6"/>'
+    )
+    parts.append(
+        f'<text x="{fix_cx}" y="{fix_cy - 10:.1f}" text-anchor="middle" class="label" font-size="17" '
+        f'fill="{bad}">{_esc(fix[0])}</text>'
+    )
+    parts.append(
+        f'<text x="{fix_cx}" y="{fix_cy + 18:.1f}" text-anchor="middle" class="label-tiny" font-size="12">{_esc(fix[1])}</text>'
+    )
+    no_label = "否 / 有 Critical" if zh else "No / Criticals"
+    fix_right = fix_cx + fix_w / 2
+    parts.append(
+        f'<line x1="{dx - size}" y1="{dy}" x2="{fix_right + 12:.1f}" y2="{fix_cy}" '
+        f'stroke="{bad}" stroke-width="2"/>'
+        f'<polygon points="{fix_right:.1f},{fix_cy} {fix_right + 12:.1f},{fix_cy - 5} '
+        f'{fix_right + 12:.1f},{fix_cy + 5}" fill="{bad}"/>'
+    )
+    parts.append(
+        f'<text x="{(dx - size + fix_right) / 2:.1f}" y="{dy - 14}" text-anchor="middle" '
+        f'fill="{bad}" font-size="12" class="label-tiny">{_esc(no_label)}</text>'
+    )
+    # dashed retry back to step 3
+    parts.append(
+        f'<path d="M {fix_cx} {fix_cy - fix_h / 2:.1f} '
+        f'C {fix_cx} 175, {centers[2]:.1f} 175, {centers[2]:.1f} {y1 + card_h / 2:.1f}" '
+        f'fill="none" stroke="{bad}" stroke-width="1.6" stroke-dasharray="6 4"/>'
+    )
+    retry = "再跑一遍 →" if zh else "run again →"
+    parts.append(
+        f'<text x="{(fix_cx + centers[2]) / 2:.1f}" y="172" text-anchor="middle" fill="{bad}" '
+        f'font-size="12" class="label-tiny">{_esc(retry)}</text>'
+    )
+
+    ship_cx, ship_cy = 1320, 280
+    ship_w, ship_h = 260, 96
+    parts.append(
+        f'<rect x="{ship_cx - ship_w / 2:.1f}" y="{ship_cy - ship_h / 2:.1f}" width="{ship_w}" height="{ship_h}" rx="2" '
+        f'fill="{ok_bg}" stroke="{ok}" stroke-width="1.6"/>'
+    )
+    parts.append(
+        f'<text x="{ship_cx}" y="{ship_cy - 10:.1f}" text-anchor="middle" class="label" font-size="17" '
+        f'fill="{ok}">{_esc(ship[0])}</text>'
+    )
+    parts.append(
+        f'<text x="{ship_cx}" y="{ship_cy + 18:.1f}" text-anchor="middle" class="label-tiny" font-size="12">{_esc(ship[1])}</text>'
+    )
+    yes_label = "是 / 无 Critical" if zh else "Yes / clear"
+    ship_left = ship_cx - ship_w / 2
+    parts.append(
+        f'<line x1="{dx + size}" y1="{dy}" x2="{ship_left - 12:.1f}" y2="{ship_cy}" '
+        f'stroke="{ok}" stroke-width="2"/>'
+        f'<polygon points="{ship_left:.1f},{ship_cy} {ship_left - 12:.1f},{ship_cy - 5} '
+        f'{ship_left - 12:.1f},{ship_cy + 5}" fill="{ok}"/>'
+    )
+    parts.append(
+        f'<text x="{(dx + size + ship_left) / 2:.1f}" y="{dy - 14}" text-anchor="middle" '
+        f'fill="{ok}" font-size="12" class="label-tiny">{_esc(yes_label)}</text>'
+    )
+
+    parts.append(
+        f'<text x="{w/2}" y="400" text-anchor="middle" class="label-tiny" font-size="13">'
+        f'{_esc("报告里重点看这三项" if zh else "Three things the report always covers")}</text>'
+    )
+    bw, bgap = 360, 40
+    btotal = 3 * bw + 2 * bgap
+    bstart = (w - btotal) / 2
+    for i, (t, sub, tag) in enumerate(bottom):
+        cx = bstart + bw / 2 + i * (bw + bgap)
+        x = cx - bw / 2
+        y = 420
+        parts.append(
+            f'<rect x="{x:.1f}" y="{y}" width="{bw}" height="72" rx="2" '
+            f'fill="{BOX}" stroke="{BOX_BORDER}" stroke-width="1"/>'
+        )
+        parts.append(
+            f'<text x="{cx:.1f}" y="{y + 28}" text-anchor="middle" class="label" font-size="15">{_esc(t)}</text>'
+        )
+        parts.append(
+            f'<text x="{cx:.1f}" y="{y + 52}" text-anchor="middle" class="label-tiny mono" font-size="12">'
+            f'{_esc(sub)} · {_esc(tag)}</text>'
+        )
+
+    for i, (lab, color) in enumerate(legend):
+        x = 40 + i * 160
+        parts.append(f'<line x1="{x}" y1="530" x2="{x + 28}" y2="530" stroke="{color}" stroke-width="3"/>')
+        parts.append(
+            f'<text x="{x + 36}" y="534" class="label-tiny" font-size="12">{_esc(lab)}</text>'
+        )
+
+    return svg_shell(w, h, "\n".join(parts), title, corner)
+
+
 def two_lights(zh: bool) -> str:
     if zh:
         banner = "自检只看两盏灯 — 给老板的读法"
@@ -371,6 +555,7 @@ def main() -> None:
         ("03-smart.svg", smart),
         ("04-5w2h.svg", five_w2h),
         ("05-two-lights.svg", two_lights),
+        ("06-fix-loop.svg", fix_loop),
     ]
     for name, fn in pairs:
         write(OUT / name, fn(False))

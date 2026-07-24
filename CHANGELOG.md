@@ -26,6 +26,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `tests/test_hard_gates.py` regression suite and `hard-gates` CI workflow
   (tests, ship floor for every `skills/*`, fixture still fails, diagrams reproducible)
 
+- Fix-loop SVG (`06-fix-loop.svg` + `zh/`): write → check → report →
+  fix & retry or ready to use; wired into README for beginners
+
 ### Fixed
 
 - Non-UTF-8 `SKILL.md` crashed with `UnicodeDecodeError` and emitted no JSON,

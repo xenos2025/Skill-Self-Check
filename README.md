@@ -44,7 +44,13 @@ https://github.com/xenos2025/Skill-Self-Check
 
 ![怎么用](assets/diagrams/zh/01-how-to-use.svg)
 
-### 2. 两盏灯怎么读（给老板）
+### 2. 改完再检（闭环）
+
+写好 → 跑检查 → 看报告；**不过就改，改完再跑**。绿灯过了再真用。
+
+![改完再检](assets/diagrams/zh/06-fix-loop.svg)
+
+### 3. 两盏灯怎么读（给老板）
 
 ![两盏灯](assets/diagrams/zh/05-two-lights.svg)
 
@@ -56,19 +62,19 @@ https://github.com/xenos2025/Skill-Self-Check
 | 只有绿灯 | 能用，但容易各做各的 |
 | 绿灯不亮 | 先改，别急着推广 |
 
-### 3. PDCA：做事要闭环
+### 4. PDCA：做事要闭环
 
 ![PDCA](assets/diagrams/zh/02-pdca.svg)
 
 计划 → 执行 → 检查 → 改进。缺「检查」或「改进」，就容易变成瞎忙。
 
-### 4. SMART：目标要说人话
+### 5. SMART：目标要说人话
 
 ![SMART](assets/diagrams/zh/03-smart.svg)
 
 别说「做好运营」；要说清交付物、怎么验收、这次跑完算结束。
 
-### 5. 5W2H：跟客户谈话问清楚
+### 6. 5W2H：跟客户谈话问清楚
 
 ![5W2H](assets/diagrams/zh/04-5w2h.svg)
 
@@ -143,6 +149,12 @@ Steps:
 ### How it works
 
 ![How to use](assets/diagrams/01-how-to-use.svg)
+
+### Fix & retry loop
+
+Write → run gates → report; if it fails, fix and run again.
+
+![Fix loop](assets/diagrams/06-fix-loop.svg)
 
 ### Two lights (boss-friendly scores)
 
