@@ -14,6 +14,28 @@
 
 适合：写说明书的人、要拍板「能不能推广」的老板、外贸 / 工厂 / 电商里要先问清流程的人。
 
+## 给朋友 / AI 初学者：最快怎么用
+
+你**不用先会装仓库、跑命令**。按自己平时的办法先写一份 Skill，再让帮你写 Skill 的 AI 做自检即可。
+
+1. **先按自己的流程写一份 Skill**（Cursor / Claude / 其他平台都行），得到一个含 `SKILL.md` 的文件夹。
+2. **把本仓库地址发给那个 AI**（复制下面整段即可）：
+
+```text
+请用这个开源包帮我自检刚写好的 Skill：
+https://github.com/xenos2025/Skill-Self-Check
+
+做法：
+1. 克隆或打开上面的仓库，按它的说明安装 skill-self-check（或直接读 skills/skill-self-check/SKILL.md）
+2. 对我的 Skill 目录跑自检（目录里要有 SKILL.md）
+3. 先出报告，不要直接改我的文件；等我说「按意见改」再改
+```
+
+3. **看报告里的两盏灯**：绿灯不亮 → 先改 Critical；两盏都亮 → 可以真用、再慢慢打磨。  
+   看不懂分数时，把报告贴回同一个 AI，问：「用白话告诉我先改哪三条。」
+
+更细的本机安装见下面「三分钟上手」；只会点聊天、不会开终端的人，**只用上面三段话就够了**。
+
 ## 可视化上手（先看图）
 
 重画图：`python branding/generate_diagrams.py`
@@ -98,6 +120,23 @@ py -3 skills/skill-self-check/scripts/hard_gates.py skills/skill-self-check/exam
 A beginner-friendly **Agent Skill self-check pack**: a local Python script scores hard gates; your coding agent suggests fixes — including a **PDCA × SMART** matrix. Nothing is fetched from GitHub at runtime.
 
 Diagrams use a simple Swiss blue/white style. Regenerate with `python branding/generate_diagrams.py`.
+
+## For friends / AI beginners (no terminal required)
+
+1. **Write a Skill your usual way** (any platform). You need a folder that contains `SKILL.md`.
+2. **Paste this to the same AI that wrote the Skill:**
+
+```text
+Please self-check my Skill with this open-source pack:
+https://github.com/xenos2025/Skill-Self-Check
+
+Steps:
+1. Clone or open that repo; install skill-self-check (or read skills/skill-self-check/SKILL.md)
+2. Run the self-check on my Skill directory (must contain SKILL.md)
+3. Report only — do not edit my files until I say “apply fixes”
+```
+
+3. **Read the two lights:** if the green light is off, fix Criticals first. If the report is hard to read, paste it back and ask for the three most important fixes in plain language.
 
 ## Visual guide
 
