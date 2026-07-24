@@ -1,0 +1,17 @@
+{
+  "name": "skill-self-check",
+  "version": "0.1.0",
+  "description": "Beginner-friendly Agent Skill self-check: deterministic hard gates and scores via script, qualitative fix suggestions via the agent. Leaves room for future PM workflow-planning experiments under exp/.",
+  "homepage": "https://github.com/xenos2025/Skill-Self-Check",
+  "repository": "https://github.com/xenos2025/Skill-Self-Check",
+  "license": "MIT",
+  "entry": "skills/skill-self-check/SKILL.md",
+  "skillsDir": "skills",
+  "skills": [
+    "skill-self-check"
+  ],
+  "experimentsDir": "exp",
+  "requirements": {
+    "python": ">=3.10"
+  }
+}

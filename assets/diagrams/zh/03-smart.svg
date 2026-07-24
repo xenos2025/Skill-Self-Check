@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 448"
+     width="1400" height="448" role="img"
+     aria-label="skill-self-check.app -&gt; docs -&gt; smart.svg">
+  <defs>
+    <style>
+      .label { fill: #1A1A1A; font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", system-ui, sans-serif; font-weight: 600; }
+      .label-sub { fill: #4A5568; font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", system-ui, sans-serif; font-weight: 400; }
+      .label-tiny { fill: #6B7280; font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", system-ui, sans-serif; font-weight: 400; }
+      .label-accent { fill: #0B3D91; font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", system-ui, sans-serif; font-weight: 600; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Microsoft YaHei", monospace; }
+    </style>
+  </defs>
+  <rect width="1400" height="448" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
+
+  <rect x="0" y="0" width="1400" height="48" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="4" height="48" fill="#0B3D91"/>
+  <line x1="0" y1="48" x2="1400" y2="48" stroke="#0B3D91" stroke-width="1.5"/>
+  <text x="20" y="29.0" fill="#4A5568" font-size="13"
+        font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">skill-self-check.app -&gt; docs -&gt; smart.svg</text>
+  <rect x="1364" y="18.0" width="16" height="12" fill="#0B3D91"/>
+
+  <g transform="translate(0, 48)">
+<text x="700.0" y="36" text-anchor="middle" class="label-sub" font-size="15">SMART：目标要说人话 — 老板能听懂、员工能验收</text>
+<rect x="40.0" y="70" width="240" height="260" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
+<text x="160.0" y="102" text-anchor="middle" class="label-accent" font-size="14">S 具体</text>
+<text x="160.0" y="132" text-anchor="middle" class="label" font-size="16">Specific</text>
+<rect x="56.0" y="160" width="208" height="64" rx="2" fill="#F8FAFC" stroke="#D0D7E2" stroke-width="1"/>
+<text x="160.0" y="185" text-anchor="middle" class="label-tiny" font-size="12">别这样</text>
+<text x="160.0" y="208" text-anchor="middle" class="label-sub" font-size="13">别说「做好运营」</text>
+<rect x="56.0" y="240" width="208" height="64" rx="2" fill="#F0F4FA" stroke="#0B3D91" stroke-width="1.4"/>
+<text x="160.0" y="265" text-anchor="middle" class="label-tiny" font-size="12">要这样</text>
+<text x="160.0" y="288" text-anchor="middle" class="label" font-size="13">要说「每周出询盘复盘表」</text>
+<rect x="310.0" y="70" width="240" height="260" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
+<text x="430.0" y="102" text-anchor="middle" class="label-accent" font-size="14">M 可衡量</text>
+<text x="430.0" y="132" text-anchor="middle" class="label" font-size="16">Measurable</text>
+<rect x="326.0" y="160" width="208" height="64" rx="2" fill="#F8FAFC" stroke="#D0D7E2" stroke-width="1"/>
+<text x="430.0" y="185" text-anchor="middle" class="label-tiny" font-size="12">别这样</text>
+<text x="430.0" y="208" text-anchor="middle" class="label-sub" font-size="13">别说「质量高一点」</text>
+<rect x="326.0" y="240" width="208" height="64" rx="2" fill="#F0F4FA" stroke="#0B3D91" stroke-width="1.4"/>
+<text x="430.0" y="265" text-anchor="middle" class="label-tiny" font-size="12">要这样</text>
+<text x="430.0" y="288" text-anchor="middle" class="label" font-size="13">要说「对照清单全勾完」</text>
+<rect x="580.0" y="70" width="240" height="260" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
+<text x="700.0" y="102" text-anchor="middle" class="label-accent" font-size="14">A 可做到</text>
+<text x="700.0" y="132" text-anchor="middle" class="label" font-size="16">Achievable</text>
+<rect x="596.0" y="160" width="208" height="64" rx="2" fill="#F8FAFC" stroke="#D0D7E2" stroke-width="1"/>
+<text x="700.0" y="185" text-anchor="middle" class="label-tiny" font-size="12">别这样</text>
+<text x="700.0" y="208" text-anchor="middle" class="label-sub" font-size="13">别一次包圆全公司</text>
+<rect x="596.0" y="240" width="208" height="64" rx="2" fill="#F0F4FA" stroke="#0B3D91" stroke-width="1.4"/>
+<text x="700.0" y="265" text-anchor="middle" class="label-tiny" font-size="12">要这样</text>
+<text x="700.0" y="288" text-anchor="middle" class="label" font-size="13">一本说明书只办一类事</text>
+<rect x="850.0" y="70" width="240" height="260" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
+<text x="970.0" y="102" text-anchor="middle" class="label-accent" font-size="14">R 相关</text>
+<text x="970.0" y="132" text-anchor="middle" class="label" font-size="16">Relevant</text>
+<rect x="866.0" y="160" width="208" height="64" rx="2" fill="#F8FAFC" stroke="#D0D7E2" stroke-width="1"/>
+<text x="970.0" y="185" text-anchor="middle" class="label-tiny" font-size="12">别这样</text>
+<text x="970.0" y="208" text-anchor="middle" class="label-sub" font-size="13">步骤要对上真实工作</text>
+<rect x="866.0" y="240" width="208" height="64" rx="2" fill="#F0F4FA" stroke="#0B3D91" stroke-width="1.4"/>
+<text x="970.0" y="265" text-anchor="middle" class="label-tiny" font-size="12">要这样</text>
+<text x="970.0" y="288" text-anchor="middle" class="label" font-size="13">别写成百科文章</text>
+<rect x="1120.0" y="70" width="240" height="260" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
+<text x="1240.0" y="102" text-anchor="middle" class="label-accent" font-size="14">T 有终点</text>
+<text x="1240.0" y="132" text-anchor="middle" class="label" font-size="16">Time-bound</text>
+<rect x="1136.0" y="160" width="208" height="64" rx="2" fill="#F8FAFC" stroke="#D0D7E2" stroke-width="1"/>
+<text x="1240.0" y="185" text-anchor="middle" class="label-tiny" font-size="12">别这样</text>
+<text x="1240.0" y="208" text-anchor="middle" class="label-sub" font-size="13">不是硬编季度口号</text>
+<rect x="1136.0" y="240" width="208" height="64" rx="2" fill="#F0F4FA" stroke="#0B3D91" stroke-width="1.4"/>
+<text x="1240.0" y="265" text-anchor="middle" class="label-tiny" font-size="12">要这样</text>
+<text x="1240.0" y="288" text-anchor="middle" class="label" font-size="13">是「这次跑完就算结束」</text>
+    <text x="1380" y="384" text-anchor="end" class="label-tiny mono">03 · SMART</text>
+  </g>
+</svg>

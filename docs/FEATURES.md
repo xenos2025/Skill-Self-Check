@@ -1,0 +1,20 @@
+# Features
+
+| Capability | Input | Output | Writes target skill? |
+| --- | --- | --- | --- |
+| Hard-gate script | Skill directory | JSON scores + findings | No |
+| Agent self-check skill | Skill path + chat | Ranked fix report | Only if user says apply |
+| Two-layer scores | Script | `basic_usable`, `contract_clarity`, `ship_floor_met` | No |
+| Checklist (Matt/Addy/Cursor fusion) | Loaded with skill | Guidance for Pass 2–4 | No |
+| PDCA + SMART audit (Pass 5) | Target SKILL.md | Matrix + findings | No |
+| Bad fixture smoke | Bundled example | Known Criticals | No |
+| Installers | This repo | Copy into Cursor skills dir | N/A |
+| `exp/` PM hook | Manual | Drafts only | N/A |
+
+## Scores
+
+| Score | Max | Meaning |
+| --- | --- | --- |
+| `basic_usable` | 5 | Structure + description + actionable body + verification markers |
+| `contract_clarity` | 5 | When / When-NOT / check axes / verification checkboxes / rationalizations |
+| `ship_floor_met` | bool | `basic_usable >= 4` and zero script Critical |

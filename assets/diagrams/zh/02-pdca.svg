@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 468"
+     width="1320" height="468" role="img"
+     aria-label="skill-self-check.app -&gt; docs -&gt; pdca.svg">
+  <defs>
+    <style>
+      .label { fill: #1A1A1A; font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", system-ui, sans-serif; font-weight: 600; }
+      .label-sub { fill: #4A5568; font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", system-ui, sans-serif; font-weight: 400; }
+      .label-tiny { fill: #6B7280; font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", system-ui, sans-serif; font-weight: 400; }
+      .label-accent { fill: #0B3D91; font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", system-ui, sans-serif; font-weight: 600; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Microsoft YaHei", monospace; }
+    </style>
+  </defs>
+  <rect width="1320" height="468" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
+
+  <rect x="0" y="0" width="1320" height="48" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="4" height="48" fill="#0B3D91"/>
+  <line x1="0" y1="48" x2="1320" y2="48" stroke="#0B3D91" stroke-width="1.5"/>
+  <text x="20" y="29.0" fill="#4A5568" font-size="13"
+        font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">skill-self-check.app -&gt; docs -&gt; pdca.svg</text>
+  <rect x="1284" y="18.0" width="16" height="12" fill="#0B3D91"/>
+
+  <g transform="translate(0, 48)">
+<text x="660.0" y="36" text-anchor="middle" class="label-sub" font-size="15">PDCA：做事要闭环 — 计划 → 执行 → 检查 → 改进（缺一环就容易瞎忙）</text>
+<rect x="50.0" y="100.0" width="260" height="160" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
+<text x="180.0" y="126.0" text-anchor="middle" class="label-tiny" font-size="11" letter-spacing="0.08em">P 计划</text>
+<text x="180.0" y="152.0" text-anchor="middle" class="label" font-size="18">先说清楚</text>
+<text x="180.0" y="178.0" text-anchor="middle" class="label-tiny" font-size="13">什么时候用</text>
+<text x="180.0" y="196.0" text-anchor="middle" class="label-tiny" font-size="13">查什么 / 不查什么</text>
+<text x="180.0" y="214.0" text-anchor="middle" class="label-tiny" font-size="13">怎样算成功</text>
+<line x1="310" y1="180" x2="340" y2="180" stroke="#D0D7E2" stroke-width="2"/><polygon points="350,180 338,175 338,185" fill="#0B3D91"/>
+<rect x="350.0" y="100.0" width="260" height="160" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
+<text x="480.0" y="126.0" text-anchor="middle" class="label-tiny" font-size="11" letter-spacing="0.08em">D 执行</text>
+<text x="480.0" y="152.0" text-anchor="middle" class="label" font-size="18">按步骤做</text>
+<text x="480.0" y="178.0" text-anchor="middle" class="label-tiny" font-size="13">一步一步来</text>
+<text x="480.0" y="196.0" text-anchor="middle" class="label-tiny" font-size="13">每步怎样算做完</text>
+<text x="480.0" y="214.0" text-anchor="middle" class="label-tiny" font-size="13">留下痕迹</text>
+<line x1="610" y1="180" x2="640" y2="180" stroke="#D0D7E2" stroke-width="2"/><polygon points="650,180 638,175 638,185" fill="#0B3D91"/>
+<rect x="650.0" y="100.0" width="260" height="160" rx="2" fill="#F0F4FA" stroke="#0B3D91" stroke-width="1.6"/>
+<text x="780.0" y="126.0" text-anchor="middle" class="label-tiny" font-size="11" letter-spacing="0.08em">C 检查</text>
+<text x="780.0" y="152.0" text-anchor="middle" class="label" font-size="18">拿证据验收</text>
+<text x="780.0" y="178.0" text-anchor="middle" class="label-tiny" font-size="13">对照清单勾选</text>
+<text x="780.0" y="196.0" text-anchor="middle" class="label-tiny" font-size="13">有输出才算过</text>
+<text x="780.0" y="214.0" text-anchor="middle" class="label-tiny" font-size="13">不能只说「好像行」</text>
+<line x1="910" y1="180" x2="940" y2="180" stroke="#D0D7E2" stroke-width="2"/><polygon points="950,180 938,175 938,185" fill="#0B3D91"/>
+<rect x="950.0" y="100.0" width="260" height="160" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
+<text x="1080.0" y="126.0" text-anchor="middle" class="label-tiny" font-size="11" letter-spacing="0.08em">A 改进</text>
+<text x="1080.0" y="152.0" text-anchor="middle" class="label" font-size="18">错了知道怎么改</text>
+<text x="1080.0" y="178.0" text-anchor="middle" class="label-tiny" font-size="13">常见借口对照</text>
+<text x="1080.0" y="196.0" text-anchor="middle" class="label-tiny" font-size="13">红灯信号</text>
+<text x="1080.0" y="214.0" text-anchor="middle" class="label-tiny" font-size="13">改完再跑一轮</text>
+<path d="M 1080 270 C 1080 340, 180 340, 180 270" fill="none" stroke="#0B3D91" stroke-width="1.6" stroke-dasharray="6 4"/>
+<text x="660.0" y="360" text-anchor="middle" class="label-tiny" font-size="13">用在：写说明书、自检报告、客户访谈都会走这一圈</text>
+<text x="660.0" y="385" text-anchor="middle" class="label-accent" font-size="13">再来一轮 →</text>
+    <text x="1300" y="404" text-anchor="end" class="label-tiny mono">02 · PDCA</text>
+  </g>
+</svg>

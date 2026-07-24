@@ -1,0 +1,34 @@
+Skill Self-Check
+Copyright (c) 2026 Contributors
+
+This project is licensed under the MIT License. See LICENSE.
+
+Third-party acknowledgements
+---------------------------
+
+This repository fuses ideas from the projects below. None of the following
+projects endorse this repository. Links and scope of reuse are listed for
+transparency.
+
+1. Matt Pocock — writing-great-skills
+   https://github.com/mattpocock/skills/tree/main/skills/productivity/writing-great-skills
+   Reused as concepts (predictability, completion criteria, pruning, failure
+   modes), rewritten into plain-language checklist items. Not a verbatim copy
+   of that skill's text.
+
+2. Addy Osmani — agent-skills
+   https://github.com/addyosmani/agent-skills
+   Reused as concepts (skill anatomy, Verification, rationalizations, quality
+   bar), adapted into checklist + report structure. Not a fork of that pack.
+
+3. Cursor — create-skill (built-in Agent Skill authoring guidance)
+   Reused as hard rules for frontmatter, third-person WHAT+WHEN descriptions,
+   length limits, and progressive disclosure.
+
+4. Classic management heuristics — PDCA, SMART, 5W2H
+   Used as checkable audit / interview frames mapped onto Agent Skill fields.
+   These are widely known methods; no single upstream owns them.
+
+Content, scripts (including hard_gates.py scoring), diagram artwork under
+assets/diagrams/, packaging files, and scoring contracts in this repository
+are original to this project unless otherwise noted above.
