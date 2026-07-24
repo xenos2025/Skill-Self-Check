@@ -1,103 +1,126 @@
 # Skill Self-Check Report
 
-**Target:** `examples/before-after.md` → Before block (as `bad-commit-helper/SKILL.md`)  
-**Date:** 2026-07-24  
-**Passes covered:** 1 Hard gates · 2 Predictability · 3 Anatomy · 4 Prune
+**Target:** `examples/fixtures/bad-commit-helper/SKILL.md`  
+**Date:** 2026-07-25  
+**Script:** `python skills/skill-self-check/scripts/hard_gates.py skills/skill-self-check/examples/fixtures/bad-commit-helper --pretty`  
+**Passes covered:** 0 Script · 1 Hard gates · 2 Predictability · 3 Anatomy · 4 Prune · 5 PDCA+SMART
 
-## 总评
+> Worked example. Regenerate after changing scoring logic — CI (`.github/workflows/hard-gates.yml`) keeps the fixture failing, but the numbers below are maintained by hand.
 
-不能发布：硬门槛多处失败（非法 `name`、第一人称且无触发的 description、步骤不可验收）。四趟均有发现；先修 Critical，再补 Verification 与完成标准。
+## 分数（脚本，禁止手改）
 
-| Severity | Count |
+| 维度 | 得分 | 含义 |
+|------|------|------|
+| 基础可用 `basic_usable` | `2/5` | 只拿到「有 frontmatter」「正文有编号步骤」两分 |
+| 契约清晰 `contract_clarity` | `0/5` | When / When-NOT / 检查轴 / Verification / 反合理化 全缺 |
+| Ship floor | `no` | 4 个 Critical，且 `basic_usable < 4` |
+
+不能发布：`name` 非法且与目录不一致、description 第一人称且无触发词、全文没有任何出口证据。先修 4 个 Critical，再补 Verification 与完成标准。
+
+| Severity | Count (script + model) |
 |----------|------:|
-| Critical | 3 |
-| Should fix | 6 |
+| Critical | 4 |
+| Should fix | 10 |
 | Nice | 1 |
+
+脚本计数为 Critical 4 / Should fix 10 / Nice 0；下面的 N1 是模型追加的定性发现。
+
+---
+
+## PDCA × SMART（模型，须填）
+
+| PDCA | Status | Evidence (quote / section) |
+|------|--------|----------------------------|
+| Plan | missing | 无 When / When NOT / 检查轴；只有 “Git is important.” |
+| Do | weak | `## Steps` 有 1–3 编号，但「Look at the changes / Write a message / Done」没有任何完成标准 |
+| Check | missing | 无 Verification，无 Done when，`Done` 只是第三步的标题 |
+| Act | missing | 无 Red Flags、无 Rationalizations、失败无去处 |
+
+| SMART | Status | Note |
+|-------|--------|------|
+| Specific | missing | “help you with git stuff” 未说明交付物是 commit message |
+| Measurable | missing | 无格式约束（长度 / type 前缀）、无验收证据 |
+| Achievable | weak | 范围看似小，但没有 When NOT，容易被当成通用 git 助手 |
+| Relevant | weak | 触发词与正文都指向 commit，但 description 泛化到「git stuff」 |
+| Time / run-bound | missing | 第三步写 `Done` 却没定义完成条件，等于没有终点 |
+
+可用性和闭环双失：不只是「能用但没闭环」，而是 Plan / Check / Act 三段都空。
 
 ---
 
 ## Critical
 
-### C1. `name` 非法且与目录不一致
+### C1. `name` 含大写，非法 · source: `script`
 
-- **问题:** `name: Helper` 含大写；若目录为 `bad-commit-helper` 则与 `name` 不一致。
-- **为什么:** Cursor / agentskills 要求小写连字符；名称是发现与安装的主键。
+- **问题:** `name: Helper`（脚本 1.3，evidence `Helper`）。
+- **为什么:** Cursor 要求小写字母 / 数字 / 连字符，≤64 字符；名称是发现与安装的主键。
 - **建议改法:**
 
 ```yaml
 name: writing-commit-messages
 ```
 
-目录同步为 `writing-commit-messages/`。
+### C2. `name` 与目录不一致 · source: `script`
 
-### C2. description 第一人称且缺少 WHAT+WHEN
+- **问题:** 脚本 1.4：`name='Helper' dir='bad-commit-helper'`。
+- **为什么:** 名称与目录不一致时，安装后可能加载不到或重名覆盖。
+- **建议改法:** 目录同步改名为 `writing-commit-messages/`，与 `name` 逐字相同。
 
-- **问题:** `I can help you with git stuff when you need it.`
-- **为什么:** 注入系统提示应用第三人称；过宽触发会导致乱调用或从不调用。
+### C3. description 用第一 / 第二人称 · source: `script`
+
+- **问题:** `I can help you with git stuff when you need it.`（脚本 1.6）。
+- **为什么:** description 会被注入系统提示，须第三人称陈述能力，而不是对用户说话。
+- **建议改法:** 见 C4 的整段重写。
+
+### C4. description 缺 WHEN 触发词 · source: `script`
+
+- **问题:** 脚本 1.7：模型可调用的技能没有可判定的触发条件。
+- **为什么:** 触发过宽会到处乱调用，过窄则永不触发——两者都会让行为不可预测。
 - **建议改法:**
 
 ```yaml
 description: >-
-  Generates concise git commit messages from staged diffs using conventional
-  commits. Use when the user asks for a commit message, reviews staged changes,
+  Generates concise conventional-commit messages from staged diffs.
+  Use when the user asks for a commit message, reviews staged changes,
   or wants help wording a commit.
 ```
-
-### C3. 正文几乎不可执行
-
-- **问题:** Steps 为「看改动 → 写消息 → Done」，无工具、无格式、无退出证据。
-- **为什么:** Agent 无法判断何时完成、产出何种形状；属于硬门槛「不可执行」。
-- **建议改法:** 改为带完成标准的三步（读 `git diff --staged` → 起草 conventional message → 展示但不擅自 commit）。见 After 示例。
 
 ---
 
 ## Should fix
 
-### S1. 步骤无完成标准 (completion criterion)
+| # | 发现 | 问题 → 建议改法 | 来源 |
+|---|------|-----------------|------|
+| S1 | 1.7b 缺 WHAT 动词 | “help with git stuff” 未说明产出 → 以 `Generates …` 开头 | script |
+| S2 | 1.10 无 Verification / Done when | 没有出口证据 → 加 `## Verification` 复选框 | script |
+| S3 | 3.2 缺 When to Use | 无正向触发清单 → 列「用户要 commit message」等 3 条 | script |
+| S4 | 3.3 缺 When NOT to use | 易被当通用 git 助手 → 排除「改写历史 / 解决冲突」 | script |
+| S5 | 3.10 检查轴未命名 | `detected_axes=[]` → 命名 summary 格式 / body 理由 / 是否代提交 | script |
+| S6 | 3.5 无带证据的复选框 | 「看起来做完了」→ 已读 diff / 格式正确 / 未擅自 commit | script |
+| S7 | 3.6 缺 Rationalizations / Red Flags | 小 diff 时爱跳过阅读 → 表里写明「Diff 小也要读全」 | script |
+| S8 | 4.4 时效性表述 | 「before 2024 people used different formats」会过期 → 删除或折叠进 Old patterns | script |
+| S9 | 2.6 无操作指令 | 「be careful」「think step by step」不改变默认行为 → 删掉换成可检查约束 | script |
+| S10 | 2.5 否定密度过高 | 3 处 “Don't …” 未给目标形状 → 「Summary 说明改动意图，body 解释原因」 | script |
 
-- **问题:** 「Understand the diff」「Improve the message」不可观察。
-- **为什么:** 易导致未读完 diff 就交稿（premature completion）。
-- **建议改法:** 每步写 **Done when:**（例如：已拿到完整 staged diff；summary ≤72 字符且含 type）。
+**S2 / S6 paste-ready:**
 
-### S2. 无操作指令 (no-op)
+```markdown
+## Verification
 
-- **问题:** 「Always be careful and think step by step.」
-- **为什么:** 不改变默认行为，只占 token。
-- **建议改法:** 删除；改成可检查约束（读 staged diff、禁止无 diff 瞎写）。
-
-### S3. 否定堆叠 (negation)
-
-- **问题:** 「Don't write bad… Don't be vague… Don't forget…」
-- **为什么:** 禁令激活坏模式；应描述目标形状。
-- **建议改法:** 「Summary states the change intent; body explains why。」
-
-### S4. 缺少 Verification
-
-- **问题:** 无出口检查。
-- **为什么:** 流程类 skill 无证据即「看起来写完了」。
-- **建议改法:** 增加 Verification：已读 diff / 格式正确 / 未擅自 commit。
-
-### S5. 缺少 When NOT 与 Rationalizations
-
-- **问题:** 无排除场景；无「借口→反驳」表。
-- **为什么:** 小 diff 时 agent 爱跳过阅读。
-- **建议改法:** 补 When NOT；表中写明「Diff 小也要读」。
-
-### S6. 多选项 + 时效闲话 (sediment / sprawl)
-
-- **问题:** 「conventional 或不要或写得好看」+「2024 以前…」。
-- **为什么:** 无默认路径；时效句易过期。
-- **建议改法:** 默认 conventional；旧格式放折叠 Old patterns 或不写。
+- [ ] 已读取完整 `git diff --staged`
+- [ ] Summary ≤72 字符且带 conventional type
+- [ ] 已展示消息，未擅自执行 commit
+```
 
 ---
 
 ## Nice
 
-### N1. 可用 leading word 收束质量
+### N1. 用一个锚词收束质量标准 · source: `model`
 
-- **问题:** 「better / improve / nice」分散。
-- **为什么:** 一个锚词（如 *conventional*）比三处形容词省 token、更稳。
-- **建议改法:** 全文以 conventional commit 为唯一质量锚。
+- **问题:** 「Make things better / Improve the message / write something nice」三处形容词各说各话。
+- **为什么:** 一个预训练概念（*conventional commit*）比三处模糊形容词更省 token、行为更稳。
+- **建议改法:** 全文以 conventional commit 作为唯一质量锚，删掉「或不用 / 或写得好看」的并列选项。
 
 ---
 
@@ -105,12 +128,15 @@ description: >-
 
 | Pass | Result |
 |------|--------|
-| 1 Hard gates | fail (3 Critical: name, description, actionable body) |
-| 2 Predictability | findings S1–S3, N1 |
-| 3 Anatomy | findings S4–S5 |
-| 4 Prune | finding S6 |
+| 0 Script | ran；exit 1，`ship_floor_met: false` |
+| 1 Hard gates | fail：4 Critical（1.3 / 1.4 / 1.6 / 1.7） |
+| 2 Predictability | S9 / S10（脚本命中）+ N1（模型） |
+| 3 Anatomy | S3–S7 |
+| 4 Prune | S8；`line_count` 23，无超长问题 |
+| 5 PDCA+SMART | 矩阵已填：Plan / Check / Act 全缺 |
 
 ## Next step
 
-Smoke **passed**: expected themes from `before-after.md` all present (弱 description、缺 verification、no-op、negation、缺完成标准).  
-Say **「按意见改」** to apply Critical / Should fix to a real target skill.
+Ship floor 未达到：先修 4 个 Critical，再按 S1–S10 补契约，不要指望「先用起来再观察」。  
+Smoke 判据：`before-after.md` 列出的主题（弱 description、缺 verification、no-op、negation、缺完成标准）全部被命中。  
+说 **「按意见改」** 可对真实目标技能应用 Critical / Should fix。

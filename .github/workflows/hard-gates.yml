@@ -1,0 +1,47 @@
+name: hard-gates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  hard-gates:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Regression tests
+        run: python tests/test_hard_gates.py
+
+      - name: Every shipped skill meets the ship floor
+        run: |
+          status=0
+          for skill in skills/*/; do
+            echo "::group::$skill"
+            python skills/skill-self-check/scripts/hard_gates.py "$skill" --pretty || status=1
+            echo "::endgroup::"
+          done
+          exit $status
+
+      - name: Bad fixture must still fail
+        run: |
+          if python skills/skill-self-check/scripts/hard_gates.py \
+              skills/skill-self-check/examples/fixtures/bad-commit-helper > /dev/null; then
+            echo "bad-commit-helper unexpectedly passed the ship floor"
+            exit 1
+          fi
+
+      - name: Diagrams are reproducible from source
+        run: |
+          python branding/generate_diagrams.py
+          git diff --exit-code -- assets/diagrams

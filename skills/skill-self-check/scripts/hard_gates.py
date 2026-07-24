@@ -27,14 +27,23 @@ WHEN_TRIGGER_RE = re.compile(
     r"when asked|when reviewing|when implementing|triggers?:|"
     r"run after|after you)\b"
 )
+# Chinese has no word boundaries, so these are matched without \b.
+WHEN_TRIGGER_ZH_RE = re.compile(
+    r"(用于|适用|适合|用来|当用户|当需要|需要.{0,6}时|使用场景|适用场景|触发条件)"
+)
 WHAT_SIGNAL_RE = re.compile(
     r"(?i)\b(generates?|reviews?|extracts?|analyzes?|guides?|checks?|"
     r"validates?|writes?|creates?|processes?|helps agents?|audits?)\b"
+)
+WHAT_SIGNAL_ZH_RE = re.compile(
+    r"(生成|审查|评审|检查|自检|校验|验证|分析|提取|编排|路由|创建|"
+    r"整理|规划|输出|审计|拆解|归档)"
 )
 COMPLETION_RE = re.compile(
     r"(?i)\b(done when|completion criterion|exit criteria|verify that|"
     r"\*\*done when\*\*)\b"
 )
+COMPLETION_ZH_RE = re.compile(r"(完成标准|完成条件|出口标准|验收标准|完成于|判定完成)")
 TIME_SENSITIVE_RE = re.compile(
     r"(?i)\bbefore (january|february|march|april|may|june|july|august|"
     r"september|october|november|december|\d{4})\b"
@@ -47,6 +56,28 @@ NEGATION_RE = re.compile(r"(?i)\b(don't|do not|never|avoid)\b")
 NUMBERED_STEP_RE = re.compile(r"(?m)^\s*\d+\.\s+\S")
 CHECKBOX_RE = re.compile(r"(?m)^\s*[-*]\s*\[[ xX]\]\s+")
 HEADING_RE = re.compile(r"(?m)^(#{1,6})\s+(.+?)\s*$")
+
+
+def read_skill_text(path: Path) -> tuple[str, str | None]:
+    """Read SKILL.md, tolerating non-UTF-8 files.
+
+    Returns (text, fallback_encoding). fallback_encoding is None for clean
+    UTF-8; otherwise it names what was used so the caller can raise a finding.
+    Agent tooling expects UTF-8, but Windows editors still emit GBK, and a
+    decode crash would leave the model with no JSON at all.
+    """
+    raw = path.read_bytes()
+    for enc in ("utf-8-sig", "utf-8"):
+        try:
+            return raw.decode(enc), None
+        except UnicodeDecodeError:
+            pass
+    for enc in ("gb18030", "big5", "cp1252"):
+        try:
+            return raw.decode(enc), enc
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("utf-8", errors="replace"), "utf-8 with invalid bytes replaced"
 
 
 def parse_frontmatter(text: str) -> tuple[dict[str, str], str, bool]:
@@ -209,9 +240,17 @@ def check_skill(skill_dir: Path) -> dict:
         fail("1.1", "critical", "Missing SKILL.md in skill directory")
         return finalize(skill_dir, None, "", findings, points, contract, 0)
 
-    text = skill_md.read_text(encoding="utf-8")
+    text, fallback_encoding = read_skill_text(skill_md)
     fm, body, has_fm = parse_frontmatter(text)
     line_count = text.count("\n") + (0 if text.endswith("\n") else 1)
+
+    if fallback_encoding:
+        fail(
+            "1.11",
+            "should_fix",
+            "SKILL.md is not UTF-8; re-save as UTF-8 so every agent tool reads it",
+            f"decoded as {fallback_encoding}",
+        )
 
     if not has_fm:
         fail("1.2", "critical", "Missing YAML frontmatter delimited by ---")
@@ -269,8 +308,8 @@ def check_skill(skill_dir: Path) -> dict:
         else:
             voice_ok = True
 
-        has_when = bool(WHEN_TRIGGER_RE.search(desc))
-        has_what = bool(WHAT_SIGNAL_RE.search(desc))
+        has_when = bool(WHEN_TRIGGER_RE.search(desc) or WHEN_TRIGGER_ZH_RE.search(desc))
+        has_what = bool(WHAT_SIGNAL_RE.search(desc) or WHAT_SIGNAL_ZH_RE.search(desc))
         if disable_model:
             # User-invoked: human-facing one-liner allowed; still prefer non-empty
             triggers_ok = True
@@ -314,9 +353,13 @@ def check_skill(skill_dir: Path) -> dict:
     headings = heading_map(body)
     has_steps = bool(NUMBERED_STEP_RE.search(body))
     has_boxes = bool(CHECKBOX_RE.search(body))
-    has_rules_heading = has_heading_containing(
-        headings, "rule"
-    ) or has_heading_containing(headings, "checklist")
+    has_rules_heading = (
+        has_heading_containing(headings, "rule")
+        or has_heading_containing(headings, "checklist")
+        or any(
+            k in h for h in headings for k in ("规则", "清单", "步骤", "流程", "做法")
+        )
+    )
     if has_steps or has_boxes or has_rules_heading:
         points["body_actionable"] = True
         ok_note("1.8", "Body has numbered steps, checkboxes, and/or rules")
@@ -328,10 +371,13 @@ def check_skill(skill_dir: Path) -> dict:
         )
 
     has_verification = any(
-        "verification" in h or "verify" == h or h.endswith(" verification") or "出口" in h
+        "verification" in h
+        or "verify" == h
+        or h.endswith(" verification")
+        or any(k in h for k in ("出口", "验收", "验证", "校验"))
         for h in headings
     ) or bool(re.search(r"(?im)^##\s+verification\b", body))
-    has_done = bool(COMPLETION_RE.search(body))
+    has_done = bool(COMPLETION_RE.search(body) or COMPLETION_ZH_RE.search(body))
     if has_verification or has_done:
         points["verification_or_done_when"] = True
     else:
@@ -343,17 +389,32 @@ def check_skill(skill_dir: Path) -> dict:
 
     # Contract clarity signals
     contract["when_to_use"] = any(
-        "when to use" in h or h == "when" or "何时使用" in h for h in headings
-    )
-    contract["when_not"] = any(
-        "when not" in h or "not to use" in h or "不要用" in h or "exclusions" in h
+        "when to use" in h
+        or h == "when"
+        or any(k in h for k in ("何时使用", "什么时候用", "使用场景", "适用场景"))
         for h in headings
-    ) or bool(re.search(r"(?i)when not to use", body))
+    )
+    contract["when_not"] = (
+        any(
+            "when not" in h
+            or "not to use" in h
+            or "exclusions" in h
+            or "out of scope" in h
+            or any(
+                k in h
+                for k in ("不要用", "何时不用", "不适用", "不用于", "超出范围", "范围外")
+            )
+            for h in headings
+        )
+        or bool(re.search(r"(?i)when not to use", body))
+    )
     axes_ok, axes = detect_check_axes(body)
     contract["check_axes_named"] = axes_ok
     contract["verification_checkboxes"] = has_verification and has_boxes
     contract["rationalizations_or_red_flags"] = any(
-        "rationalization" in h or "red flag" in h or "借口" in h or "红旗" in h
+        "rationalization" in h
+        or "red flag" in h
+        or any(k in h for k in ("借口", "红旗", "危险信号", "常见误区"))
         for h in headings
     )
 
@@ -473,7 +534,17 @@ def finalize(
     }
 
 
+def force_utf8_streams() -> None:
+    """Keep JSON readable when the console codepage is not UTF-8 (e.g. cp936)."""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):
+            pass
+
+
 def main() -> int:
+    force_utf8_streams()
     parser = argparse.ArgumentParser(description="Hard-gate skill checker")
     parser.add_argument("skill_dir", type=Path, help="Path to skill directory")
     parser.add_argument(

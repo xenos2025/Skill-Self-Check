@@ -39,7 +39,10 @@ Plain-language items for auditing a target skill. Optional Matt-style terms appe
 | 1.8 | Body is actionable: ordered steps and/or clear review/reference rules | Narrative diary, slogans only, no procedure | Critical |
 | 1.9 | If `disable-model-invocation: true`, description may be human-facing one-liner; if omitted/false, description must be model-facing triggers | Model-invoked skill with empty trigger list | Critical |
 | 1.10 | Verification section or Done-when markers | Neither detected | Should fix |
+| 1.11 | `SKILL.md` is saved as UTF-8 | Decodes only as GBK / Big5 / CP1252 | Should fix |
 | 3.10 | Named check axes (color / composition / copy / …) | Review/audit skill with no axis list | Critical if review-like |
+
+**Bilingual detection:** 1.7 accepts Chinese triggers (`用于` / `适用` / `当用户` / `使用场景`) and Chinese WHAT verbs (`生成` / `审查` / `检查` / `编排`). Chinese headings count too: `何时使用`, `何时不用` / `不适用`, `检查轴` / `维度`, `验收` / `校验`, `常见借口` / `危险信号`.
 
 ---
 

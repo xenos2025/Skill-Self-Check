@@ -118,7 +118,12 @@ python skills/skill-self-check/scripts/hard_gates.py \
   skills/skill-self-check/examples/fixtures/bad-commit-helper --pretty
 ```
 
-Expect: `basic_usable` about 2/5, `ship_floor_met: false`, Critical on name/description; hints for no-op, negation, missing verification.
+Expect `basic_usable 2/5`, `contract_clarity 0/5`, `ship_floor_met: false`, 4 Critical (1.3 / 1.4 / 1.6 / 1.7) and 10 Should fix, including no-op, negation and missing verification hints. Worked report: [smoke-report-before.md](smoke-report-before.md).
 
 2. Full skill review: run `skill-self-check` in chat against the same fixture (or After example).
 3. After fixture / After block: script Critical should be 0 for a cleaned skill; model may still suggest Nice polish.
+4. Regression suite (covers the fixture, the shipped skill, Chinese skills and non-UTF-8 files):
+
+```bash
+python tests/test_hard_gates.py
+```

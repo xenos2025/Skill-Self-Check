@@ -23,7 +23,13 @@ python skills/skill-self-check/scripts/hard_gates.py \
   skills/skill-self-check/examples/fixtures/bad-commit-helper --pretty
 ```
 
-Expect `ship_floor_met: false` and Critical findings on name/description.
+Expect `basic_usable 2/5`, `contract_clarity 0/5`, `ship_floor_met: false`, 4 Critical.
+
+5. Run the regression suite (same checks as CI):
+
+```bash
+python tests/test_hard_gates.py
+```
 
 ## Project structure
 
@@ -32,6 +38,7 @@ skills/                 # product skills (installable)
   skill-self-check/     # stable self-check skill
 exp/                    # experiments — NOT installed by default
   pm-workflow-planning/ # future PM / workflow productization hook
+tests/                  # stdlib regression tests for hard_gates.py
 docs/                   # architecture, installation, audience, design
 install.ps1 / install.sh
 plugin.json
@@ -42,6 +49,7 @@ plugin.json
 - **Stable product** lives under `skills/`. Keep `SKILL.md` short; put long checklists in sibling files.
 - **Experiments** live under `exp/`. Do not promote an experiment into `skills/` without a ship-floor self-check pass and a CHANGELOG note.
 - **Hard gates and scores are script-owned.** Change scoring only in `scripts/hard_gates.py` with a fixture update; do not ask the model to invent numbers.
+- Scoring changes must keep `tests/test_hard_gates.py` green and refresh the numbers in `examples/smoke-report-before.md`.
 - Update `CHANGELOG.md` under `[Unreleased]` for user-visible behavior or docs changes.
 - Never commit secrets, client PII, store tokens, or filled export CSVs.
 

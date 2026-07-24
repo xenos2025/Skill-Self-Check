@@ -71,6 +71,7 @@ py -3 skills/skill-self-check/scripts/hard_gates.py skills/skill-self-check/exam
 | `skills/` | 正式产品（安装器会拷贝） |
 | `exp/` | 试验区：客户访谈 → 流程 → 再写说明书（默认不安装） |
 | `assets/diagrams/` | 上图；`zh/` 为中文 |
+| `tests/` | 回归测试（中文技能、非 UTF-8 文件都覆盖） |
 | `docs/` | 安装与设计说明 |
 
 更多：[docs/INSTALLATION.md](docs/INSTALLATION.md) · [docs/AUDIENCE.md](docs/AUDIENCE.md) · [exp/README.md](exp/README.md)
@@ -137,10 +138,13 @@ In Cursor, invoke **skill-self-check** and pass a skill path. Report-only by def
 ```text
 skills/skill-self-check/   # installable product
 exp/                       # PM interview → workflow experiments (not installed)
+tests/                     # regression suite mirrored by CI
 assets/diagrams/           # EN SVGs · zh/ for Chinese
 branding/generate_diagrams.py
 docs/
 ```
+
+Chinese and English skills score identically: `用于` / `适用` / `当用户` count as WHEN triggers, and `何时不用` / `检查轴` / `验收` are recognised headings. A non-UTF-8 `SKILL.md` is scored and flagged (`1.11`) rather than crashing the run.
 
 ## Docs
 

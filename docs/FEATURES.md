@@ -8,6 +8,9 @@
 | Checklist (Matt/Addy/Cursor fusion) | Loaded with skill | Guidance for Pass 2–4 | No |
 | PDCA + SMART audit (Pass 5) | Target SKILL.md | Matrix + findings | No |
 | Bad fixture smoke | Bundled example | Known Criticals | No |
+| Bilingual gates | EN or 中文 `SKILL.md` | Same scores either language | No |
+| Encoding tolerance | Non-UTF-8 file | Scores + finding `1.11` (no crash) | No |
+| Regression suite + CI | `tests/test_hard_gates.py` | Pass/fail per scoring rule | No |
 | Installers | This repo | Copy into Cursor skills dir | N/A |
 | `exp/` PM hook | Manual | Drafts only | N/A |
 
