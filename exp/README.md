@@ -34,7 +34,7 @@ Interview method: [pm-workflow-planning/INTERVIEW.md](pm-workflow-planning/INTER
 
 | Folder | Status | Intent |
 | --- | --- | --- |
-| [pm-workflow-planning/](pm-workflow-planning/) | stub | 5W2H interview → workflow → skill proposal |
+| [pm-workflow-planning/](pm-workflow-planning/) | working experiment | one-question interview → evidence-backed workflow → skill proposal; includes customer background investigation example |
 
 ## Scope of `exp/`
 

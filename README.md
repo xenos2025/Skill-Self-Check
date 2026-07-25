@@ -81,6 +81,11 @@ https://github.com/xenos2025/Skill-Self-Check
 做什么 / 为什么 / 谁 / 何时 / 在哪 / 怎么做 / 多少——**一次只问一句**，口号式回答要追问。  
 访谈稿：[exp/pm-workflow-planning/INTERVIEW.md](exp/pm-workflow-planning/INTERVIEW.md)
 
+流程梳理实验区会先判断是否需要业务数据模块；不明确时问用户一次并给出建议。
+需要重复分级、取证或复盘时，可按情况启用 `L1–L3` 业务价值、`S1–S3`
+来源等级、`V0–V3` 验证强度和运行记录。合理的 `N/A` 不影响通用自检。详见
+[operational-data-contract.md](exp/pm-workflow-planning/references/operational-data-contract.md)。
+
 ## 三分钟上手
 
 ```powershell
@@ -171,6 +176,12 @@ Write → run gates → report; if it fails, fix and run again.
 ### 5W2H interviews
 
 ![5W2H](assets/diagrams/04-5w2h.svg)
+
+The workflow-planning experiment first judges whether business-data modules are
+useful and asks once with a recommendation when unclear. It can selectively
+enable `L1–L3` value, `S1–S3` source fitness, `V0–V3` verification, and run
+records. A justified N/A does not lower the general self-check score. See
+[operational-data-contract.md](exp/pm-workflow-planning/references/operational-data-contract.md).
 
 ## Quick start
 

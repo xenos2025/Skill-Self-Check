@@ -7,6 +7,20 @@ Status: **experiment**. Use in a private workspace. Do not paste customer PII in
 Interview with **5W2H**. Ask **one question at a time**. Do not invent answers.
 If the client is vague, ask a follow-up until the cell is **clear enough to design a workflow step**.
 
+For every decision question, include:
+
+1. the Agent's recommended answer based on confirmed context;
+2. why that answer is recommended;
+3. the main alternative or condition that would change it.
+
+Wait for the client to confirm or correct the recommendation. If a fact can be
+verified from the filesystem, connected tools, or permitted public sources,
+look it up instead of asking. Business goals, risk tolerance, ownership, and
+approval remain client decisions.
+
+Do not start executing the workflow or drafting a Skill until the client
+confirms the read-back summary.
+
 **Done when (interview):** every 5W2H cell for the target process has a concrete answer, or an explicit `unknown — blocker` with who will supply it by when.
 
 ## 5W2H map
@@ -91,10 +105,13 @@ Next three actions:
 | Temptation | Do instead |
 | --- | --- |
 | Ask five questions in one message | One question; wait |
+| Ask a blank question with no point of view | Give a recommended answer and the main alternative |
 | Fill empty cells from "industry common sense" | Leave `unknown — blocker` |
+| Ask the client for a fact available in connected tools | Look it up and show the evidence |
 | Jump to skill names mid-interview | Finish 5W2H table first |
 | Accept slogan answers | Paraphrase + ask for artifact / number / system |
 | Mix three processes in one table | New table per process |
+| Start execution after the last question | Read back the workflow and wait for explicit confirmation |
 
 ## Handoff to proposal
 

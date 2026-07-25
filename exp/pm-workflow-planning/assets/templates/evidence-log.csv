@@ -1,0 +1,1 @@
+run_id,evidence_id,claim_id,metric_id,source_id,query_or_url,source_grade,verification_level,verification_method,evidence_type,evidence_path,observed_value,unit,expected_rule,result,captured_at,verifier,confidence,limitation

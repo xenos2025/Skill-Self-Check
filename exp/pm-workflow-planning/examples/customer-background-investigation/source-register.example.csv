@@ -1,0 +1,6 @@
+source_id,source_name,source_type,claim_scope,source_grade,access_method,access_status,last_tested_at,requires_login,allowed_use,fallback_source_id,owner,notes
+src-google,Google Search,search_discovery,source_discovery,S1,browser,not_tested,,false,public_business_research,src-alt-search,sales_ops,Search results are leads only
+src-official-site,Claimed official website,first_party_web,products_and_capabilities,S2,browser_and_screenshot,not_tested,,false,public_business_research,,sales_ops,Website is not authoritative for legal identity
+src-linkedin,LinkedIn public page,social_company_page,company_presence_and_public_roles,S2,authorized_browser,not_tested,,true,public_pages_only,,sales_ops,Stop at login or access challenge
+src-registry,Jurisdiction public registry,official_registry,legal_identity,S3,browser_or_export,not_tested,,varies,permitted_public_records,,sales_ops,Registry depends on jurisdiction
+src-erp,Internal ERP,internal_system_of_record,margin_and_order_history,S3,authorized_export,not_tested,,true,approved_internal_use,,sales_manager,Credentials stay outside logs

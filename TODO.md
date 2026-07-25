@@ -22,8 +22,10 @@ Open an issue with the `roadmap` label to propose items.
 Reserved for a future **PM / ops workflow planner** that helps foreign trade,
 factory, and ecommerce teams:
 
-- [ ] Interview → workflow map → skill gap proposal (draft under `exp/pm-workflow-planning/`)
-- [ ] Industry packs (B2B inquiry, DTC Shopify, factory OEM) as experiment folders
+- [x] Interview → workflow map → skill gap proposal (draft under `exp/pm-workflow-planning/`)
+- [x] Conditional operational data contract: judge/ask before selecting L value, S source, V verification, and R record modules
+- [x] First industry example: B2B customer background investigation with browser evidence gates
+- [ ] Additional industry packs (DTC Shopify, factory OEM) as experiment folders
 - [ ] Promote only after self-check ship floor + real-client pilot notes
 
 ## Later

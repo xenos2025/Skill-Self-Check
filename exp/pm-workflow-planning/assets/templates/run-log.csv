@@ -1,0 +1,1 @@
+run_id,started_at,completed_at,skill_name,skill_version,score_rule_version,subject_id,subject_name,primary_metric_id,score_value,score_unit,final_level,overall_verification_level,decision,status,human_owner,human_override,override_reason,next_action,next_review_at,record_schema_version

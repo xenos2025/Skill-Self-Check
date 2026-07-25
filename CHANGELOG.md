@@ -28,6 +28,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Fix-loop SVG (`06-fix-loop.svg` + `zh/`): write → check → report →
   fix & retry or ready to use; wired into README for beginners
+- Experimental `pm-workflow-planning` skill for turning tacit business
+  experience into a reviewable workflow through one-question-at-a-time,
+  recommendation-led interviews
+- Conditional L/S/V/R operating modules for measurable decisions, source
+  provenance, evidence strength, and repeatable run records; non-applicable
+  modules are recorded as `N/A` instead of becoming universal self-check gates
+- Browser evidence contract for Google discovery, public LinkedIn access, and
+  screenshot-backed official-site claims with explicit blocked/unverified states
+- Customer background investigation example with workflow/proposal artifacts
+  plus linked `score-rules`, `source-register`, `evidence-log`, and `run-log`
+  CSV templates
 
 ### Fixed
 

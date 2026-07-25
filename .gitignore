@@ -54,3 +54,4 @@ credentials.json
 exp/**/private/
 exp/**/*.csv
 !exp/**/*.example.csv
+!exp/**/assets/templates/*.csv
