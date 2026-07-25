@@ -84,6 +84,12 @@ class ProductSkillTests(unittest.TestCase):
         self.assertEqual(report["scores"]["basic_usable"]["score"], 5)
         self.assertEqual(report["scores"]["contract_clarity"]["score"], 5)
         self.assertEqual(report["counts"]["critical"], 0)
+        kit = report["scores"]["support_kit"]
+        self.assertTrue(kit["kit_complete"])
+        self.assertEqual(kit["modules"]["references"]["status"], "pass")
+        self.assertEqual(kit["modules"]["examples"]["status"], "pass")
+        self.assertEqual(kit["modules"]["scripts"]["status"], "pass")
+        self.assertEqual(kit["modules"]["memory"]["status"], "na")
 
     def test_bad_fixture_fails_ship_floor(self) -> None:
         code, report = run_script(BAD_FIXTURE)
@@ -128,6 +134,52 @@ class ChineseSkillTests(unittest.TestCase):
             skill = write_skill(Path(tmp), "zh-skill", ZH_SKILL)
             _, report = run_script(skill, env=env)
         self.assertIn("检查中文技能", report["frontmatter"]["description"])
+
+
+class SupportKitTests(unittest.TestCase):
+    def test_workflow_without_kit_gets_should_fix_not_critical(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = write_skill(Path(tmp), "bare-flow", ZH_SKILL)
+            code, report = run_script(skill)
+        ids = [f["id"] for f in report["findings"]]
+        self.assertIn("6.1", ids)
+        self.assertIn("6.2", ids)
+        self.assertEqual(code, 0, "support_kit must not block ship floor")
+        self.assertFalse(report["scores"]["support_kit"]["kit_complete"])
+
+    def test_explicit_na_clears_support_kit(self) -> None:
+        body = ZH_SKILL + """
+
+## 配套模块
+
+| 模块 | 状态 | 说明 |
+| --- | --- | --- |
+| 资料 | N/A | 全文自包含 |
+| 案例 | N/A | 无样例需求 |
+"""
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = write_skill(Path(tmp), "na-kit", body)
+            code, report = run_script(skill)
+        kit = report["scores"]["support_kit"]
+        self.assertEqual(kit["modules"]["references"]["status"], "na")
+        self.assertEqual(kit["modules"]["examples"]["status"], "na")
+        self.assertTrue(kit["kit_complete"])
+        self.assertEqual(code, 0)
+        ids = [f["id"] for f in report["findings"]]
+        self.assertNotIn("6.1", ids)
+        self.assertNotIn("6.2", ids)
+
+    def test_memory_signal_requires_schema(self) -> None:
+        body = ZH_SKILL.replace(
+            "## 常见借口",
+            "冷却期状态要跨次保留，禁止重复触达。\n\n## 常见借口",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = write_skill(Path(tmp), "mem-thin", body)
+            _, report = run_script(skill)
+        ids = [f["id"] for f in report["findings"]]
+        self.assertIn("6.3", ids)
+        self.assertEqual(report["scores"]["support_kit"]["modules"]["memory"]["status"], "fail")
 
 
 if __name__ == "__main__":

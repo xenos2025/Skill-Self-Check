@@ -56,6 +56,42 @@ NEGATION_RE = re.compile(r"(?i)\b(don't|do not|never|avoid)\b")
 NUMBERED_STEP_RE = re.compile(r"(?m)^\s*\d+\.\s+\S")
 CHECKBOX_RE = re.compile(r"(?m)^\s*[-*]\s*\[[ xX]\]\s+")
 HEADING_RE = re.compile(r"(?m)^(#{1,6})\s+(.+?)\s*$")
+# Explicit N/A for support-kit modules (table row or "资料: N/A").
+SUPPORT_NA_RES = {
+    "references": re.compile(
+        r"(?im)(?:^\s*\|\s*)?(资料|references?)\s*(?:\||[:：=])\s*"
+        r"(N/?A|不适用|不需要|无|跳过)"
+    ),
+    "examples": re.compile(
+        r"(?im)(?:^\s*\|\s*)?(案例|examples?|示例|样例)\s*(?:\||[:：=])\s*"
+        r"(N/?A|不适用|不需要|无|跳过)"
+    ),
+    "memory": re.compile(
+        r"(?im)(?:^\s*\|\s*)?(落地记忆|业务记忆|memory(?:\s*contract)?|状态落盘|"
+        r"run.?log)\s*(?:\||[:：=])\s*(N/?A|不适用|不需要|无|跳过)"
+    ),
+    "scripts": re.compile(
+        r"(?im)(?:^\s*\|\s*)?(脚本|scripts?|自动化脚本)\s*(?:\||[:：=])\s*"
+        r"(N/?A|不适用|不需要|无|跳过)"
+    ),
+}
+MEMORY_SIGNAL_RE = re.compile(
+    r"(?i)(发送记录|回写|冷却期|落表|查重源|MEMORY\.md|run-log|evidence-log|"
+    r"score-rules|source-register|持久化|状态库|\.db\b|写入.{0,12}(json|csv|记录)|"
+    r"sent_at|跨次|下次启动)"
+)
+MEMORY_SCHEMA_RE = re.compile(
+    r"(?i)(sent_at|字段|结构|schema|ISO.?8601|status\s*=|\"[a-z_]+\"\s*:|"
+    r"必填|回写.{0,8}(json|记录)|落表)"
+)
+SCRIPT_CLAIM_RE = re.compile(
+    r"(?i)(scripts/|自动化脚本|脚本目录|脚本索引|调用脚本|"
+    r"\.py\b|\.ps1\b|\.sh\b|automation|codeact|calendar script|"
+    r"python\s+\S+\.py)"
+)
+EXAMPLE_HEADING_RE = re.compile(
+    r"(?im)^(#{1,6})\s+.*(example|examples|案例|示例|样例|worked example)\s*$"
+)
 
 
 def read_skill_text(path: Path) -> tuple[str, str | None]:
@@ -131,6 +167,184 @@ def has_heading_containing(headings: dict[str, str], *needles: str) -> bool:
         if any(n == h or n in h for n in needles):
             return True
     return False
+
+
+def _dir_has_files(path: Path, suffixes: set[str] | None = None) -> bool:
+    if not path.is_dir():
+        return False
+    for f in path.rglob("*"):
+        if not f.is_file():
+            continue
+        if f.name.startswith("."):
+            continue
+        if suffixes is None or f.suffix.lower() in suffixes:
+            return True
+    return False
+
+
+def _example_section_present(body: str) -> bool:
+    for m in EXAMPLE_HEADING_RE.finditer(body):
+        rest = body[m.end() : m.end() + 400]
+        # Next heading cuts the section; require a bit of substance.
+        next_h = HEADING_RE.search(rest)
+        chunk = rest[: next_h.start()] if next_h else rest
+        if len(re.sub(r"\s+", "", chunk)) >= 40:
+            return True
+    return False
+
+
+def assess_support_kit(
+    skill_dir: Path, body: str, has_steps: bool
+) -> tuple[dict, list[dict]]:
+    """Score references / examples / memory / scripts. N/A does not dock.
+
+    Ship floor is unaffected — failures are should_fix only.
+    """
+    findings: list[dict] = []
+    modules: dict[str, dict] = {}
+
+    def mark(key: str, status: str, reason: str) -> None:
+        modules[key] = {"status": status, "reason": reason}
+
+    na = {k: bool(rx.search(body)) for k, rx in SUPPORT_NA_RES.items()}
+
+    # --- references (资料) ---
+    refs_dir = skill_dir / "references"
+    refs_present = _dir_has_files(refs_dir)
+    refs_linked = bool(re.search(r"(?i)references/", body))
+    if na["references"]:
+        mark("references", "na", "explicit N/A in SKILL.md")
+    elif refs_present:
+        mark(
+            "references",
+            "pass",
+            "references/ present"
+            + (" and linked" if refs_linked else " (link from SKILL.md recommended)"),
+        )
+        if not refs_linked:
+            findings.append(
+                {
+                    "id": "6.1b",
+                    "severity": "nice",
+                    "message": "references/ exists but SKILL.md does not link to it",
+                    "evidence": "",
+                    "source": "script",
+                }
+            )
+    elif has_steps or refs_linked:
+        mark("references", "fail", "workflow skill needs references/ (or mark 资料 N/A)")
+        findings.append(
+            {
+                "id": "6.1",
+                "severity": "should_fix",
+                "message": "Missing references/ materials pack (资料); add files or mark 资料 N/A",
+                "evidence": "",
+                "source": "script",
+            }
+        )
+    else:
+        mark("references", "na", "short/non-workflow skill; no references/ required")
+
+    # --- examples (案例) ---
+    examples_dir = skill_dir / "examples"
+    examples_present = _dir_has_files(examples_dir) or _example_section_present(body)
+    if na["examples"]:
+        mark("examples", "na", "explicit N/A in SKILL.md")
+    elif examples_present:
+        mark("examples", "pass", "examples/ or in-body example section present")
+    elif has_steps:
+        mark("examples", "fail", "workflow skill needs examples/ or ## 案例 (or mark 案例 N/A)")
+        findings.append(
+            {
+                "id": "6.2",
+                "severity": "should_fix",
+                "message": "Missing examples/ case pack (案例); add a fixture/example or mark 案例 N/A",
+                "evidence": "",
+                "source": "script",
+            }
+        )
+    else:
+        mark("examples", "na", "non-workflow skill; no examples/ required")
+
+    # --- memory (落地记忆) ---
+    memory_claimed = bool(MEMORY_SIGNAL_RE.search(body))
+    memory_schema = bool(MEMORY_SCHEMA_RE.search(body))
+    if na["memory"]:
+        mark("memory", "na", "explicit N/A in SKILL.md")
+    elif memory_claimed and memory_schema:
+        mark("memory", "pass", "persistent state path/fields described")
+    elif memory_claimed:
+        mark("memory", "fail", "mentions logs/state but no field/path contract")
+        findings.append(
+            {
+                "id": "6.3",
+                "severity": "should_fix",
+                "message": "落地记忆 claimed without path/fields (e.g. sent_at, JSON shape); "
+                "document the record schema or mark 落地记忆 N/A",
+                "evidence": "",
+                "source": "script",
+            }
+        )
+    else:
+        mark("memory", "na", "no cross-run state/log signals detected")
+
+    # --- scripts ---
+    scripts_dir = skill_dir / "scripts"
+    script_files = []
+    if scripts_dir.is_dir():
+        script_files = [
+            p
+            for p in scripts_dir.rglob("*")
+            if p.is_file() and p.suffix.lower() in {".py", ".sh", ".ps1", ".js", ".ts"}
+        ]
+    scripts_on_disk = bool(script_files)
+    scripts_claimed = bool(SCRIPT_CLAIM_RE.search(body)) or scripts_on_disk
+    scripts_documented = False
+    if script_files:
+        names = {p.name for p in script_files}
+        scripts_documented = any(name in body for name in names) or bool(
+            re.search(r"(?i)scripts/\S+", body)
+        )
+    if na["scripts"]:
+        mark("scripts", "na", "explicit N/A in SKILL.md")
+    elif scripts_on_disk and scripts_documented:
+        mark("scripts", "pass", "scripts/ present and named in SKILL.md")
+    elif scripts_on_disk and not scripts_documented:
+        mark("scripts", "fail", "scripts/ exists but SKILL.md does not document when to run")
+        findings.append(
+            {
+                "id": "6.4",
+                "severity": "should_fix",
+                "message": "scripts/ present but not documented in SKILL.md (when to run / output)",
+                "evidence": ", ".join(sorted(p.name for p in script_files)[:6]),
+                "source": "script",
+            }
+        )
+    elif scripts_claimed and not scripts_on_disk:
+        mark("scripts", "fail", "body claims scripts/automation but scripts/ missing")
+        findings.append(
+            {
+                "id": "6.4b",
+                "severity": "should_fix",
+                "message": "Skill claims scripts/automation but has no scripts/ directory",
+                "evidence": "",
+                "source": "script",
+            }
+        )
+    else:
+        mark("scripts", "na", "no script/automation claim detected")
+
+    applicable = [k for k, v in modules.items() if v["status"] != "na"]
+    passed = [k for k in applicable if modules[k]["status"] == "pass"]
+    score = len(passed)
+    max_score = len(applicable)
+    kit = {
+        "score": score,
+        "max": max_score,
+        "modules": modules,
+        "kit_complete": score == max_score,
+    }
+    return kit, findings
 
 
 def detect_check_axes(body: str) -> tuple[bool, list[str]]:
@@ -238,7 +452,21 @@ def check_skill(skill_dir: Path) -> dict:
 
     if not skill_md.is_file():
         fail("1.1", "critical", "Missing SKILL.md in skill directory")
-        return finalize(skill_dir, None, "", findings, points, contract, 0)
+        return finalize(
+            skill_dir,
+            None,
+            "",
+            findings,
+            points,
+            contract,
+            0,
+            support_kit={
+                "score": 0,
+                "max": 0,
+                "modules": {},
+                "kit_complete": False,
+            },
+        )
 
     text, fallback_encoding = read_skill_text(skill_md)
     fm, body, has_fm = parse_frontmatter(text)
@@ -479,10 +707,24 @@ def check_skill(skill_dir: Path) -> dict:
             f"High negation density ({neg_count} don't/never/avoid hits); prefer positive targets",
         )
 
+    support_kit, kit_findings = assess_support_kit(skill_dir, body, has_steps)
+    findings.extend(kit_findings)
+
     basic = sum(1 for v in points.values() if v)
     contract_score = sum(1 for v in contract.values() if v)
     return finalize(
-        skill_dir, fm, body, findings, points, contract, line_count, axes, basic, contract_score, disable_model
+        skill_dir,
+        fm,
+        body,
+        findings,
+        points,
+        contract,
+        line_count,
+        axes,
+        basic,
+        contract_score,
+        disable_model,
+        support_kit,
     )
 
 
@@ -498,11 +740,19 @@ def finalize(
     basic: int | None = None,
     contract_score: int | None = None,
     disable_model: bool = False,
+    support_kit: dict | None = None,
 ) -> dict:
     if basic is None:
         basic = sum(1 for v in points.values() if v)
     if contract_score is None:
         contract_score = sum(1 for v in contract.values() if v)
+    if support_kit is None:
+        support_kit = {
+            "score": 0,
+            "max": 0,
+            "modules": {},
+            "kit_complete": False,
+        }
     critical = [f for f in findings if f["severity"] == "critical"]
     should = [f for f in findings if f["severity"] == "should_fix"]
     nice = [f for f in findings if f["severity"] == "nice"]
@@ -521,6 +771,7 @@ def finalize(
                 "points": contract,
                 "detected_axes": axes or [],
             },
+            "support_kit": support_kit,
             "ship_floor_met": ship_floor,
         },
         "counts": {
@@ -559,6 +810,12 @@ def main() -> int:
                     "scores": {
                         "basic_usable": {"score": 0, "max": 5},
                         "contract_clarity": {"score": 0, "max": 5},
+                        "support_kit": {
+                            "score": 0,
+                            "max": 0,
+                            "modules": {},
+                            "kit_complete": False,
+                        },
                         "ship_floor_met": False,
                     },
                 }
@@ -572,9 +829,18 @@ def main() -> int:
     dump = json.dumps(report, ensure_ascii=False, indent=2 if args.pretty else None)
     print(dump)
     scores = report["scores"]
+    kit = scores.get("support_kit") or {}
+    kit_max = kit.get("max", 0)
+    kit_score = kit.get("score", 0)
+    kit_txt = (
+        f"support_kit {kit_score}/{kit_max}"
+        if kit_max
+        else "support_kit n/a"
+    )
     print(
         f"hard_gates: basic_usable {scores['basic_usable']['score']}/5 · "
         f"contract_clarity {scores['contract_clarity']['score']}/5 · "
+        f"{kit_txt} · "
         f"ship_floor={'yes' if scores['ship_floor_met'] else 'no'} · "
         f"critical={report['counts']['critical']}",
         file=sys.stderr,

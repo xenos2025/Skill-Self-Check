@@ -8,6 +8,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `skill-ship-safety` skill: behavioral "safe to actually send" audit that
+  complements the static self-check. `scripts/ship_safety.py` (stdlib-only)
+  inventories documented commands, flags promises without implementation
+  (`CMD.*`), scans send-capable scripts for dry-run guards (`EXT.*`), and
+  emits a ship / stop-ship verdict; optional `--exec` probes run in a
+  sandboxed copy of the target so nothing touches real files. Gate-bypass
+  sandbox tests and compliance wording stay model-owned
+  (`references/gate-bypass.md`). Fixture `examples/fixtures/promise-gap`
+  plus `tests/test_ship_safety.py` wired into CI.
+
 - Open-source packaging: LICENSE (MIT), NOTICE, CONTRIBUTING, CODE_OF_CONDUCT,
   SECURITY, SUPPORT, PRIVACY, AGENTS, plugin.json, installers, GitHub templates
 - Repository layout: `skills/` product root + `exp/` experiment hook for future
@@ -18,7 +28,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Client interview 5W2H guide under `exp/pm-workflow-planning/INTERVIEW.md`
   (one question at a time; required source table on skill proposals)
 - Boss-friendly SVG diagrams (`assets/diagrams/` + `zh/`) via
-  `branding/generate_diagrams.py`: how-to-use, PDCA, SMART, 5W2H, two lights;
+  `branding/generate_diagrams.py`: how-to-use, PDCA, SMART, 5W2H, three lights;
   README leads with Chinese visuals
 - Bilingual hard gates: Chinese WHEN triggers, WHAT verbs and headings
   (`何时使用`, `何时不用` / `不适用`, `检查轴`, `验收`, `常见借口`) now score
@@ -39,6 +49,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Customer background investigation example with workflow/proposal artifacts
   plus linked `score-rules`, `source-register`, `evidence-log`, and `run-log`
   CSV templates
+- Gap-question loop inside `skill-self-check`: `references/gap-questions.md`
+  maps decision-owned findings (`1.7` `3.2` `3.3` `3.5` `5.3` `5.4`) to one
+  plain-Chinese question each, a paste-ready section, and a `unknown — 待用户确认`
+  fallback; report gains a 「还需你确认」 section and a 「帮我补」 exit
+- `support_kit` score in `hard_gates.py`: detects references/, examples/,
+  cross-run memory contracts, and scripts/; findings `6.1`–`6.4`; explicit
+  `资料/案例/落地记忆/脚本: N/A` clears the module without docking
+
+### Changed
+
+- Pass 3 now splits gaps: wording/structure are rewritten by the model, while
+  triggers, exclusions, acceptance evidence and escalation are asked (one
+  question at a time, max three per round) instead of invented
+- Report template’s closing sections are Chinese, matching the rest of the report
+- Boss-facing scores are now **three lights**: green `basic_usable`, amber
+  `contract_clarity`, blue `support_kit` (资料/案例/落地记忆/脚本; N/A allowed;
+  does not block ship floor). Diagram `05-three-lights.svg` replaces two-lights.
 
 ### Fixed
 

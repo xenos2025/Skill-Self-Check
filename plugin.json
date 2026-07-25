@@ -8,7 +8,8 @@
   "entry": "skills/skill-self-check/SKILL.md",
   "skillsDir": "skills",
   "skills": [
-    "skill-self-check"
+    "skill-self-check",
+    "skill-ship-safety"
   ],
   "experimentsDir": "exp",
   "requirements": {

@@ -16,6 +16,7 @@ Open an issue with the `roadmap` label to propose items.
 - [ ] Optional script hints for PDCA section headings (Plan/Do/Check/Act aliases)
 - [ ] `npx skills add` / marketplace install notes once the public repo URL is set
 - [x] Boss-friendly SVGs under `assets/diagrams/` (+ `zh/`)
+- [x] Third light `support_kit` (资料/案例/落地记忆/脚本; N/A; not ship floor)
 
 ## Productization hook (`exp/`)
 
@@ -30,6 +31,8 @@ factory, and ecommerce teams:
 
 ## Later
 
+- [x] Ship-safety behavioral audit (`skills/skill-ship-safety`): promise
+      inventory, send-gate scan, sandboxed exec probes, ship/stop-ship verdict
 - [ ] Lightweight behavioral evals (trigger / non-trigger cases)
 - [x] CI job: regression tests + `hard_gates.py` on all `skills/*` + diagram reproducibility
 - [ ] Optional uninstall.ps1 / uninstall.sh for Cursor skills dir

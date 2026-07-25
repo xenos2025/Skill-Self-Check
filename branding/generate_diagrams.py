@@ -117,7 +117,7 @@ def how_to_use(zh: bool) -> str:
         steps = [
             ("第 1 步", "写好说明书", ["把做事步骤写清楚", "（也叫 Skill）"], False),
             ("第 2 步", "一键自检", ["电脑先打分", "再给修改意见"], True),
-            ("第 3 步", "看两盏灯", ["能不能上手用", "有没有说清楚查什么"], False),
+            ("第 3 步", "看三盏灯", ["能不能上手用", "说清了吗", "配套齐了吗"], False),
             ("第 4 步", "改完再用", ["先过门槛再真用", "边用边观察"], False),
             ("可选", "先访谈客户", ["把事情问清楚", "再决定写哪些说明书"], False),
         ]
@@ -128,7 +128,7 @@ def how_to_use(zh: bool) -> str:
         steps = [
             ("STEP 1", "Write the playbook", ["Clear steps for the AI", "(called a Skill)"], False),
             ("STEP 2", "Run self-check", ["Script scores first", "Then fix suggestions"], True),
-            ("STEP 3", "Read two lights", ["Usable now?", "Scope clear?"], False),
+            ("STEP 3", "Read three lights", ["Usable?", "Clear?", "Kit complete?"], False),
             ("STEP 4", "Fix, then use", ["Pass the floor first", "Learn while using"], False),
             ("OPTIONAL", "Interview first", ["Ask until clear", "Then decide which playbooks"], False),
         ]
@@ -349,7 +349,7 @@ def fix_loop(zh: bool) -> str:
         ]
         decision = ("过门槛了吗？", "看 ship floor / Critical")
         fix = ("按意见改", "先改 Critical，再说「按意见改」")
-        ship = ("可以真用了", "两盏灯都亮再推广")
+        ship = ("可以真用了", "绿灯过了再推广")
         bottom = [
             ("结构过关", "basic_usable ≥ 4", "绿灯"),
             ("说清楚查什么", "contract_clarity", "黄灯"),
@@ -517,33 +517,50 @@ def fix_loop(zh: bool) -> str:
     return svg_shell(w, h, "\n".join(parts), title, corner)
 
 
-def two_lights(zh: bool) -> str:
+def three_lights(zh: bool) -> str:
     if zh:
-        banner = "自检只看两盏灯 — 给老板的读法"
-        left = ("绿灯：能不能上手", ["结构过关", "可以先真用", "边用边改细节"], True)
-        right = ("黄灯：说清楚了吗", ["查什么写清楚了吗", "什么时候用 / 不用", "验收有没有证据"], False)
-        mid = "两盏都亮 → 放心推广\n绿灯亮、黄灯暗 → 能用但容易各做各的\n绿灯不亮 → 先改，别急着推广"
-        title = "skill-self-check.app -> docs -> two-lights.svg"
-        corner = "05 · 两盏灯"
+        banner = "自检看三盏灯 — 给老板的读法"
+        cards = [
+            (190, "BASIC", "绿灯：能不能上手", ["结构过关", "可以先真用"], True),
+            (550, "CONTRACT", "黄灯：说清楚了吗", ["何时用 / 不用", "检查轴 + 验收"], False),
+            (910, "KIT", "蓝灯：配套齐了吗", ["资料 / 案例", "落地记忆 / 脚本"], False),
+        ]
+        mid = (
+            "绿灯不亮 → 先改，别推广\n"
+            "绿灯亮、黄/蓝暗 → 能用，但容易各做各的或不好交接\n"
+            "三盏都亮 → 可以放心推广\n"
+            "蓝灯 N/A 不算缺（声明不适用即可）"
+        )
+        title = "skill-self-check.app -> docs -> three-lights.svg"
+        corner = "05 · 三盏灯"
     else:
-        banner = "Two lights for bosses — how to read a self-check"
-        left = ("Green: usable now?", ["Structure OK", "Safe to try in real work", "Polish while using"], True)
-        right = ("Amber: scope clear?", ["Named check axes", "When / when not", "Proof of done"], False)
-        mid = "Both on → ready to share\nGreen only → usable but drift risk\nGreen off → fix before rollout"
-        title = "skill-self-check.app -> docs -> two-lights.svg"
-        corner = "05 · two lights"
+        banner = "Three lights for bosses — how to read a self-check"
+        cards = [
+            (190, "BASIC", "Green: usable now?", ["Structure OK", "Safe to try"], True),
+            (550, "CONTRACT", "Amber: scope clear?", ["When / when not", "Axes + proof"], False),
+            (910, "KIT", "Blue: kit complete?", ["Refs / examples", "Memory / scripts"], False),
+        ]
+        mid = (
+            "Green off → fix before rollout\n"
+            "Green on, amber/blue dim → usable but drift/handoff risk\n"
+            "All three on → ready to share\n"
+            "Blue N/A does not dock (declare when not applicable)"
+        )
+        title = "skill-self-check.app -> docs -> three-lights.svg"
+        corner = "05 · three lights"
 
-    w, h = 1100, 380
+    w, h = 1100, 420
     parts = [
         f'<text x="{w/2}" y="36" text-anchor="middle" class="label-sub" font-size="15">{_esc(banner)}</text>',
-        card(280, 170, 320, 160, "BASIC", left[0], left[1], focal=left[2]),
-        card(820, 170, 320, 160, "CONTRACT", right[0], right[1], focal=right[2]),
-        arrow_h(440, 170, 660),
     ]
+    for cx, eyebrow, title_txt, lines, focal in cards:
+        parts.append(card(cx, 160, 300, 150, eyebrow, title_txt, lines, focal=focal))
+    parts.append(arrow_h(340, 160, 400))
+    parts.append(arrow_h(700, 160, 760))
     for i, line in enumerate(mid.split("\n")):
         parts.append(
-            f'<text x="{w/2}" y="{300 + i * 22}" text-anchor="middle" class="label-tiny" '
-            f'font-size="14">{_esc(line)}</text>'
+            f'<text x="{w/2}" y="{290 + i * 22}" text-anchor="middle" class="label-tiny" '
+            f'font-size="13">{_esc(line)}</text>'
         )
     return svg_shell(w, h, "\n".join(parts), title, corner)
 
@@ -554,7 +571,7 @@ def main() -> None:
         ("02-pdca.svg", pdca),
         ("03-smart.svg", smart),
         ("04-5w2h.svg", five_w2h),
-        ("05-two-lights.svg", two_lights),
+        ("05-three-lights.svg", three_lights),
         ("06-fix-loop.svg", fix_loop),
     ]
     for name, fn in pairs:

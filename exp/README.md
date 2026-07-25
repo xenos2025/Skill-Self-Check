@@ -22,6 +22,12 @@ Client interview (5W2H — ask until clear)
 
 Interview method: [pm-workflow-planning/INTERVIEW.md](pm-workflow-planning/INTERVIEW.md).
 
+**Not part of the self-check loop.** Filling gaps found by a self-check report
+happens inside `skill-self-check` itself
+([references/gap-questions.md](../skills/skill-self-check/references/gap-questions.md)).
+This folder is the separate, upstream bet: plan a business workflow *before* any
+skill exists.
+
 ## Rules
 
 1. Drafts and demos only — no customer PII, tokens, or production CSVs.

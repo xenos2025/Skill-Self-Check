@@ -13,17 +13,25 @@
 |------|------|------|
 | 基础可用 `basic_usable` | `2/5` | 只拿到「有 frontmatter」「正文有编号步骤」两分 |
 | 契约清晰 `contract_clarity` | `0/5` | When / When-NOT / 检查轴 / Verification / 反合理化 全缺 |
+| 配套齐备 `support_kit` | `0/2` | 工作流缺资料包与案例包（记忆/脚本 N/A） |
 | Ship floor | `no` | 4 个 Critical，且 `basic_usable < 4` |
 
-不能发布：`name` 非法且与目录不一致、description 第一人称且无触发词、全文没有任何出口证据。先修 4 个 Critical，再补 Verification 与完成标准。
+不能发布：`name` 非法且与目录不一致、description 第一人称且无触发词、全文没有任何出口证据。先修 4 个 Critical，再补 Verification、完成标准，以及蓝灯配套。
+
+| 模块 | 状态 | 说明 |
+|------|------|------|
+| 资料 references | fail | 无 `references/` |
+| 案例 examples | fail | 无 `examples/` / 案例节 |
+| 落地记忆 memory | na | 无跨次状态信号 |
+| 脚本 scripts | na | 无自动化声称 |
 
 | Severity | Count (script + model) |
 |----------|------:|
 | Critical | 4 |
-| Should fix | 10 |
+| Should fix | 12 |
 | Nice | 1 |
 
-脚本计数为 Critical 4 / Should fix 10 / Nice 0；下面的 N1 是模型追加的定性发现。
+脚本计数为 Critical 4 / Should fix 12 / Nice 0（含 `6.1`/`6.2`）；下面的 N1 是模型追加的定性发现。
 
 ---
 
@@ -101,6 +109,8 @@ description: >-
 | S8 | 4.4 时效性表述 | 「before 2024 people used different formats」会过期 → 删除或折叠进 Old patterns | script |
 | S9 | 2.6 无操作指令 | 「be careful」「think step by step」不改变默认行为 → 删掉换成可检查约束 | script |
 | S10 | 2.5 否定密度过高 | 3 处 “Don't …” 未给目标形状 → 「Summary 说明改动意图，body 解释原因」 | script |
+| S11 | 6.1 缺资料包 | 工作流无 `references/` → 加材料或标 `资料 N/A` | script |
+| S12 | 6.2 缺案例包 | 无 examples/案例 → 加 fixture 或标 `案例 N/A` | script |
 
 **S2 / S6 paste-ready:**
 
@@ -124,19 +134,32 @@ description: >-
 
 ---
 
-## Pass coverage notes
+## 还需你确认（只有你知道的空缺）
 
-| Pass | Result |
-|------|--------|
-| 0 Script | ran；exit 1，`ship_floor_met: false` |
-| 1 Hard gates | fail：4 Critical（1.3 / 1.4 / 1.6 / 1.7） |
-| 2 Predictability | S9 / S10（脚本命中）+ N1（模型） |
-| 3 Anatomy | S3–S7 |
-| 4 Prune | S8；`line_count` 23，无超长问题 |
+C4 / S4 / S6 里给的都是**建议稿**：触发场景、排除范围、验收凭据取决于你团队怎么做事，我不替你定。
+一次问一个，一轮最多三个。
+
+| # | 对应 finding | 要问你的一句话 | 我建议的答案（可直接改） | 状态 |
+|---|--------------|----------------|--------------------------|------|
+| Q1 | `3.3` 缺 何时不用 | 「什么情况下**不该**让它写 commit message？有没有必须你自己动手的？」 | 排除改写历史、解决冲突、代你执行 `git commit` | 待回答 |
+| Q2 | `3.5` 验收没有凭据 | 「它写完之后，你看什么就知道写对了？」 | Summary ≤72 字符且带 conventional type，且消息只展示不提交 | 待回答 |
+| Q3 | `1.7` / `3.2` 触发场景 | 「你平时会说哪句话让它上场？给我一两句原话。」 | 「帮我写个 commit」「看下暂存区改了啥」 | 待回答 |
+
+## 各 Pass 覆盖情况
+
+| Pass | 结果 |
+|------|------|
+| 0 脚本 | 已运行；exit 1，`ship_floor_met: false` |
+| 1 硬门禁 | fail：4 Critical（1.3 / 1.4 / 1.6 / 1.7） |
+| 2 可预测性 | S9 / S10（脚本命中）+ N1（模型） |
+| 3 结构解剖 | S3–S7 |
+| 4 修剪 | S8；`line_count` 23，无超长问题 |
 | 5 PDCA+SMART | 矩阵已填：Plan / Check / Act 全缺 |
+| 6 配套齐备 | S11 / S12；`support_kit 0/2` |
 
-## Next step
+## 下一步
 
 Ship floor 未达到：先修 4 个 Critical，再按 S1–S10 补契约，不要指望「先用起来再观察」。  
 Smoke 判据：`before-after.md` 列出的主题（弱 description、缺 verification、no-op、negation、缺完成标准）全部被命中。  
-说 **「按意见改」** 可对真实目标技能应用 Critical / Should fix。
+说 **「按意见改」** 可对真实目标技能应用 Critical / Should fix。  
+说 **「帮我补」** 我按 Q1–Q3 一次问一个，答完再写进文件。

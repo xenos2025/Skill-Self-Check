@@ -31,7 +31,7 @@ https://github.com/xenos2025/Skill-Self-Check
 3. 先出报告，不要直接改我的文件；等我说「按意见改」再改
 ```
 
-3. **看报告里的两盏灯**：绿灯不亮 → 先改 Critical；两盏都亮 → 可以真用、再慢慢打磨。  
+3. **看报告里的三盏灯**：绿灯不亮 → 先改 Critical；绿灯过了再看黄灯（契约）和蓝灯（资料/案例/记忆/脚本是否齐）。  
    看不懂分数时，把报告贴回同一个 AI，问：「用白话告诉我先改哪三条。」
 
 更细的本机安装见下面「三分钟上手」；只会点聊天、不会开终端的人，**只用上面三段话就够了**。
@@ -50,17 +50,19 @@ https://github.com/xenos2025/Skill-Self-Check
 
 ![改完再检](assets/diagrams/zh/06-fix-loop.svg)
 
-### 3. 两盏灯怎么读（给老板）
+### 3. 三盏灯怎么读（给老板）
 
-![两盏灯](assets/diagrams/zh/05-two-lights.svg)
+![三盏灯](assets/diagrams/zh/05-three-lights.svg)
 
 | 灯 | 白话 |
 | --- | --- |
-| 绿灯 `basic_usable` | 结构过关，可以先真用 |
-| 黄灯 `contract_clarity` | 查什么、何时用说清楚了吗 |
-| 两盏都亮 | 可以放心推广 |
-| 只有绿灯 | 能用，但容易各做各的 |
+| 绿灯 `basic_usable` | 结构过关，可以先真用（ship floor） |
+| 黄灯 `contract_clarity` | 查什么、何时用 / 不用、验收说清楚了吗 |
+| 蓝灯 `support_kit` | 资料 / 案例 / 落地记忆 / 脚本是否按需配齐 |
+| 三盏都亮 | 可以放心推广 |
+| 绿灯亮、黄或蓝暗 | 能用，但容易各做各的或不好交接 |
 | 绿灯不亮 | 先改，别急着推广 |
+| 蓝灯某项 N/A | 声明不适用即可，不扣分 |
 
 ### 4. PDCA：做事要闭环
 
@@ -147,7 +149,7 @@ Steps:
 3. Report only — do not edit my files until I say “apply fixes”
 ```
 
-3. **Read the two lights:** if the green light is off, fix Criticals first. If the report is hard to read, paste it back and ask for the three most important fixes in plain language.
+3. **Read the three lights:** if the green light is off, fix Criticals first. Then check amber (contract) and blue (refs / examples / memory / scripts). If the report is hard to read, paste it back and ask for the three most important fixes in plain language.
 
 ## Visual guide
 
@@ -161,9 +163,9 @@ Write → run gates → report; if it fails, fix and run again.
 
 ![Fix loop](assets/diagrams/06-fix-loop.svg)
 
-### Two lights (boss-friendly scores)
+### Three lights (boss-friendly scores)
 
-![Two lights](assets/diagrams/05-two-lights.svg)
+![Three lights](assets/diagrams/05-three-lights.svg)
 
 ### PDCA
 

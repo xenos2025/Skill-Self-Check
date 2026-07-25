@@ -32,6 +32,7 @@ This audit always reports on:
 - **Hard structure** — frontmatter, name, description shape (script)
 - **Basic usable score** — 0–5 ship floor (script)
 - **Contract clarity score** — 0–5 including named check axes / when-not / verification (script)
+- **Support kit score** — references / examples / memory / scripts; N/A allowed (script; does not block ship floor)
 - **Predictability** — completion criteria, no-op, negation, sprawl (model + script hints)
 - **Anatomy** — workflow quality, rationalizations (model + script hints)
 - **PDCA loop** — Plan / Do / Check / Act all explicit (model; see references)
@@ -60,8 +61,9 @@ On Windows, `py -3` is fine if `python` is missing.
 - Read **stdout JSON** as the source of truth for scores and script findings.
 - Stderr one-liner is for humans; parse scores from stdout JSON only.
 - Exit code 1 means ship floor not met — still continue the review.
+- `scores.support_kit` is the blue light: materials / examples / memory / scripts. `kit_complete=false` is Should fix, not Critical.
 
-**Completion criterion:** JSON parsed; `scores.basic_usable`, `scores.contract_clarity`, and `findings` available. Leave numeric scores exactly as the script emitted them.
+**Completion criterion:** JSON parsed; `scores.basic_usable`, `scores.contract_clarity`, `scores.support_kit`, and `findings` available. Leave numeric scores exactly as the script emitted them.
 
 ### Pass 1 — Hard gates (script-owned)
 
@@ -80,7 +82,12 @@ Use [CHECKLIST.md](CHECKLIST.md) Pass 2. Incorporate script hints (no-op / negat
 
 Use checklist Pass 3. If script already flagged missing Verification / When NOT / check axes, skip empty restatement — add paste-ready rewrites instead.
 
-**Completion criterion:** Contract gaps have concrete section text the user can paste.
+Split the gaps before writing rewrites:
+
+- **Wording, structure, length, terminology** — infer and write the rewrite yourself.
+- **Business decisions** (`1.7` triggers, `3.2` real scenarios, `3.3` exclusions, `3.5` acceptance evidence, `5.4` escalation) — only the user knows these. Ask instead of inventing; see [references/gap-questions.md](references/gap-questions.md).
+
+**Completion criterion:** Contract gaps have concrete section text the user can paste, and every decision-owned gap is either answered by the user or marked `unknown — 待用户确认`.
 
 ### Pass 4 — Prune (model)
 
@@ -113,10 +120,12 @@ Rules:
 - Each finding: **问题** → **为什么** → **建议改法** (paste-ready when helpful)
 - Label source: `script` vs `model` on each finding
 - Default: report only. Offer: "说「按意见改」我可以代改 Critical / Should fix"
+- If decision-owned gaps remain, also offer: "说「帮我补」我一次问你一个问题，把这些补齐" — follow [references/gap-questions.md](references/gap-questions.md): one question at a time, max three per round, recommended answer first
+- Answers become **待确认文本 in the report**. Write them into the target `SKILL.md` only under the same gate as 「按意见改」
 - If `ship_floor_met` is false: tell the user to fix Critical before relying on real-world observation to polish
 - If ship floor is true but PDCA **Check** or **Act** is missing: say so — usable ≠ closed-loop
 
-**Completion criterion (skill done):** Report includes script scores, PDCA×SMART matrix, all script Criticals with rewrites, Pass 2–5 coverage, and an offer to apply fixes (not applied).
+**Completion criterion (skill done):** Report includes script scores, PDCA×SMART matrix, all script Criticals with rewrites, Pass 2–5 coverage, and an offer to apply fixes or to interview for decision-owned gaps (neither applied yet).
 
 ## Verification
 
@@ -126,6 +135,7 @@ Rules:
 - [ ] User was advised whether ship floor is met
 - [ ] PDCA×SMART matrix filled (Plan/Do/Check/Act × S/M/A/R/T notes)
 - [ ] Every PDCA `missing` cell mapped to a finding or dated waiver
+- [ ] Decision-owned gaps were asked, not invented (or left as `unknown — 待用户确认`)
 
 ## Common Rationalizations
 
@@ -136,6 +146,8 @@ Rules:
 | "Ship floor failed but skill looks fine" | Floor is the rule for 'basic usable'. List Criticals first. |
 | "PDCA/SMART is enterprise fluff" | Here they are evidence mappings (When→Plan, Done when→Measurable, Verification→Check). Empty cells are defects. |
 | "Time-bound needs a calendar date" | For skills, T means run-bound exit (Verification / handoff), unless the domain is truly dated ops. |
+| "User didn't say when NOT to use it — I'll write a sensible default" | Exclusions, triggers and acceptance evidence are the user's business decisions. Ask one question; a plausible invention scores well and still runs wrong. |
+| "Asking is slower, I'll fill everything in" | Ask only decision-owned Critical / Should fix gaps, max three per round. The rest you still rewrite yourself. |
 
 ## Red Flags
 
@@ -144,6 +156,8 @@ Rules:
 - Skipping check-axes guidance when script severity is critical
 - Report without PDCA×SMART matrix
 - Calling a skill "done" with no Check (Verification) or Act (fix path)
+- Writing exclusions, triggers or acceptance evidence the user never stated
+- Interrogating the user with a long question list instead of three at a time
 
 ## Out of scope
 

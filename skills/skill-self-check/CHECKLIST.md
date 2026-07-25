@@ -13,6 +13,7 @@ Plain-language items for auditing a target skill. Optional Matt-style terms appe
 
 - `basic_usable` /5 — file+frontmatter, name match, description voice/triggers, actionable body, verification or Done-when
 - `contract_clarity` /5 — When to Use, When NOT, named check axes, verification checkboxes, rationalizations/red flags
+- `support_kit` n/applicable — references (资料), examples (案例), memory (落地记忆), scripts (脚本); explicit `N/A` / `不适用` does not dock; **does not** affect ship floor
 - `ship_floor_met` — `basic_usable >= 4` and zero script Critical
 
 **Severity**
@@ -99,6 +100,21 @@ Plain-language items for auditing a target skill. Optional Matt-style terms appe
 
 ---
 
+## Pass 6 — Support kit (script-owned; blue light)
+
+Four modules beyond `SKILL.md`. Workflow skills are expected to pack what they need; mark `资料/案例/落地记忆/脚本: N/A` when a module truly does not apply.
+
+| # | Check (plain) | Fail if | Sev |
+|---|----------------|---------|-----|
+| 6.1 | **资料** — `references/` present (link from SKILL.md recommended) | Workflow has steps but no materials pack and no N/A | Should fix |
+| 6.2 | **案例** — `examples/` or a substantive `## 案例` / Example section | Workflow with no worked example and no N/A | Should fix |
+| 6.3 | **落地记忆** — if the skill writes/reads cross-run state, path + fields are named | Mentions 回写/发送记录/冷却/落表 but no schema (`sent_at`, JSON shape, …) | Should fix |
+| 6.4 | **脚本** — `scripts/` present and named in SKILL.md when automation is claimed | `scripts/` undocumented, or body claims automation with no `scripts/` | Should fix |
+
+N/A markers recognised: table rows or `资料: N/A` / `案例: 不适用` style lines in `SKILL.md`.
+
+---
+
 ## Pass 5 — PDCA + SMART (model)
 
 Full mapping: [references/pdca-smart.md](references/pdca-smart.md).
@@ -133,6 +149,10 @@ If the skill interviews humans or gathers requirements (PM intake, client ops di
 | 5.12 | Capture table or equivalent before proposing solutions | Jumps to skill/build advice mid-interview | Should fix |
 
 Canonical guide for this pack's PM experiment: `exp/pm-workflow-planning/INTERVIEW.md`.
+
+5.10–5.12 score **the target skill** when it happens to be an interview skill.
+They are not the path for interviewing *your own user* about report gaps — that
+is [references/gap-questions.md](references/gap-questions.md).
 
 ---
 
