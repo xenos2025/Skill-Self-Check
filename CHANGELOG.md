@@ -8,6 +8,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- README scorecard gallery: personal Growth and project Detection screenshots
+  under `assets/scorecards/`, plus CN/EN copy explaining the two offline HTML
+  views and how to regenerate a suite demo.
 - Maintainer platform matrix in `docs/PLATFORM-COMPATIBILITY.md` and README:
   Cursor in active use, Codex as the next comparable second platform; Claude
   Code, WorkBuddy, and Coze listed as not tested yet (not a certification).

@@ -33,13 +33,14 @@ https://github.com/xenos2025/Skill-Self-Check
 
 3. **看普通用户版报告里的三盏灯**：绿灯不亮 → 先改“必须解决的问题”；绿灯过了再看黄灯（契约）和蓝灯（资料/案例/记忆/脚本是否齐）。
    看不懂分数时，把报告贴回同一个 AI，问：「用白话告诉我先改哪三条。」
+4. **有本机 Python 时**，优先跑一键审计，打开两份离线成绩单：个人看成长画像，项目看检测结果（示例图见下面「成绩单长什么样」）。
 
-更细的本机安装见下面「三分钟上手」；只会点聊天、不会开终端的人，**只用上面三段话就够了**。
+更细的本机安装见下面「三分钟上手」；只会点聊天、不会开终端的人，**只用上面 1–3 就够了**。
 
 如果公司很多事情还靠口头约定，先用 **agent-work-readiness** 把一个具体工作
-练到“目标、步骤、负责人、交接、标准和权限”说清楚，再写 Skill。写完后可用
-**skill-growth-scorecard** 生成一张像成长画像的离线 HTML；原来的三盏灯和
-技术证据仍完整保留。
+练到“目标、步骤、负责人、交接、标准和权限”说清楚，再写 Skill。写完后用
+**skill-growth-scorecard**（或一键审计）生成个人 / 项目两份离线 HTML 成绩单；
+原来的三盏灯和技术证据仍完整保留。
 
 ## 可视化上手（先看图）
 
@@ -103,10 +104,37 @@ py -3 skills/skill-self-check/scripts/run_full_audit.py C:\你的Skill目录 `
   --out-dir "$HOME\Documents\skill-audits\本次成绩单" --pretty
 ```
 
-上面一条审计命令会生成个人能力和项目两份离线 HTML，并证明审计前后目标没有
-变化；真实报告会被拒绝写入目标或源码仓库。也可以在 Cursor 里点名
-**skill-self-check**，给出待检说明书路径。默认只出报告；说「按意见改」再改文件。
-同一次检查会生成两种表达：普通用户版讲“能不能用、为什么、下一步”，技术版保留分数、问题编号和证据。
+上面一条审计命令会生成**个人能力成绩单**和**项目检测成绩单**两份离线 HTML，
+并证明审计前后目标没有变化；真实报告会被拒绝写入目标或源码仓库。也可以在
+Cursor 里点名 **skill-self-check**，给出待检说明书路径。默认只出报告；说
+「按意见改」再改文件。同一次检查还会生成两种文字报告：普通用户版讲
+“能不能用、为什么、下一步”，技术版保留分数、问题编号和证据。
+
+## 成绩单长什么样（示例截图）
+
+跑完一键审计后，用浏览器打开输出目录里的 HTML 即可。个人页默认看**成长画像**
+（类型、等级、下一练习）；项目页默认看**检测结果**（分数、风险、整改优先级）。
+下面是对本仓库四件套的脱敏示例（不含真实客户数据）：
+
+### 个人能力成绩单 · 成长画像
+
+![个人能力成绩单示例](assets/scorecards/personal-growth.png)
+
+看什么：你的 Skill 创作类型、六项证据轴、优势，以及下一步练习题。
+
+### 项目检测成绩单 · 检测结果
+
+![项目检测成绩单示例](assets/scorecards/project-detection.png)
+
+看什么：能不能进入受控试用、四个正式 Skill 的分数矩阵、静态安全与回归测试结论。
+
+两份成绩单共用同一组 JSON 事实；打印 / 存 PDF 按钮在页面右上角。生成方式见上面
+「三分钟上手」，或对整仓运行：
+
+```powershell
+py -3 skills/skill-growth-scorecard/scripts/suite_scorecards.py . `
+  --out-dir "$HOME\Documents\skill-audits\suite-demo" --pretty
+```
 
 ## 仓库里有什么（白话）
 
@@ -115,6 +143,7 @@ py -3 skills/skill-self-check/scripts/run_full_audit.py C:\你的Skill目录 `
 | `skills/` | 正式产品（安装器会拷贝） |
 | `exp/` | 试验区：客户访谈 → 流程 → 再写说明书（默认不安装） |
 | `assets/diagrams/` | 上图；`zh/` 为中文 |
+| `assets/scorecards/` | 成绩单示例截图（个人成长 / 项目检测） |
 | `tests/` | 回归测试（中文技能、非 UTF-8 文件都覆盖） |
 | `docs/` | 安装与设计说明 |
 
@@ -222,11 +251,38 @@ python skills/skill-self-check/scripts/run_full_audit.py \
   --out-dir "$HOME/Documents/skill-audits/current" --pretty
 ```
 
-The command creates separate personal and project offline HTML scorecards and
-records that the audit did not change the target. Real outputs are refused
-inside the target or its source repository. In Cursor, invoke
+The command creates separate **personal** and **project** offline HTML
+scorecards and records that the audit did not change the target. Real outputs
+are refused inside the target or its source repository. In Cursor, invoke
 **skill-self-check** and pass a skill path. Report-only by default; say “apply
 fixes” to edit.
+
+## What the scorecards look like
+
+After the one-command audit, open the HTML files in a browser. The personal
+card defaults to **Growth Profile**; the project card defaults to **Detection
+Results**. Screenshots below are a sanitized run of this repository’s four
+shipped Skills (no client data):
+
+### Personal capability · Growth Profile
+
+![Personal growth scorecard example](assets/scorecards/personal-growth.png)
+
+Shows Skill-building type, six evidence axes, strengths, and the next practice quest.
+
+### Project delivery · Detection Results
+
+![Project detection scorecard example](assets/scorecards/project-detection.png)
+
+Shows controlled-trial readiness, the four-Skill score matrix, static safety, and regression tests.
+
+Both views share one JSON fact set. Use Print / Save as PDF from the page header.
+Whole-suite generation:
+
+```bash
+python skills/skill-growth-scorecard/scripts/suite_scorecards.py . \
+  --out-dir "$HOME/Documents/skill-audits/suite-demo" --pretty
+```
 
 ## Layout
 
@@ -238,6 +294,7 @@ skills/skill-growth-scorecard/ # JSON facts → offline growth scorecard
 exp/                        # PM interview → workflow experiments (not installed)
 tests/                      # regression suite mirrored by CI
 assets/diagrams/            # EN SVGs · zh/ for Chinese
+assets/scorecards/          # README scorecard screenshots
 branding/generate_diagrams.py
 docs/
 ```
