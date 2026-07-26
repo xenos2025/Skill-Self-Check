@@ -90,6 +90,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `CONTRIBUTING.md` and `AGENTS.md` updated for the four-skill pack: full
+  unittest discover, scorecard private-output rules, script ownership map, and
+  platform-evidence pointers.
 - `skill-growth-scorecard` description and check axes tightened for clearer
   triggers and named review axes (business readiness, maturity, type, next
   quest, privacy, browser behavior).

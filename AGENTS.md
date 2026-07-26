@@ -9,26 +9,39 @@ Guidance for coding agents working **on this repository**.
 
 | Path | Role |
 | --- | --- |
-| `skills/` | Installable product skills |
+| `skills/` | Installable product skills (four shipped names in `plugin.json`) |
+| `skills/agent-work-readiness/` | Oral process → B0–B6 work package |
+| `skills/skill-self-check/` | Structure/contract audit + `run_full_audit.py` |
+| `skills/skill-ship-safety/` | Static external-action preflight |
+| `skills/skill-growth-scorecard/` | Offline personal/project scorecards |
 | `exp/` | Experiments — do not install by default; may be unstable |
-| `tests/` | Stdlib regression tests for `hard_gates.py` and `ship_safety.py` (mirrors CI) |
-| `docs/` | Human docs |
-| `install.ps1` / `install.sh` | Copy `skills/skill-self-check` into Cursor skills dirs |
+| `tests/` | Stdlib regression suite (mirrors CI intent) |
+| `assets/scorecards/` | README scorecard screenshots only (sanitized) |
+| `docs/` | Human docs including platform compatibility |
+| `install.ps1` / `install.sh` | Copy shipped skills into Cursor skills dirs |
 
 ## Rules
 
-1. Prefer editing `skills/skill-self-check/` for product behavior.
+1. Prefer editing the relevant skill under `skills/` for product behavior.
 2. Put speculative PM / industry workflow work under `exp/`, not `skills/`.
-3. Hard-gate scores come from `scripts/hard_gates.py` only — never invent scores in prose without running the script.
+3. Hard-gate, ship-safety, readiness, and growth scores come from their scripts
+   only — never invent scores in prose without running the script.
 4. Keep Python stdlib-only unless CONTRIBUTING is updated.
-5. Do not commit secrets or client PII.
-6. After scoring logic changes, run `tests/test_hard_gates.py`, run the bad-commit-helper fixture, note before/after in the PR, and refresh `examples/smoke-report-before.md`.
+5. Do not commit secrets, client PII, or real audit reports inside this repo.
+6. After scoring logic changes, run the matching tests (or
+   `python -m unittest discover tests -v`), note before/after in the PR, and
+   refresh smoke reports when hard-gate numbers move.
+7. Real scorecard `--out-dir` values must stay outside the audited Skill and
+   this source repository.
 
 ## Quick commands
 
 ```bash
-python tests/test_hard_gates.py
-python tests/test_ship_safety.py
+python -m unittest discover tests -v
 python skills/skill-self-check/scripts/hard_gates.py skills/skill-self-check --pretty
-python skills/skill-self-check/scripts/hard_gates.py skills/skill-self-check/examples/fixtures/bad-commit-helper --pretty
+python skills/skill-self-check/scripts/hard_gates.py \
+  skills/skill-self-check/examples/fixtures/bad-commit-helper --pretty
+python skills/skill-ship-safety/scripts/ship_safety.py skills/skill-self-check --pretty
+python skills/skill-self-check/scripts/run_full_audit.py skills/skill-self-check \
+  --out-dir "$HOME/Documents/skill-audits/agent-demo" --pretty
 ```

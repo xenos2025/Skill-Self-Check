@@ -5,8 +5,9 @@ Thanks for helping improve Skill Self-Check.
 ## Getting started
 
 1. Fork and clone `https://github.com/xenos2025/Skill-Self-Check.git`.
-2. Use **Python 3.10+** (stdlib only for `hard_gates.py`; no `pip install` for core paths).
-3. Install locally:
+2. Use **Python 3.10+**. Core scripts are **stdlib only** (no `pip install` for
+   product paths under `skills/`).
+3. Install the four shipped skills locally:
 
 ```powershell
 ./install.ps1 -Force
@@ -16,60 +17,120 @@ Thanks for helping improve Skill Self-Check.
 chmod +x install.sh && ./install.sh --force
 ```
 
-4. Smoke the script against the bundled fixture:
+4. Smoke the structure gates against the bundled bad fixture:
 
 ```bash
 python skills/skill-self-check/scripts/hard_gates.py \
   skills/skill-self-check/examples/fixtures/bad-commit-helper --pretty
 ```
 
-Expect `basic_usable 2/5`, `contract_clarity 0/5`, `ship_floor_met: false`, 4 Critical.
+Expect `basic_usable 2/5`, `contract_clarity 0/5`, `ship_floor_met: false`, and
+Critical findings (the fixture must keep failing).
 
-5. Run the regression suite (same checks as CI):
+5. Run the full regression suite (mirrors CI intent; prefer this locally):
+
+```bash
+python -m unittest discover tests -v
+```
+
+Individual entry points when you touch one area:
 
 ```bash
 python tests/test_hard_gates.py
 python tests/test_ship_safety.py
+python tests/test_readiness_gates.py
+python tests/test_profile_engine.py
+python tests/test_full_audit_runner.py
+python tests/test_platform_record.py
+python tests/test_suite_scorecards.py
+```
+
+6. Optional: generate private offline scorecards for this repo (output **must**
+   stay outside the repository):
+
+```bash
+python skills/skill-self-check/scripts/run_full_audit.py \
+  skills/skill-self-check \
+  --out-dir "$HOME/Documents/skill-audits/contrib-demo" --pretty
+
+python skills/skill-growth-scorecard/scripts/suite_scorecards.py . \
+  --out-dir "$HOME/Documents/skill-audits/suite-demo" --pretty
 ```
 
 ## Project structure
 
 ```text
-skills/                 # product skills (installable)
-  skill-self-check/     # stable self-check skill
-  skill-ship-safety/    # static external-action preflight
-exp/                    # experiments — NOT installed by default
-  pm-workflow-planning/ # future PM / workflow productization hook
-tests/                  # stdlib regression tests for hard_gates.py
-docs/                   # architecture, installation, audience, design
+skills/                      # product skills (installable)
+  agent-work-readiness/      # oral process → B0–B6 work package
+  skill-self-check/          # static structure / contract audit + run_full_audit
+  skill-ship-safety/         # static external-action preflight
+  skill-growth-scorecard/    # JSON facts → personal/project offline HTML
+exp/                         # experiments — NOT installed by default
+  pm-workflow-planning/      # PM / interview → workflow hook
+tests/                       # stdlib regression suite
+assets/diagrams/             # README SVGs (zh/ for Chinese)
+assets/scorecards/           # README scorecard screenshots (sanitized demos)
+docs/                        # architecture, installation, platform matrix, …
 install.ps1 / install.sh
-plugin.json
+plugin.json                  # lists the four shipped skill folder names
 ```
+
+Shipped skill names are the source of truth in `plugin.json` → `skills`.
 
 ## Making changes
 
-- **Stable product** lives under `skills/`. Keep `SKILL.md` short; put long checklists in sibling files.
-- **Experiments** live under `exp/`. Do not promote an experiment into `skills/` without a ship-floor self-check pass and a CHANGELOG note.
-- **Hard gates and scores are script-owned.** Change scoring only in `scripts/hard_gates.py` with a fixture update; do not ask the model to invent numbers.
-- Scoring changes must keep `tests/test_hard_gates.py` green and refresh the numbers in `examples/smoke-report-before.md`.
-- Update `CHANGELOG.md` under `[Unreleased]` for user-visible behavior or docs changes.
-- Never commit secrets, client PII, store tokens, or filled export CSVs.
+- **Stable product** lives under `skills/`. Keep each `SKILL.md` short; put long
+  contracts, fixtures, and templates in sibling files.
+- **Experiments** live under `exp/`. Do not promote an experiment into `skills/`
+  without a ship-floor self-check pass and a CHANGELOG note.
+- **Scores and verdicts are script-owned.**
+  - Structure scores → `skill-self-check/scripts/hard_gates.py`
+  - Safety verdict → `skill-ship-safety/scripts/ship_safety.py`
+  - Business readiness B0–B6 → `agent-work-readiness/scripts/readiness_gates.py`
+  - Growth level / type / HTML → `skill-growth-scorecard/scripts/profile_engine.py`
+    (and `suite_scorecards.py` for whole-repo runs)
+  - Never invent numeric scores or soften a stricter script verdict in prose.
+- Built-in audit scripts are **read-only** toward the target Skill: they must not
+  execute target code or send external messages. Real scorecards and client
+  reports stay in a private directory outside this repository.
+- Scoring / gate changes need green tests, fixture updates when behavior
+  changes, and refreshed smoke numbers in
+  `skills/skill-self-check/examples/smoke-report-before.md` (and the business
+  twin when that report’s numbers move).
+- Update README scorecard screenshots under `assets/scorecards/` only from a
+  sanitized local suite/fixture run (no client paths or PII).
+- Update `CHANGELOG.md` under `[Unreleased]` for user-visible behavior or docs.
+- Never commit secrets, client PII, store tokens, filled export CSVs, or private
+  audit HTML/JSON from real engagements.
+
+## Platform notes
+
+Portable Level B assumes local files + Python 3.10+. Maintainer evidence and the
+Cursor / Codex / other platform matrix live in
+[docs/PLATFORM-COMPATIBILITY.md](docs/PLATFORM-COMPATIBILITY.md). Cross-platform
+“verified” claims need two distinct platforms sharing the same contract and
+fixture SHA-256 identifiers — do not treat “ran once on my machine” as enough.
 
 ## Python style
 
 - `from __future__ import annotations` in new scripts
-- stdlib only unless a dependency is strongly justified
+- stdlib only unless a dependency is strongly justified **and** this file plus
+  `plugin.json` / docs are updated
 - `argparse` CLIs; meaningful non-zero exit codes on failure
 - Prefer `pathlib.Path`
+- Force UTF-8 on stdout/stderr when emitting Chinese JSON for agents
 
 ## Pull requests
 
 1. Branch from `main`.
 2. Keep the PR focused (one concern when possible).
 3. Describe **why** the change is needed; link issues if any.
-4. Include script output for scoring changes (before/after on a fixture).
-5. Follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+4. For scoring or gate changes, paste before/after script JSON (or a short
+   excerpt) on a fixture.
+5. Confirm `python -m unittest discover tests -v` is green.
+6. Follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Security
 
-Report vulnerabilities privately per [SECURITY.md](SECURITY.md). Do not open public issues for security findings.
+Report vulnerabilities privately per [SECURITY.md](SECURITY.md). Do not open
+public issues for security findings.
