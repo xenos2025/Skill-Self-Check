@@ -24,8 +24,7 @@ FIRST_SECOND_PERSON_RE = re.compile(
 )
 WHEN_TRIGGER_RE = re.compile(
     r"(?i)\b(use when|when the user|when users?|when working with|"
-    r"when asked|when reviewing|when implementing|triggers?:|"
-    r"run after|after you)\b"
+    r"when asked|when reviewing|when implementing|triggers?:)\b"
 )
 # Chinese has no word boundaries, so these are matched without \b.
 WHEN_TRIGGER_ZH_RE = re.compile(
@@ -33,7 +32,8 @@ WHEN_TRIGGER_ZH_RE = re.compile(
 )
 WHAT_SIGNAL_RE = re.compile(
     r"(?i)\b(generates?|reviews?|extracts?|analyzes?|guides?|checks?|"
-    r"validates?|writes?|creates?|processes?|helps agents?|audits?)\b"
+    r"validates?|writes?|creates?|processes?|helps agents?|audits?|"
+    r"routes?|orchestrates?)\b"
 )
 WHAT_SIGNAL_ZH_RE = re.compile(
     r"(生成|审查|评审|检查|自检|校验|验证|分析|提取|编排|路由|创建|"
@@ -86,7 +86,8 @@ MEMORY_SCHEMA_RE = re.compile(
 )
 SCRIPT_CLAIM_RE = re.compile(
     r"(?i)(scripts/|自动化脚本|脚本目录|脚本索引|调用脚本|"
-    r"\.py\b|\.ps1\b|\.sh\b|automation|codeact|calendar script|"
+    r"\.py\b|\.ps1\b|\.sh\b|automation\s+(?:script|tool|runner|command)|"
+    r"automates?|codeact|calendar script|"
     r"python\s+\S+\.py)"
 )
 EXAMPLE_HEADING_RE = re.compile(
@@ -386,7 +387,7 @@ def detect_check_axes(body: str) -> tuple[bool, list[str]]:
         if item.startswith("[") and "]" in item[:4]:
             continue
         item = re.sub(r"\*\*(.+?)\*\*", r"\1", item)
-        short = re.split(r"\s*[—–:\-|]\s*", item, maxsplit=1)[0].strip()
+        short = re.split(r"\s*(?:—|–|:|\|)\s*", item, maxsplit=1)[0].strip()
         if 2 <= len(short) <= 48:
             axes.append(short)
     if len(axes) < 2:
@@ -646,8 +647,11 @@ def check_skill(skill_dir: Path) -> dict:
         for h in headings
     )
 
-    if not contract["when_to_use"] and not disable_model:
-        fail("3.2", "should_fix", "Missing 'When to Use' (or equivalent) heading")
+    if not contract["when_to_use"]:
+        message = "Missing 'When to Use' (or equivalent) heading"
+        if disable_model:
+            message += " — user-invoked skills still need a human-readable usage section"
+        fail("3.2", "should_fix", message)
     if not contract["when_not"]:
         fail("3.3", "should_fix", "Missing 'When NOT to use' / exclusions")
     review_like = bool(
@@ -758,8 +762,11 @@ def finalize(
     nice = [f for f in findings if f["severity"] == "nice"]
     ship_floor = basic >= 4 and len(critical) == 0
     return {
+        "schema_version": "1.0",
+        "audit_level": "static_contract_check",
         "skill_dir": str(skill_dir),
         "skill_md": str(skill_dir / "SKILL.md"),
+        "target_platform": "generic",
         "frontmatter": fm or {},
         "disable_model_invocation": disable_model,
         "line_count": line_count,
@@ -781,6 +788,10 @@ def finalize(
         },
         "findings": [f for f in findings if f["severity"] != "info"],
         "notes": [f for f in findings if f["severity"] == "info"],
+        "limitations": [
+            "scores cover static structure and contract signals only",
+            "behavioral correctness and safe execution require separate evidence",
+        ],
         "llm_passes_remaining": ["predictability_qualitative", "anatomy_qualitative", "prune_qualitative"],
     }
 
@@ -806,6 +817,9 @@ def main() -> int:
         print(
             json.dumps(
                 {
+                    "schema_version": "1.0",
+                    "audit_level": "static_contract_check",
+                    "target_platform": "generic",
                     "error": f"path not found: {args.skill_dir}",
                     "scores": {
                         "basic_usable": {"score": 0, "max": 5},
@@ -818,6 +832,7 @@ def main() -> int:
                         },
                         "ship_floor_met": False,
                     },
+                    "limitations": ["target path was not available for static checks"],
                 }
             ),
             flush=True,

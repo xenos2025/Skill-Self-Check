@@ -11,7 +11,7 @@ Guidance for coding agents working **on this repository**.
 | --- | --- |
 | `skills/` | Installable product skills |
 | `exp/` | Experiments — do not install by default; may be unstable |
-| `tests/` | Stdlib regression tests for `hard_gates.py` (mirrors CI) |
+| `tests/` | Stdlib regression tests for `hard_gates.py` and `ship_safety.py` (mirrors CI) |
 | `docs/` | Human docs |
 | `install.ps1` / `install.sh` | Copy `skills/skill-self-check` into Cursor skills dirs |
 
@@ -28,6 +28,7 @@ Guidance for coding agents working **on this repository**.
 
 ```bash
 python tests/test_hard_gates.py
+python tests/test_ship_safety.py
 python skills/skill-self-check/scripts/hard_gates.py skills/skill-self-check --pretty
 python skills/skill-self-check/scripts/hard_gates.py skills/skill-self-check/examples/fixtures/bad-commit-helper --pretty
 ```

@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "process": {
+    "name": "每周询盘复盘",
+    "intended_outcome": "形成一份本周询盘问题清单",
+    "why": "减少同类问题反复口头沟通",
+    "trigger": "每周五下午",
+    "owner": "",
+    "approver": "",
+    "out_of_scope": "不自动联系客户"
+  },
+  "steps": [],
+  "roles": [],
+  "handoffs": [],
+  "metrics": [],
+  "agent_boundary": {
+    "allowed_actions": [],
+    "forbidden_actions": [],
+    "human_approval": [],
+    "escalation": ""
+  },
+  "evidence": {
+    "version": "",
+    "pilot_runs": [],
+    "retrospective": ""
+  }
+}

@@ -21,7 +21,7 @@
   <rect x="1444" y="18.0" width="16" height="12" fill="#0B3D91"/>
 
   <g transform="translate(0, 48)">
-<text x="740.0" y="32" text-anchor="middle" class="label-sub" font-size="15">Self-check loop: write → run gates → report → fix &amp; retry or ship</text>
+<text x="740.0" y="32" text-anchor="middle" class="label-sub" font-size="15">Self-check loop: write → run gates → report → fix &amp; retry or controlled trial</text>
 <rect x="80.0" y="60.0" width="240" height="100" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
 <text x="200.0" y="86.0" text-anchor="middle" class="label-tiny" font-size="11" letter-spacing="0.08em">1</text>
 <text x="200.0" y="112.0" text-anchor="middle" class="label" font-size="18">Write Skill</text>
@@ -53,8 +53,8 @@
 <path d="M 300 232.0 C 300 175, 736.0 175, 736.0 160.0" fill="none" stroke="#B42318" stroke-width="1.6" stroke-dasharray="6 4"/>
 <text x="518.0" y="172" text-anchor="middle" fill="#B42318" font-size="12" class="label-tiny">run again →</text>
 <rect x="1190.0" y="232.0" width="260" height="96" rx="2" fill="#F0Faf4" stroke="#1B7A4E" stroke-width="1.6"/>
-<text x="1320" y="270.0" text-anchor="middle" class="label" font-size="17" fill="#1B7A4E">Ready to use</text>
-<text x="1320" y="298.0" text-anchor="middle" class="label-tiny" font-size="12">Both lights on before rollout</text>
+<text x="1320" y="270.0" text-anchor="middle" class="label" font-size="17" fill="#1B7A4E">Controlled trial</text>
+<text x="1320" y="298.0" text-anchor="middle" class="label-tiny" font-size="12">Static pass is not behavior proof</text>
 <line x1="1068.0" y1="280" x2="1178.0" y2="280" stroke="#1B7A4E" stroke-width="2"/><polygon points="1190.0,280 1178.0,275 1178.0,285" fill="#1B7A4E"/>
 <text x="1129.0" y="266" text-anchor="middle" fill="#1B7A4E" font-size="12" class="label-tiny">Yes / clear</text>
 <text x="740.0" y="400" text-anchor="middle" class="label-tiny" font-size="13">Three things the report always covers</text>

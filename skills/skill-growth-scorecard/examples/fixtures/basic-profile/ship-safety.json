@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "verdict": "stop_ship",
+  "execution": {
+    "status": "not_safely_verified"
+  },
+  "counts": {
+    "critical": 1,
+    "should_fix": 0,
+    "info": 0
+  },
+  "findings": [
+    {
+      "id": "CMD.2",
+      "severity": "critical",
+      "message": "文档承诺的命令没有实现",
+      "evidence": "SKILL.md:42",
+      "source": "script"
+    }
+  ],
+  "limitations": [
+    "target code was not executed"
+  ]
+}

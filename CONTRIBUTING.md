@@ -29,6 +29,7 @@ Expect `basic_usable 2/5`, `contract_clarity 0/5`, `ship_floor_met: false`, 4 Cr
 
 ```bash
 python tests/test_hard_gates.py
+python tests/test_ship_safety.py
 ```
 
 ## Project structure
@@ -36,6 +37,7 @@ python tests/test_hard_gates.py
 ```text
 skills/                 # product skills (installable)
   skill-self-check/     # stable self-check skill
+  skill-ship-safety/    # static external-action preflight
 exp/                    # experiments — NOT installed by default
   pm-workflow-planning/ # future PM / workflow productization hook
 tests/                  # stdlib regression tests for hard_gates.py

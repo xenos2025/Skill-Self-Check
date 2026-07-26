@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""ship_safety.py — deterministic checks for "safe to actually send".
+"""ship_safety.py — deterministic static checks before external actions.
 
-Answers two script-ownable questions about a target skill:
+Answers two script-ownable questions about a target skill without executing it:
 
 1. Promise inventory — does every command documented in SKILL.md (and
    references/*.md) point at a script that exists, with a subcommand the
@@ -10,30 +10,29 @@ Answers two script-ownable questions about a target skill:
    (SMTP / IMAP / HTTP / browser / subprocess), and do they carry a
    dry-run guard?
 
-Gate-bypass sandbox tests and compliance wording stay model-owned; see
-the skill's references/gate-bypass.md.
+Behavioral gate-bypass tests require a separately supplied trusted isolation
+runner. A temporary directory and sanitized environment are not a security
+sandbox, so this stdlib-only script never executes target code.
 
 Usage:
   python ship_safety.py /path/to/target-skill [--exec] [--pretty]
 
-  --exec    Also probe each documented (script, subcommand) pair by
-            running it with no extra args in a temp working directory
-            with sanitized env (creds stripped, DRY_RUN=1). Opt-in.
+  --exec    Compatibility flag. Target code is NOT executed. The report
+            returns execution_unverified and explains that a trusted runner
+            is required.
   --pretty  Indent the JSON output.
 
 Output: JSON on stdout (UTF-8). One-line summary on stderr.
-Exit code: 1 when verdict is stop_ship, else 0. Stdlib only.
+Exit code: 0 for static_pass; 1 for stop_ship or execution_unverified.
+Stdlib only.
 """
 
 from __future__ import annotations
 
+import ast
 import json
-import os
 import re
-import shutil
-import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 PY_CMD_RE = re.compile(
@@ -42,37 +41,25 @@ PY_CMD_RE = re.compile(
     r"(?P<rest>[^\n`]*)"
 )
 SUB_TOKEN_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
-UNKNOWN_CMD_RE = re.compile(r"(?i)unknown command|未知命令|unrecognized command")
+IGNORED_SCAN_DIRS = {
+    ".git",
+    "__pycache__",
+    "examples",
+    "fixtures",
+    "tests",
+}
 
-def _import_re(*mods: str) -> re.Pattern:
-    """Match `import a, b, mod` and `from mod import ...` lines."""
-    alt = "|".join(mods)
-    return re.compile(
-        rf"(?m)^\s*(?:import\s+[^\n#]*\b(?:{alt})\b|from\s+(?:{alt})\b)"
-    )
-
-
-# Capability -> (regex, severity when no dry-run guard is present)
+# Capability -> (imported module names, severity without a dry-run guard)
 CAPABILITIES = {
-    "smtp": (_import_re("smtplib"), "critical"),
-    "imap": (_import_re("imaplib", "poplib"), "critical"),
-    "network": (
-        re.compile(
-            r"(?m)urllib\.request|http\.client"
-            r"|^\s*(?:import\s+[^\n#]*\b(?:requests|socket)\b|from\s+(?:requests|socket)\b)"
-        ),
-        "should_fix",
-    ),
+    "smtp": ({"smtplib"}, "critical"),
+    "imap": ({"imaplib", "poplib"}, "critical"),
+    "network": ({"urllib.request", "http.client", "requests", "socket"}, "should_fix"),
     "browser_or_shell": (
-        re.compile(
-            r"(?m)webbrowser|selenium|playwright"
-            r"|^\s*(?:import\s+[^\n#]*\bsubprocess\b|from\s+subprocess\b)"
-        ),
+        {"webbrowser", "selenium", "playwright", "subprocess"},
         "should_fix",
     ),
 }
 GUARD_RE = re.compile(r"(?i)dry[_-]?run|--preview\b")
-CRED_ENV_RE = re.compile(r"(?i)(smtp|imap|api[_-]?key|token|secret|passw|_pass\b|_pw\b)")
 
 
 def _read(path: Path) -> str:
@@ -91,12 +78,26 @@ def _doc_files(target: Path) -> list[Path]:
 
 
 def _resolve_script(target: Path, raw: str) -> Path | None:
-    rel = raw.replace("\\", "/").lstrip("./")
-    candidates = [target / rel, target / "scripts" / Path(rel).name]
+    normalized = raw.replace("\\", "/")
+    rel = Path(normalized)
+    if rel.is_absolute() or rel.drive or ".." in rel.parts:
+        return None
+    candidates = [target / rel, target / "scripts" / rel.name]
+    target_resolved = target.resolve()
     for cand in candidates:
-        if cand.is_file():
-            return cand
-    hits = [p for p in target.rglob(Path(rel).name) if p.is_file()]
+        resolved = cand.resolve()
+        try:
+            resolved.relative_to(target_resolved)
+        except ValueError:
+            continue
+        if resolved.is_file():
+            return resolved
+    hits = [
+        p
+        for p in target.rglob(rel.name)
+        if p.is_file()
+        and not any(part.lower() in IGNORED_SCAN_DIRS for part in p.relative_to(target).parts)
+    ]
     return hits[0] if hits else None
 
 
@@ -107,6 +108,8 @@ def _extract_commands(target: Path) -> list[dict]:
         for lineno, line in enumerate(_read(doc).splitlines(), start=1):
             for m in PY_CMD_RE.finditer(line):
                 raw = m.group("dq") or m.group("sq") or m.group("bare") or ""
+                if any(mark in raw for mark in ("<", ">", "{", "}")):
+                    continue
                 rest = (m.group("rest") or "").strip()
                 sub = ""
                 if rest:
@@ -125,53 +128,68 @@ def _extract_commands(target: Path) -> list[dict]:
 
 
 def _subcommand_implemented(script_path: Path, sub: str) -> bool:
-    src = _read(script_path)
-    return bool(
-        re.search(rf"(?<![A-Za-z0-9_-]){re.escape(sub)}(?![A-Za-z0-9_-])", src)
+    try:
+        tree = ast.parse(_read(script_path), filename=str(script_path))
+    except SyntaxError:
+        return False
+
+    docstring_values: set[int] = set()
+    owners = [tree, *ast.walk(tree)]
+    for owner in owners:
+        body = getattr(owner, "body", None)
+        if (
+            isinstance(body, list)
+            and body
+            and isinstance(body[0], ast.Expr)
+            and isinstance(body[0].value, ast.Constant)
+            and isinstance(body[0].value.value, str)
+        ):
+            docstring_values.add(id(body[0].value))
+
+    return any(
+        isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and node.value == sub
+        and id(node) not in docstring_values
+        for node in ast.walk(tree)
     )
 
 
-def _probe(sandbox_root: Path, script_rel: Path, sub: str) -> dict:
-    """Run `python script sub` inside a sandbox copy of the target skill.
+def _iter_source_files(target: Path, pattern: str) -> list[Path]:
+    files = []
+    for path in sorted(target.rglob(pattern)):
+        rel_parts = tuple(part.lower() for part in path.relative_to(target).parts[:-1])
+        if any(part in IGNORED_SCAN_DIRS for part in rel_parts):
+            continue
+        files.append(path)
+    return files
 
-    The whole skill directory is copied beforehand, so scripts that write
-    next to themselves (generated .ps1, __pycache__, reports) touch only
-    the sandbox, never the user's real files.
-    """
-    env = {k: v for k, v in os.environ.items() if not CRED_ENV_RE.search(k)}
-    env["DRY_RUN"] = "1"
-    env["PYTHONIOENCODING"] = "utf-8"
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
+
+def _imported_modules(src: str) -> set[str]:
     try:
-        proc = subprocess.run(
-            [sys.executable, str(sandbox_root / script_rel)] + ([sub] if sub else []),
-            cwd=sandbox_root,
-            env=env,
-            capture_output=True,
-            timeout=20,
-        )
-        text = (proc.stdout + proc.stderr).decode("utf-8", errors="replace")
-        return {
-            "ran": True,
-            "exit_code": proc.returncode,
-            "unknown_command": bool(UNKNOWN_CMD_RE.search(text)),
-            "first_line": text.strip().splitlines()[0][:160] if text.strip() else "",
-        }
-    except subprocess.TimeoutExpired:
-        return {"ran": True, "exit_code": None, "unknown_command": False,
-                "first_line": "timeout after 20s (long-running entrypoint?)"}
-    except OSError as exc:
-        return {"ran": False, "exit_code": None, "unknown_command": False,
-                "first_line": f"probe error: {exc}"}
+        tree = ast.parse(src)
+    except SyntaxError:
+        return set()
+    modules: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            modules.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            modules.add(node.module)
+            modules.update(f"{node.module}.{alias.name}" for alias in node.names)
+    return modules
 
 
 def _scan_external_actions(target: Path) -> list[dict]:
     results = []
-    for py in sorted(target.rglob("*.py")):
-        if "__pycache__" in py.parts:
-            continue
+    for py in _iter_source_files(target, "*.py"):
         src = _read(py)
-        caps = [name for name, (rx, _sev) in CAPABILITIES.items() if rx.search(src)]
+        imported = _imported_modules(src)
+        caps = [
+            name
+            for name, (modules, _sev) in CAPABILITIES.items()
+            if imported.intersection(modules)
+        ]
         if caps:
             results.append(
                 {
@@ -180,7 +198,7 @@ def _scan_external_actions(target: Path) -> list[dict]:
                     "has_dry_run_guard": bool(GUARD_RE.search(src)),
                 }
             )
-    for ps1 in sorted(target.rglob("*.ps1")):
+    for ps1 in _iter_source_files(target, "*.ps1"):
         results.append(
             {
                 "file": ps1.relative_to(target).as_posix(),
@@ -191,22 +209,18 @@ def _scan_external_actions(target: Path) -> list[dict]:
     return results
 
 
-def audit(target: Path, do_exec: bool = False) -> dict:
+def audit(target: Path, exec_requested: bool = False) -> dict:
     findings: list[dict] = []
     commands = _extract_commands(target)
-
-    sandbox = None
-    sandbox_root = None
-    if do_exec:
-        sandbox = tempfile.mkdtemp(prefix="ship_safety_")
-        sandbox_root = Path(sandbox) / target.name
-        shutil.copytree(target, sandbox_root)
 
     for cmd in commands:
         script_path = _resolve_script(target, cmd["script"])
         cmd["script_exists"] = script_path is not None
         cmd["subcommand_implemented"] = None
-        cmd["probe"] = None
+        cmd["probe"] = {
+            "status": "not_run",
+            "reason": "target execution requires a separately supplied trusted isolation runner",
+        }
         where = f'{cmd["doc_file"]}:{cmd["doc_line"]}'
         if script_path is None:
             findings.append(
@@ -236,23 +250,6 @@ def audit(target: Path, do_exec: bool = False) -> dict:
                     }
                 )
                 continue
-        if do_exec:
-            script_rel = script_path.relative_to(target)
-            cmd["probe"] = _probe(sandbox_root, script_rel, cmd["subcommand"])
-            if cmd["probe"]["unknown_command"]:
-                findings.append(
-                    {
-                        "id": "CMD.3",
-                        "severity": "critical",
-                        "message": (
-                            f'probe: {cmd["script"]} rejected documented subcommand '
-                            f'`{cmd["subcommand"]}` (Unknown command)'
-                        ),
-                        "evidence": cmd["probe"]["first_line"],
-                        "source": "script",
-                    }
-                )
-
     external = _scan_external_actions(target)
     for entry in external:
         severities = [CAPABILITIES[c][1] for c in entry["capabilities"] if c in CAPABILITIES]
@@ -305,25 +302,54 @@ def audit(target: Path, do_exec: bool = False) -> dict:
             }
         )
 
-    if sandbox:
-        shutil.rmtree(sandbox, ignore_errors=True)
+    if exec_requested:
+        findings.append(
+            {
+                "id": "EXEC.0",
+                "severity": "should_fix",
+                "message": (
+                    "--exec was requested, but target code was not run: a temporary "
+                    "copy is not a security sandbox; supply a trusted isolated runner"
+                ),
+                "evidence": "",
+                "source": "script",
+            }
+        )
 
     counts = {
         "critical": sum(1 for f in findings if f["severity"] == "critical"),
         "should_fix": sum(1 for f in findings if f["severity"] == "should_fix"),
         "info": sum(1 for f in findings if f["severity"] == "info"),
     }
-    verdict = "stop_ship" if counts["critical"] else "pass_with_watchlist"
+    if counts["critical"]:
+        verdict = "stop_ship"
+    elif exec_requested:
+        verdict = "execution_unverified"
+    else:
+        verdict = "static_pass"
     return {
+        "schema_version": "1.0",
+        "audit_level": "static_safety_scan",
         "target": str(target),
-        "exec_probe": do_exec,
+        "target_platform": "generic",
+        "execution": {
+            "requested": exec_requested,
+            "performed": False,
+            "isolation": "unavailable",
+            "status": "not_safely_verified",
+        },
         "commands": commands,
         "external_actions": external,
         "counts": counts,
         "findings": findings,
         "verdict": verdict,
+        "limitations": [
+            "target code was not executed",
+            "external-action and dry-run detection are static heuristics",
+            "final ship approval requires trusted isolated behavior tests",
+        ],
         "model_passes_remaining": [
-            "gate_bypass_sandbox_test",
+            "gate_bypass_isolated_test",
             "default_off_verification",
             "write_back_integrity",
             "claims_and_compliance_wording",
@@ -342,7 +368,16 @@ def main(argv: list[str]) -> int:
     target = Path(args[0]).resolve()
     if not target.is_dir() or not (target / "SKILL.md").is_file():
         report = {
+            "schema_version": "1.0",
+            "audit_level": "static_safety_scan",
             "target": str(target),
+            "target_platform": "generic",
+            "execution": {
+                "requested": "--exec" in argv,
+                "performed": False,
+                "isolation": "unavailable",
+                "status": "not_safely_verified",
+            },
             "commands": [],
             "external_actions": [],
             "counts": {"critical": 1, "should_fix": 0, "info": 0},
@@ -356,11 +391,12 @@ def main(argv: list[str]) -> int:
                 }
             ],
             "verdict": "stop_ship",
+            "limitations": ["target is not a skill directory"],
         }
         print(json.dumps(report, ensure_ascii=False, indent=2))
         return 1
 
-    report = audit(target, do_exec="--exec" in argv)
+    report = audit(target, exec_requested="--exec" in argv)
     indent = 2 if "--pretty" in argv else None
     print(json.dumps(report, ensure_ascii=False, indent=indent))
     print(
@@ -369,7 +405,7 @@ def main(argv: list[str]) -> int:
         f"should_fix={report['counts']['should_fix']}",
         file=sys.stderr,
     )
-    return 1 if report["verdict"] == "stop_ship" else 0
+    return 0 if report["verdict"] == "static_pass" else 1
 
 
 if __name__ == "__main__":

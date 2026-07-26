@@ -24,6 +24,8 @@ jobs:
         run: |
           python tests/test_hard_gates.py
           python tests/test_ship_safety.py
+          python tests/test_readiness_gates.py
+          python tests/test_profile_engine.py
 
       - name: Every shipped skill meets the ship floor
         run: |
@@ -47,3 +49,46 @@ jobs:
         run: |
           python branding/generate_diagrams.py
           git diff --exit-code -- assets/diagrams
+
+  installer-smoke:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bash installer copies all stable skills and rejects unsafe leaf
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          target="$(mktemp -d)"
+          bash install.sh --project "$target"
+          test -f "$target/.cursor/skills/skill-self-check/SKILL.md"
+          test -f "$target/.cursor/skills/skill-ship-safety/SKILL.md"
+          test -f "$target/.cursor/skills/agent-work-readiness/SKILL.md"
+          test -f "$target/.cursor/skills/skill-growth-scorecard/SKILL.md"
+          if bash install.sh --dest "$target/not-the-skill-name" --force; then
+            echo "installer accepted an unsafe destination leaf"
+            exit 1
+          fi
+
+      - name: PowerShell installer copies all stable skills and rejects unsafe leaf
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $target = Join-Path $env:RUNNER_TEMP "skill-install-smoke"
+          New-Item -ItemType Directory -Force -Path $target | Out-Null
+          ./install.ps1 -Project $target
+          if (-not (Test-Path (Join-Path $target ".cursor/skills/skill-self-check/SKILL.md"))) { throw "skill-self-check missing" }
+          if (-not (Test-Path (Join-Path $target ".cursor/skills/skill-ship-safety/SKILL.md"))) { throw "skill-ship-safety missing" }
+          if (-not (Test-Path (Join-Path $target ".cursor/skills/agent-work-readiness/SKILL.md"))) { throw "agent-work-readiness missing" }
+          if (-not (Test-Path (Join-Path $target ".cursor/skills/skill-growth-scorecard/SKILL.md"))) { throw "skill-growth-scorecard missing" }
+          try {
+            ./install.ps1 -Dest (Join-Path $target "not-the-skill-name") -Force
+            throw "installer accepted an unsafe destination leaf"
+          }
+          catch {
+            if ($_.Exception.Message -eq "installer accepted an unsafe destination leaf") { throw }
+          }

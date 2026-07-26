@@ -53,8 +53,8 @@
 <path d="M 300 232.0 C 300 175, 736.0 175, 736.0 160.0" fill="none" stroke="#B42318" stroke-width="1.6" stroke-dasharray="6 4"/>
 <text x="518.0" y="172" text-anchor="middle" fill="#B42318" font-size="12" class="label-tiny">再跑一遍 →</text>
 <rect x="1190.0" y="232.0" width="260" height="96" rx="2" fill="#F0Faf4" stroke="#1B7A4E" stroke-width="1.6"/>
-<text x="1320" y="270.0" text-anchor="middle" class="label" font-size="17" fill="#1B7A4E">可以真用了</text>
-<text x="1320" y="298.0" text-anchor="middle" class="label-tiny" font-size="12">绿灯过了再推广</text>
+<text x="1320" y="270.0" text-anchor="middle" class="label" font-size="17" fill="#1B7A4E">可进入受控试用</text>
+<text x="1320" y="298.0" text-anchor="middle" class="label-tiny" font-size="12">静态通过，不等于安全执行</text>
 <line x1="1068.0" y1="280" x2="1178.0" y2="280" stroke="#1B7A4E" stroke-width="2"/><polygon points="1190.0,280 1178.0,275 1178.0,285" fill="#1B7A4E"/>
 <text x="1129.0" y="266" text-anchor="middle" fill="#1B7A4E" font-size="12" class="label-tiny">是 / 无 Critical</text>
 <text x="740.0" y="400" text-anchor="middle" class="label-tiny" font-size="13">报告里重点看这三项</text>

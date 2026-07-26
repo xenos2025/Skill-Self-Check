@@ -1,15 +1,19 @@
-# Skill Self-Check Report
+# Skill Self-Check Technical Report（技术版）
 
 **Target:** `<path/to/skill>/SKILL.md`  
 **Date:** `<YYYY-MM-DD>`  
 **Script:** `python scripts/hard_gates.py <skill-dir>`  
 **Passes covered:** 0 Script · 1 Hard gates · 2 Predictability · 3 Anatomy · 4 Prune · 5 PDCA+SMART
+**Schema:** `<schema_version>` · **Audit level:** `<audit_level>`
+
+> 本报告面向开发、测试和技能维护者。面向业务读者的结论使用
+> `REPORT-BUSINESS-TEMPLATE.md`，两份报告必须共享相同分数、问题编号和结论。
 
 ## 分数（脚本，禁止手改）
 
 | 维度 | 得分 | 含义 |
 |------|------|------|
-| 基础可用 `basic_usable` | `<n>/5` | ≥4 且无 Critical → 可先真用再观察优化 |
+| 基础可用 `basic_usable` | `<n>/5` | ≥4 且无 Critical → 达到静态基础门槛，不代表行为已验证 |
 | 契约清晰 `contract_clarity` | `<n>/5` | When/When-NOT/检查轴/Verification/反合理化 |
 | 配套齐备 `support_kit` | `<n>/<max>` 或 `n/a` | 资料/案例/落地记忆/脚本；N/A 不扣分；不挡 ship floor |
 | Ship floor | `yes/no` | 来自 `scores.ship_floor_met`（只看绿灯+Critical） |
@@ -118,6 +122,6 @@ T = **run-bound exit** (Verification / handoff), not a fake calendar date unless
 
 - Ship floor **未过**：先改 Critical，别急着靠实战观察去打磨。
 - Ship floor **过了**但 PDCA 的 Check / Act **缺失**：补上验收和出错处理，才算闭环。
-- Ship floor **过了**且 PDCA 正常：拿去真用，盯着漏掉的情况，下一轮提升 SMART 的可衡量性。
+- Ship floor **过了**且 PDCA 正常：进入受控试用或行为验证；不要把静态通过当成安全执行证明。
 - 说 **「按意见改」** —— 我来改 Critical / Should fix。
 - 说 **「帮我补」** —— 我一次问你一个问题，把上面「还需你确认」的空缺补齐；你点头之后才写进文件。

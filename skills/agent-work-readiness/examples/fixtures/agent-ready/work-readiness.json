@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0",
+  "process": {
+    "name": "每周询盘复盘",
+    "intended_outcome": "生成经销售主管确认的本周询盘问题清单",
+    "why": "减少重复沟通并在下一周调整回复规则",
+    "trigger": "每周五 16:00",
+    "owner": "销售运营",
+    "approver": "销售主管",
+    "out_of_scope": "不自动回复客户，不修改 CRM 正式记录"
+  },
+  "steps": [
+    {
+      "id": "S1",
+      "input": "本周脱敏询盘导出",
+      "action": "按问题类型归类并统计",
+      "output": "询盘问题草表",
+      "role": "销售运营",
+      "done_when": "每条询盘都有唯一问题类型",
+      "exception": "无法归类时标记待主管确认"
+    },
+    {
+      "id": "S2",
+      "input": "询盘问题草表",
+      "action": "复核高频问题并确认下周动作",
+      "output": "已确认的问题清单",
+      "role": "销售主管",
+      "done_when": "主管确认前三类问题和负责人",
+      "exception": "数据不足时保留原规则并记录原因"
+    }
+  ],
+  "roles": [
+    {
+      "role": "销售运营",
+      "owns": ["询盘归类与统计"],
+      "approves": [],
+      "not_responsible_for": ["对外回复"]
+    },
+    {
+      "role": "销售主管",
+      "owns": ["问题确认与行动分配"],
+      "approves": ["下周调整动作"],
+      "not_responsible_for": ["原始数据整理"]
+    }
+  ],
+  "handoffs": [
+    {
+      "from": "销售运营",
+      "to": "销售主管",
+      "deliverable": "询盘问题草表",
+      "acceptance": "无缺失记录且分类规则随表附上"
+    }
+  ],
+  "metrics": [
+    {
+      "id": "M1",
+      "name": "询盘归类完整率",
+      "formula": "已归类询盘数 / 本周询盘总数",
+      "unit": "percent",
+      "direction": "higher_is_better",
+      "threshold": ">= 95%",
+      "owner": "销售运营"
+    }
+  ],
+  "agent_boundary": {
+    "allowed_actions": ["读取脱敏导出", "生成分类建议", "生成复盘草表"],
+    "forbidden_actions": ["联系客户", "修改 CRM", "推断未提供的客户信息"],
+    "human_approval": ["高频问题结论", "下周调整动作"],
+    "escalation": "任何数据缺失或类别冲突交给销售主管"
+  },
+  "evidence": {
+    "version": "0.1",
+    "pilot_runs": [],
+    "retrospective": ""
+  }
+}

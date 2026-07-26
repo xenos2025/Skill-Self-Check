@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install skill-self-check + skill-ship-safety into Cursor personal skills
+# Install the four stable workflow, audit, safety, and scorecard skills
 # (default) or a project.
 # Usage:
 #   ./install.sh
@@ -13,7 +13,12 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 DEST=""
 PROJECT=""
 FORCE=0
-SKILLS=(skill-self-check skill-ship-safety)
+SKILLS=(
+  skill-self-check
+  skill-ship-safety
+  agent-work-readiness
+  skill-growth-scorecard
+)
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -53,7 +58,26 @@ for SKILL in "${SKILLS[@]}"; do
     TARGET="$BASE/$SKILL"
   fi
 
-  mkdir -p "$(dirname "$TARGET")"
+  TARGET_PARENT="$(dirname "$TARGET")"
+  mkdir -p "$TARGET_PARENT"
+  TARGET_PARENT_ABS="$(cd "$TARGET_PARENT" && pwd -P)"
+  TARGET_ABS="$TARGET_PARENT_ABS/$(basename "$TARGET")"
+  HOME_ABS="$(cd "$HOME" && pwd -P)"
+
+  if [[ "$(basename "$TARGET_ABS")" != "$SKILL" ]]; then
+    echo "Install target must end with the skill name '$SKILL': $TARGET_ABS" >&2
+    exit 1
+  fi
+  if [[ "$TARGET_ABS" == "$HOME_ABS" || "$TARGET_ABS" == "$ROOT" ]]; then
+    echo "Unsafe install target: $TARGET_ABS" >&2
+    exit 1
+  fi
+  if [[ "$TARGET_PARENT_ABS" == "/" ]]; then
+    echo "Refusing to install directly under the filesystem root: $TARGET_ABS" >&2
+    exit 1
+  fi
+  TARGET="$TARGET_ABS"
+
   if [[ -e "$TARGET" && "$FORCE" -ne 1 ]]; then
     echo "Destination exists: $TARGET (pass --force to overwrite)" >&2
     exit 1
@@ -64,5 +88,8 @@ for SKILL in "${SKILLS[@]}"; do
 done
 
 echo "Requires Python 3.10+ (stdlib only). Try:"
+echo "  python \"\$HOME/.cursor/skills/skill-self-check/scripts/run_full_audit.py\" path/to/your-skill --out-dir path/outside/the/repo --pretty"
 echo "  python \"\$HOME/.cursor/skills/skill-self-check/scripts/hard_gates.py\" path/to/your-skill --pretty"
 echo "  python \"\$HOME/.cursor/skills/skill-ship-safety/scripts/ship_safety.py\" path/to/your-skill --pretty"
+echo "  python \"\$HOME/.cursor/skills/agent-work-readiness/scripts/readiness_gates.py\" path/to/work-package --pretty"
+echo "  python \"\$HOME/.cursor/skills/skill-growth-scorecard/scripts/profile_engine.py\" --readiness readiness.json --out-html scorecard.html"

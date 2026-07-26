@@ -47,6 +47,23 @@ agent tooling assumes it.
 Ship floor is intentionally strict. Fix script Criticals first; qualitative
 polish comes after.
 
+`ship_floor_met: true` is a static structure/contract result. It does not prove
+that target code runs correctly or that external actions are safe.
+
+## `--exec` returns `execution_unverified`
+
+This is expected. The built-in `ship_safety.py` does not execute target code.
+A copied directory plus `DRY_RUN=1` is not a security sandbox. Complete
+behavior tests only in a trusted isolation runner; otherwise keep the result
+marked 未完成安全验证.
+
+## Which report should I read?
+
+- `REPORT-BUSINESS-TEMPLATE.md`: plain-language conclusion, impact, and next action.
+- `REPORT-TEMPLATE.md`: scores, finding IDs, evidence, and reproduction details.
+
+Both reports must describe the same findings and conclusion.
+
 ## Installer says destination exists
 
 Pass `-Force` / `--force`, or remove the old copy manually.

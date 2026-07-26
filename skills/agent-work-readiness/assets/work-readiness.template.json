@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "process": {
+    "name": "",
+    "intended_outcome": "",
+    "why": "",
+    "trigger": "",
+    "owner": "",
+    "approver": "",
+    "out_of_scope": ""
+  },
+  "steps": [
+    {
+      "id": "S1",
+      "input": "",
+      "action": "",
+      "output": "",
+      "role": "",
+      "done_when": "",
+      "exception": ""
+    }
+  ],
+  "roles": [
+    {
+      "role": "",
+      "owns": [],
+      "approves": [],
+      "not_responsible_for": []
+    }
+  ],
+  "handoffs": [],
+  "metrics": [
+    {
+      "id": "M1",
+      "name": "",
+      "formula": "",
+      "unit": "",
+      "direction": "",
+      "threshold": "",
+      "owner": ""
+    }
+  ],
+  "agent_boundary": {
+    "allowed_actions": [],
+    "forbidden_actions": [],
+    "human_approval": [],
+    "escalation": ""
+  },
+  "evidence": {
+    "version": "",
+    "pilot_runs": [],
+    "retrospective": ""
+  }
+}

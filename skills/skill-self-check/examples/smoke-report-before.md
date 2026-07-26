@@ -1,11 +1,16 @@
 # Skill Self-Check Report
 
+> Technical companion to
+> [smoke-report-before-business.md](smoke-report-before-business.md).
+
 **Target:** `examples/fixtures/bad-commit-helper/SKILL.md`  
-**Date:** 2026-07-25  
+**Date:** 2026-07-27
 **Script:** `python skills/skill-self-check/scripts/hard_gates.py skills/skill-self-check/examples/fixtures/bad-commit-helper --pretty`  
 **Passes covered:** 0 Script · 1 Hard gates · 2 Predictability · 3 Anatomy · 4 Prune · 5 PDCA+SMART
 
 > Worked example. Regenerate after changing scoring logic — CI (`.github/workflows/hard-gates.yml`) keeps the fixture failing, but the numbers below are maintained by hand.
+> Revalidated on 2026-07-27 after the one-command audit and growth ruleset
+> 0.2 changes: hard-gate scores and counts remain unchanged.
 
 ## 分数（脚本，禁止手改）
 

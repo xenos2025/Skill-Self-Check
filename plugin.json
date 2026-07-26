@@ -1,7 +1,7 @@
 {
   "name": "skill-self-check",
   "version": "0.1.0",
-  "description": "Beginner-friendly Agent Skill self-check: deterministic hard gates and scores via script, qualitative fix suggestions via the agent. Leaves room for future PM workflow-planning experiments under exp/.",
+  "description": "Agent work-readiness and Skill quality pack: turn oral workflows into checkable work packages, run deterministic structure and safety gates, and generate an offline growth scorecard. Target code is never executed by the built-in scripts.",
   "homepage": "https://github.com/xenos2025/Skill-Self-Check",
   "repository": "https://github.com/xenos2025/Skill-Self-Check",
   "license": "MIT",
@@ -9,7 +9,9 @@
   "skillsDir": "skills",
   "skills": [
     "skill-self-check",
-    "skill-ship-safety"
+    "skill-ship-safety",
+    "agent-work-readiness",
+    "skill-growth-scorecard"
   ],
   "experimentsDir": "exp",
   "requirements": {

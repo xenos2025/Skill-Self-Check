@@ -1,0 +1,4 @@
+interface:
+  display_name: "Skill Growth Scorecard"
+  short_description: "Merge work readiness and Skill audits into one growth profile"
+  default_prompt: "Use $skill-growth-scorecard to combine readiness and audit JSON into an offline growth scorecard."

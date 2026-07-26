@@ -2,8 +2,8 @@
 name: skill-self-check
 description: >-
   Reviews a newly written or edited Agent Skill and returns ranked fix suggestions.
-  Human-facing summary: run after you draft a skill to get a beginner-friendly audit.
-disable-model-invocation: true
+  Use when a user asks to audit, review, self-check, score, or explain what must
+  change in a drafted Skill before it is shared or used.
 ---
 
 # Skill Self-Check
@@ -48,6 +48,32 @@ This audit always reports on:
 
 ## Process
 
+### 新手入口 — 一次生成两份成绩单（推荐）
+
+四个正式 Skill 已一起安装时，优先运行：
+
+```bash
+python scripts/run_full_audit.py /absolute/path/to/target-skill \
+  --out-dir /private/path/target-skill-audit \
+  --pretty
+```
+
+Windows 可以使用 `py -3`。真实输出目录必须在被检查 Skill 和其源码仓库
+之外；脚本会拒绝把报告放进可能同步到 GitHub 的目录。它只读取目标，不执行
+目标 Skill，也不联网，并生成：
+
+- `personal-scorecard.html`：个人能力、等级、优势和下一项练习；
+- `project-scorecard.html`：项目分数、风险、证据和整改优先级；
+- 两份成绩单共用的 JSON 来源，以及证明审计前后目标未变化的
+  `audit-manifest.json`。
+
+可选加上 `--work-package 工作包.json` 和 `--behavior 可信行为证据.json`。
+没有行为证据时，等级不会越过静态证据上限。目标未变化只证明**本次审计只读**，
+不能替代目标 Skill 自身的运行与安全验证。
+
+**完成标准：** 两份 HTML 指向同一个 Skill，项目成绩单保留原始分数，
+`audit-manifest.json` 中 `target.unchanged=true`。
+
 ### Pass 0 — Run hard-gate script (required)
 
 From this skill's directory (or via absolute path to the script):
@@ -57,6 +83,9 @@ python scripts/hard_gates.py /absolute/path/to/target-skill --pretty
 ```
 
 On Windows, `py -3` is fine if `python` is missing.
+
+如果已经使用上面的新手入口，直接读取其 `hard-gates.json`，不要为了相同证据
+重复运行。
 
 - Read **stdout JSON** as the source of truth for scores and script findings.
 - Stderr one-liner is for humans; parse scores from stdout JSON only.
@@ -108,13 +137,23 @@ Read [references/pdca-smart.md](references/pdca-smart.md). Use checklist Pass 5.
 
 This self-check skill itself follows the loop: Plan (When + axes) → Do (passes 0–5) → Check (Verification) → Act (offer 「按意见改」, rationalizations).
 
-## Write the report
+## Write both reports
 
-Copy [REPORT-TEMPLATE.md](REPORT-TEMPLATE.md). Fill every section.
+Create both views from the same script result and qualitative findings:
+
+- [REPORT-BUSINESS-TEMPLATE.md](REPORT-BUSINESS-TEMPLATE.md) — plain-language
+  version for owners, operators, and other non-technical readers.
+- [REPORT-TEMPLATE.md](REPORT-TEMPLATE.md) — technical version with finding
+  IDs, script fields, evidence, and reproduction details.
 
 Rules:
 
-- Put **script scores** in the 分数表 verbatim from JSON
+- Keep scores, finding counts, finding IDs, and pass/fail conclusion identical
+  across both reports
+- Put **script scores** in the technical 分数表 verbatim from JSON
+- Translate technical terms in the business report: Critical → 必须先解决,
+  Should fix → 建议尽快改进, ship floor → 基础使用门槛
+- Do not expose raw JSON or unexplained exit codes in the business report
 - Fill **PDCA×SMART** matrix (Pass 5) — model-owned, not inventing script scores
 - Rank findings: Critical → Should fix → Nice
 - Each finding: **问题** → **为什么** → **建议改法** (paste-ready when helpful)
@@ -125,12 +164,20 @@ Rules:
 - If `ship_floor_met` is false: tell the user to fix Critical before relying on real-world observation to polish
 - If ship floor is true but PDCA **Check** or **Act** is missing: say so — usable ≠ closed-loop
 
-**Completion criterion (skill done):** Report includes script scores, PDCA×SMART matrix, all script Criticals with rewrites, Pass 2–5 coverage, and an offer to apply fixes or to interview for decision-owned gaps (neither applied yet).
+**Completion criterion (skill done):** Both reports share one conclusion and
+finding set; the business report gives one plain-language next action; the
+technical report includes script scores, PDCA×SMART, all script Criticals with
+rewrites, Pass 2–5 coverage, and an offer to apply fixes or interview for
+decision-owned gaps.
 
 ## Verification
 
 - [ ] `hard_gates.py` was executed on the target directory
-- [ ] Report scores match JSON exactly
+- [ ] 新手入口生成的真实报告位于目标和源码仓库之外
+- [ ] `audit-manifest.json` 证明审计前后目标未变化
+- [ ] Both reports share the same scores, counts, finding IDs, and conclusion
+- [ ] Technical report scores match JSON exactly
+- [ ] Business report contains no unexplained technical terms
 - [ ] No script Critical was overridden
 - [ ] User was advised whether ship floor is met
 - [ ] PDCA×SMART matrix filled (Plan/Do/Check/Act × S/M/A/R/T notes)

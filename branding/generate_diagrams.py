@@ -334,7 +334,7 @@ def five_w2h(zh: bool) -> str:
 
 
 def fix_loop(zh: bool) -> str:
-    """Write → check → report → pass/fail → fix & retry or ready to use."""
+    """Write → check → report → pass/fail → fix & retry or controlled trial."""
     ok = "#1B7A4E"
     bad = "#B42318"
     ok_bg = "#F0Faf4"
@@ -349,7 +349,7 @@ def fix_loop(zh: bool) -> str:
         ]
         decision = ("过门槛了吗？", "看 ship floor / Critical")
         fix = ("按意见改", "先改 Critical，再说「按意见改」")
-        ship = ("可以真用了", "绿灯过了再推广")
+        ship = ("可进入受控试用", "静态通过，不等于安全执行")
         bottom = [
             ("结构过关", "basic_usable ≥ 4", "绿灯"),
             ("说清楚查什么", "contract_clarity", "黄灯"),
@@ -359,7 +359,7 @@ def fix_loop(zh: bool) -> str:
         title = "skill-self-check.app -> docs -> fix-loop.svg"
         corner = "06 · 改完再检"
     else:
-        banner = "Self-check loop: write → run gates → report → fix & retry or ship"
+        banner = "Self-check loop: write → run gates → report → fix & retry or controlled trial"
         steps = [
             ("1", "Write Skill", "Your usual drafting flow", False),
             ("2", "Hand to AI / install", "Paste the GitHub URL to your AI", False),
@@ -368,7 +368,7 @@ def fix_loop(zh: bool) -> str:
         ]
         decision = ("Ship floor met?", "Critical count → zero?")
         fix = ("Apply fixes", "Fix Criticals, then say “apply fixes”")
-        ship = ("Ready to use", "Both lights on before rollout")
+        ship = ("Controlled trial", "Static pass is not behavior proof")
         bottom = [
             ("Structure OK", "basic_usable ≥ 4", "green light"),
             ("Scope clear", "contract_clarity", "amber light"),
@@ -521,14 +521,14 @@ def three_lights(zh: bool) -> str:
     if zh:
         banner = "自检看三盏灯 — 给老板的读法"
         cards = [
-            (190, "BASIC", "绿灯：能不能上手", ["结构过关", "可以先真用"], True),
+            (190, "BASIC", "绿灯：能不能上手", ["结构过关", "达到静态门槛"], True),
             (550, "CONTRACT", "黄灯：说清楚了吗", ["何时用 / 不用", "检查轴 + 验收"], False),
             (910, "KIT", "蓝灯：配套齐了吗", ["资料 / 案例", "落地记忆 / 脚本"], False),
         ]
         mid = (
             "绿灯不亮 → 先改，别推广\n"
             "绿灯亮、黄/蓝暗 → 能用，但容易各做各的或不好交接\n"
-            "三盏都亮 → 可以放心推广\n"
+            "三盏都亮 → 可以进入受控试用\n"
             "蓝灯 N/A 不算缺（声明不适用即可）"
         )
         title = "skill-self-check.app -> docs -> three-lights.svg"
@@ -536,14 +536,14 @@ def three_lights(zh: bool) -> str:
     else:
         banner = "Three lights for bosses — how to read a self-check"
         cards = [
-            (190, "BASIC", "Green: usable now?", ["Structure OK", "Safe to try"], True),
+            (190, "BASIC", "Green: usable now?", ["Structure OK", "Static floor met"], True),
             (550, "CONTRACT", "Amber: scope clear?", ["When / when not", "Axes + proof"], False),
             (910, "KIT", "Blue: kit complete?", ["Refs / examples", "Memory / scripts"], False),
         ]
         mid = (
             "Green off → fix before rollout\n"
             "Green on, amber/blue dim → usable but drift/handoff risk\n"
-            "All three on → ready to share\n"
+            "All three on → ready for controlled trial\n"
             "Blue N/A does not dock (declare when not applicable)"
         )
         title = "skill-self-check.app -> docs -> three-lights.svg"

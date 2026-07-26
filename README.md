@@ -31,10 +31,15 @@ https://github.com/xenos2025/Skill-Self-Check
 3. 先出报告，不要直接改我的文件；等我说「按意见改」再改
 ```
 
-3. **看报告里的三盏灯**：绿灯不亮 → 先改 Critical；绿灯过了再看黄灯（契约）和蓝灯（资料/案例/记忆/脚本是否齐）。  
+3. **看普通用户版报告里的三盏灯**：绿灯不亮 → 先改“必须解决的问题”；绿灯过了再看黄灯（契约）和蓝灯（资料/案例/记忆/脚本是否齐）。
    看不懂分数时，把报告贴回同一个 AI，问：「用白话告诉我先改哪三条。」
 
 更细的本机安装见下面「三分钟上手」；只会点聊天、不会开终端的人，**只用上面三段话就够了**。
+
+如果公司很多事情还靠口头约定，先用 **agent-work-readiness** 把一个具体工作
+练到“目标、步骤、负责人、交接、标准和权限”说清楚，再写 Skill。写完后可用
+**skill-growth-scorecard** 生成一张像成长画像的离线 HTML；原来的三盏灯和
+技术证据仍完整保留。
 
 ## 可视化上手（先看图）
 
@@ -46,7 +51,7 @@ https://github.com/xenos2025/Skill-Self-Check
 
 ### 2. 改完再检（闭环）
 
-写好 → 跑检查 → 看报告；**不过就改，改完再跑**。绿灯过了再真用。
+写好 → 跑检查 → 看报告；**不过就改，改完再跑**。绿灯表示达到静态基础门槛，可以进入受控试用；涉及外部发送或真实数据时仍需单独的行为安全验证。
 
 ![改完再检](assets/diagrams/zh/06-fix-loop.svg)
 
@@ -56,11 +61,11 @@ https://github.com/xenos2025/Skill-Self-Check
 
 | 灯 | 白话 |
 | --- | --- |
-| 绿灯 `basic_usable` | 结构过关，可以先真用（ship floor） |
+| 绿灯 `basic_usable` | 结构过关，达到静态基础门槛 |
 | 黄灯 `contract_clarity` | 查什么、何时用 / 不用、验收说清楚了吗 |
 | 蓝灯 `support_kit` | 资料 / 案例 / 落地记忆 / 脚本是否按需配齐 |
-| 三盏都亮 | 可以放心推广 |
-| 绿灯亮、黄或蓝暗 | 能用，但容易各做各的或不好交接 |
+| 三盏都亮 | 可以进入受控试用；不等于真实行为已验证 |
+| 绿灯亮、黄或蓝暗 | 静态可用，但容易各做各的或不好交接 |
 | 绿灯不亮 | 先改，别急着推广 |
 | 蓝灯某项 N/A | 声明不适用即可，不扣分 |
 
@@ -94,10 +99,14 @@ https://github.com/xenos2025/Skill-Self-Check
 git clone https://github.com/xenos2025/Skill-Self-Check.git
 cd Skill-Self-Check
 ./install.ps1
-py -3 skills/skill-self-check/scripts/hard_gates.py skills/skill-self-check/examples/fixtures/bad-commit-helper --pretty
+py -3 skills/skill-self-check/scripts/run_full_audit.py C:\你的Skill目录 `
+  --out-dir "$HOME\Documents\skill-audits\本次成绩单" --pretty
 ```
 
-在 Cursor 里点名 **skill-self-check**，给出待检说明书路径。默认只出报告；说「按意见改」再改文件。
+上面一条审计命令会生成个人能力和项目两份离线 HTML，并证明审计前后目标没有
+变化；真实报告会被拒绝写入目标或源码仓库。也可以在 Cursor 里点名
+**skill-self-check**，给出待检说明书路径。默认只出报告；说「按意见改」再改文件。
+同一次检查会生成两种表达：普通用户版讲“能不能用、为什么、下一步”，技术版保留分数、问题编号和证据。
 
 ## 仓库里有什么（白话）
 
@@ -109,7 +118,24 @@ py -3 skills/skill-self-check/scripts/hard_gates.py skills/skill-self-check/exam
 | `tests/` | 回归测试（中文技能、非 UTF-8 文件都覆盖） |
 | `docs/` | 安装与设计说明 |
 
-更多：[docs/INSTALLATION.md](docs/INSTALLATION.md) · [docs/AUDIENCE.md](docs/AUDIENCE.md) · [exp/README.md](exp/README.md)
+更多：[docs/INSTALLATION.md](docs/INSTALLATION.md) · [docs/PLATFORM-COMPATIBILITY.md](docs/PLATFORM-COMPATIBILITY.md) · [docs/AUDIENCE.md](docs/AUDIENCE.md) · [exp/README.md](exp/README.md)
+
+正式产品共四块：业务准备度、Skill 结构自检、安全预检、成长成绩单。它们都只
+读取本地文件；真实客户报告默认不应提交到这个开源仓库。
+
+### 平台适配进度（不是认证）
+
+| 平台 | 状态 | 说明 |
+| --- | --- | --- |
+| Cursor | 在用 | 日常编写与一键审计入口 |
+| Codex | 可测 | 下一组跨平台对照的第二平台 |
+| Claude Code | 未测 | 后续适配候选 |
+| WorkBuddy | 未测 | 中国市场候选，安装/调用方式待探 |
+| Coze | 未测 | 中国市场候选，安装/调用方式待探 |
+
+跨平台“已验证”需要 Cursor + Codex（或任意两个不同平台）使用**同一契约文件**和
+**同一脱敏夹具**，并各自留下 `verified` 记录。详见
+[docs/PLATFORM-COMPATIBILITY.md](docs/PLATFORM-COMPATIBILITY.md)。
 
 ## 致谢与参考（写清楚我们站在谁的肩膀上）
 
@@ -149,7 +175,7 @@ Steps:
 3. Report only — do not edit my files until I say “apply fixes”
 ```
 
-3. **Read the three lights:** if the green light is off, fix Criticals first. Then check amber (contract) and blue (refs / examples / memory / scripts). If the report is hard to read, paste it back and ask for the three most important fixes in plain language.
+3. **Read the business report's three lights:** if green is off, fix the must-resolve items first. Then check amber (contract) and blue (refs / examples / memory / scripts). A static green light is not behavioral or execution proof.
 
 ## Visual guide
 
@@ -159,7 +185,7 @@ Steps:
 
 ### Fix & retry loop
 
-Write → run gates → report; if it fails, fix and run again.
+Write → run gates → report; if it fails, fix and run again. Passing the static floor means the skill is ready for a controlled trial, not that external actions are proven safe.
 
 ![Fix loop](assets/diagrams/06-fix-loop.svg)
 
@@ -191,28 +217,50 @@ records. A justified N/A does not lower the general self-check score. See
 git clone https://github.com/xenos2025/Skill-Self-Check.git
 cd Skill-Self-Check
 ./install.sh   # or ./install.ps1 on Windows
-python skills/skill-self-check/scripts/hard_gates.py \
-  skills/skill-self-check/examples/fixtures/bad-commit-helper --pretty
+python skills/skill-self-check/scripts/run_full_audit.py \
+  /path/to/your-skill \
+  --out-dir "$HOME/Documents/skill-audits/current" --pretty
 ```
 
-In Cursor, invoke **skill-self-check** and pass a skill path. Report-only by default; say “apply fixes” to edit.
+The command creates separate personal and project offline HTML scorecards and
+records that the audit did not change the target. Real outputs are refused
+inside the target or its source repository. In Cursor, invoke
+**skill-self-check** and pass a skill path. Report-only by default; say “apply
+fixes” to edit.
 
 ## Layout
 
 ```text
-skills/skill-self-check/   # installable product
-exp/                       # PM interview → workflow experiments (not installed)
-tests/                     # regression suite mirrored by CI
-assets/diagrams/           # EN SVGs · zh/ for Chinese
+skills/skill-self-check/    # static structure/contract audit
+skills/skill-ship-safety/   # static external-action preflight
+skills/agent-work-readiness/# oral workflow → B0–B6 readiness
+skills/skill-growth-scorecard/ # JSON facts → offline growth scorecard
+exp/                        # PM interview → workflow experiments (not installed)
+tests/                      # regression suite mirrored by CI
+assets/diagrams/            # EN SVGs · zh/ for Chinese
 branding/generate_diagrams.py
 docs/
 ```
 
 Chinese and English skills score identically: `用于` / `适用` / `当用户` count as WHEN triggers, and `何时不用` / `检查轴` / `验收` are recognised headings. A non-UTF-8 `SKILL.md` is scored and flagged (`1.11`) rather than crashing the run.
 
+### Platform matrix (not a certification)
+
+| Platform | Status | Notes |
+| --- | --- | --- |
+| Cursor | In active use | Primary authoring + full-audit entry |
+| Codex | Available for testing | Chosen second platform for the next comparable pair |
+| Claude Code | Not tested yet | Later adapter candidate |
+| WorkBuddy | Not tested yet | China-market candidate |
+| Coze | Not tested yet | China-market candidate |
+
+Cross-platform credit needs two distinct platforms sharing the same contract and
+sanitized fixture identifiers. See
+[PLATFORM COMPATIBILITY](docs/PLATFORM-COMPATIBILITY.md).
+
 ## Docs
 
-[INSTALLATION](docs/INSTALLATION.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [AUDIENCE](docs/AUDIENCE.md) · [DESIGN](docs/DESIGN.md) · [FEATURES](docs/FEATURES.md) · [TROUBLESHOOTING](docs/TROUBLESHOOTING.md) · [TODO](TODO.md)
+[INSTALLATION](docs/INSTALLATION.md) · [PLATFORM COMPATIBILITY](docs/PLATFORM-COMPATIBILITY.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [AUDIENCE](docs/AUDIENCE.md) · [DESIGN](docs/DESIGN.md) · [FEATURES](docs/FEATURES.md) · [TROUBLESHOOTING](docs/TROUBLESHOOTING.md) · [TODO](TODO.md)
 
 ## Credits / references
 

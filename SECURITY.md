@@ -37,8 +37,9 @@ security fixes.
 
 ## Trust boundaries
 
-- The checker **reads** a target skill directory; it should not require network
-  access for hard gates.
+- The checkers **read** a target skill directory; they do not require network
+  access and the built-in scripts do not execute target code. Behavioral tests
+  require a separately supplied trusted isolation runner.
 - Installers **copy** files into `~/.cursor/skills` or `.cursor/skills` — review
   the destination before `-Force` / `--force`.
 - `exp/` may hold workflow drafts for factories / trade / ecommerce; never put

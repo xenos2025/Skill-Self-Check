@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Work Readiness"
+  short_description: "Turn oral work into a scored Agent-ready workflow"
+  default_prompt: "Use $agent-work-readiness to turn one verbal business process into an Agent-ready work package and readiness score."

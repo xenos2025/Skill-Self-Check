@@ -1,0 +1,1621 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230b3d91'/%3E%3Cpath d='M18 16h28v7H25v8h17v7H25v10h21v7H18z' fill='white'/%3E%3C/svg%3E">
+  <title>__DOCUMENT_TITLE__</title>
+  <style>
+    :root {
+      --canvas: #f5f7fa;
+      --surface: #ffffff;
+      --surface-soft: #f0f4fa;
+      --ink: #1a1a1a;
+      --muted: #4a5568;
+      --quiet: #6b7280;
+      --line: #d0d7e2;
+      --line-strong: #aab6c8;
+      --blue: #0b3d91;
+      --blue-bright: #0050b3;
+      --blue-soft: #edf3fc;
+      --violet: #66518f;
+      --violet-deep: #493761;
+      --violet-soft: #eee9f5;
+      --teal: #3f9f9c;
+      --teal-soft: #e7f4f2;
+      --green: #1b7a4e;
+      --green-soft: #f0faf4;
+      --amber: #8a5a00;
+      --amber-soft: #fff8e8;
+      --red: #b42318;
+      --red-soft: #fff5f5;
+      --shadow: 0 10px 28px rgba(31, 48, 76, 0.08);
+      --radius: 4px;
+      --max: 1240px;
+      --focus: 0 0 0 3px rgba(0, 80, 179, 0.24);
+      font-family: "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei",
+        "Noto Sans SC", "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font-size: 15px;
+      line-height: 1.62;
+    }
+    button, summary { font: inherit; }
+    button { min-height: 44px; }
+    button:focus-visible, summary:focus-visible, a:focus-visible {
+      outline: none;
+      box-shadow: var(--focus);
+    }
+    [hidden] { display: none !important; }
+    code, pre { font-family: Consolas, "SFMono-Regular", monospace; }
+    .skip-link {
+      position: fixed;
+      left: 16px;
+      top: -72px;
+      z-index: 40;
+      padding: 10px 14px;
+      background: var(--ink);
+      color: white;
+      text-decoration: none;
+    }
+    .skip-link:focus { top: 16px; }
+    .topline { height: 5px; background: var(--blue); }
+    .shell { width: min(calc(100% - 36px), var(--max)); margin: 0 auto; }
+    .site-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      min-height: 82px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      background: var(--blue);
+      color: white;
+      border-radius: 2px;
+      font-weight: 850;
+      letter-spacing: -0.04em;
+    }
+    .brand-title { margin: 0; font-size: 16px; line-height: 1.25; font-weight: 780; }
+    .subject-line {
+      margin: 3px 0 0;
+      color: var(--quiet);
+      font-size: 12px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+    .subject-name { color: var(--ink); font-weight: 780; }
+    .actions { display: flex; align-items: center; gap: 8px; }
+    .button {
+      appearance: none;
+      border: 1px solid var(--line-strong);
+      border-radius: 3px;
+      padding: 9px 14px;
+      background: var(--surface);
+      color: var(--ink);
+      cursor: pointer;
+      font-weight: 760;
+    }
+    .button:hover { border-color: var(--blue); color: var(--blue); }
+    .button.primary { background: var(--blue); border-color: var(--blue); color: white; }
+    .button.primary:hover { background: var(--blue-bright); }
+    main { padding: 28px 0 64px; }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 10px;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before { content: ""; width: 18px; height: 2px; background: currentColor; }
+    h1, h2, h3, p, dd { overflow-wrap: anywhere; }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.97);
+      border: 1px solid var(--line);
+      box-shadow: 0 7px 20px rgba(31, 48, 76, 0.06);
+      backdrop-filter: blur(8px);
+    }
+    .tabs { display: flex; gap: 4px; }
+    .tab {
+      min-height: 44px;
+      padding: 8px 14px;
+      border: 1px solid transparent;
+      border-radius: 2px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 780;
+    }
+    .tab[aria-selected="true"] {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: white;
+    }
+    .toolbar-note { color: var(--quiet); font-size: 12px; }
+    .profile-declaration {
+      padding: 22px 18px 30px;
+      text-align: center;
+    }
+    .profile-kicker {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 850;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .profile-declaration h1 {
+      margin: 0;
+      color: var(--violet-deep);
+      font-size: clamp(44px, 7vw, 84px);
+      line-height: 1;
+      letter-spacing: -0.045em;
+    }
+    .profile-code {
+      margin: 8px 0 0;
+      color: var(--teal);
+      font-size: 13px;
+      font-weight: 850;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .type-copy {
+      max-width: 760px;
+      margin: 14px auto 0;
+      color: var(--muted);
+      font-size: 17px;
+    }
+    .profile-subject {
+      margin: 7px 0 0;
+      color: var(--quiet);
+      font-size: 12px;
+    }
+    .profile-subject strong { color: var(--ink); }
+    .dna-hero {
+      display: grid;
+      grid-template-columns: minmax(280px, 0.74fr) minmax(0, 1.26fr);
+      gap: clamp(24px, 4vw, 58px);
+      align-items: center;
+      padding: 12px 0 24px;
+    }
+    .avatar-scene {
+      position: relative;
+      min-width: 0;
+      padding: 12px;
+      text-align: center;
+    }
+    .avatar-scene::before {
+      content: "";
+      position: absolute;
+      inset: 12% 8% 8%;
+      z-index: -1;
+      background:
+        linear-gradient(135deg, rgba(102, 81, 143, 0.08), rgba(63, 159, 156, 0.13));
+      clip-path: polygon(14% 8%, 88% 0, 100% 73%, 74% 100%, 5% 88%, 0 29%);
+    }
+    .skill-avatar { display: block; width: min(100%, 390px); margin: 0 auto; }
+    .avatar-caption {
+      max-width: 360px;
+      margin: -8px auto 0;
+      color: var(--quiet);
+      font-size: 12px;
+    }
+    .avatar-caption strong {
+      display: block;
+      color: var(--violet-deep);
+      font-size: 16px;
+    }
+    .trait-panel {
+      padding: clamp(20px, 3vw, 34px);
+      border-top: 5px solid var(--teal);
+    }
+    .trait-intro { margin-bottom: 20px; }
+    .trait-intro h2 { margin: 0; font-size: 24px; }
+    .trait-intro p { margin: 5px 0 0; color: var(--quiet); font-size: 12px; }
+    .trait-list { display: grid; gap: 20px; }
+    .trait-row { --trait-color: var(--teal); }
+    .trait-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 6px;
+    }
+    .trait-head h3 {
+      margin: 0;
+      color: var(--ink);
+      font-size: 15px;
+      letter-spacing: 0.03em;
+    }
+    .trait-head p { margin: 0; color: var(--quiet); font-size: 11px; }
+    .trait-labels {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 5px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+    }
+    .trait-labels span { color: var(--trait-color); }
+    .trait-labels strong { color: var(--ink); text-align: right; }
+    .trait-meter {
+      display: block;
+      padding: 0 22px;
+    }
+    .trait-percent {
+      position: absolute;
+      top: 50%;
+      left: var(--coverage-position, 0%);
+      z-index: 2;
+      display: grid;
+      place-items: center;
+      width: 43px;
+      height: 43px;
+      transform: translate(-50%, -50%);
+      border: 4px solid var(--trait-color);
+      border-radius: 50%;
+      background: var(--surface);
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 850;
+      font-variant-numeric: tabular-nums;
+    }
+    .trait-track {
+      position: relative;
+      display: block;
+      width: 100%;
+      height: 30px;
+      overflow: visible;
+      border-radius: 999px;
+      background: #ececef;
+    }
+    .trait-fill {
+      display: block;
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--trait-color);
+    }
+    .trait-standard {
+      margin: 8px 0 0;
+      color: var(--quiet);
+      font-size: 10.5px;
+      line-height: 1.5;
+    }
+    .trait-standard strong { color: var(--ink); }
+    .hero-follow {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.72fr);
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .identity-summary {
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr);
+      gap: 22px;
+      align-items: center;
+      padding: 26px 28px;
+      border-top: 4px solid var(--violet);
+    }
+    .ability-level {
+      position: relative;
+      display: grid;
+      min-height: 112px;
+      place-content: center;
+      overflow: hidden;
+      border: 1px solid #d9d0e8;
+      background: var(--violet-soft);
+      color: var(--violet-deep);
+      text-align: center;
+    }
+    .ability-level::after {
+      content: "";
+      position: absolute;
+      right: -22px;
+      bottom: -36px;
+      width: 82px;
+      height: 82px;
+      transform: rotate(24deg);
+      background: rgba(102, 81, 143, 0.11);
+    }
+    .ability-level span {
+      position: relative;
+      z-index: 1;
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: 0.12em;
+    }
+    .ability-level strong {
+      position: relative;
+      z-index: 1;
+      margin-top: 4px;
+      font-size: 34px;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+    .identity-copy h2 { margin: 0 0 7px; font-size: 20px; }
+    .identity-copy > p:not(.eyebrow):not(.identity-evidence) {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .ability-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 14px;
+    }
+    .ability-tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 9px;
+      border: 1px solid #cfd7e5;
+      background: #f7f9fc;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .ability-tag.primary {
+      border-color: #d9d0e8;
+      background: var(--violet-soft);
+      color: var(--violet-deep);
+    }
+    .identity-evidence {
+      margin: 13px 0 0;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+      color: var(--quiet);
+      font-size: 11px;
+    }
+    .identity-evidence strong { color: var(--ink); }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 28px;
+      padding: 4px 9px;
+      border: 1px solid currentColor;
+      border-radius: 999px;
+      font-size: 12px;
+      line-height: 1.2;
+      font-weight: 850;
+    }
+    .status::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .danger { color: var(--red); background: var(--red-soft); }
+    .warn { color: var(--amber); background: var(--amber-soft); }
+    .pass { color: var(--green); background: var(--green-soft); }
+    .info { color: var(--blue); background: var(--blue-soft); }
+    .quest {
+      padding: 24px;
+      border-top: 4px solid var(--amber);
+    }
+    .quest h2 { margin: 0 0 8px; font-size: 20px; }
+    .quest p { margin: 0; color: var(--muted); font-size: 13px; }
+    .quest-practice {
+      display: grid;
+      gap: 7px;
+      margin: 14px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    .quest-practice li {
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      background: var(--surface-soft);
+      color: var(--muted);
+      font-size: 11.5px;
+      line-height: 1.5;
+    }
+    .quest-practice strong { color: var(--ink); }
+    .quest .acceptance {
+      margin-top: 16px;
+      padding: 12px;
+      background: var(--amber-soft);
+      border-left: 3px solid var(--amber);
+      color: #62430a;
+    }
+    .project-remediation {
+      padding: 20px 22px;
+      border-top: 4px solid var(--red);
+    }
+    .project-remediation.review { border-top-color: var(--amber); }
+    .project-remediation h2 { margin: 0 0 7px; font-size: 19px; }
+    .project-remediation > p:not(.eyebrow) {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .project-remediation .acceptance {
+      margin-top: 13px;
+      padding: 11px 12px;
+      background: var(--red-soft);
+      color: #772d2a;
+    }
+    .section { margin-top: 18px; }
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 12px;
+    }
+    .section-head h2 { margin: 0; font-size: 21px; letter-spacing: -0.02em; }
+    .section-head p { margin: 0; color: var(--quiet); font-size: 13px; }
+    .dual-grid, .technical-grid, .score-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .level-card { padding: 22px; }
+    .level-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .level-card h3 { margin: 0; font-size: 17px; }
+    .level-value {
+      margin: 15px 0 4px;
+      color: var(--blue);
+      font-size: 31px;
+      font-weight: 850;
+      letter-spacing: -0.04em;
+    }
+    .level-label { color: var(--muted); font-weight: 760; }
+    .level-track {
+      display: grid;
+      gap: 4px;
+      margin-top: 17px;
+    }
+    .level-track.business { grid-template-columns: repeat(7, 1fr); }
+    .level-track.skill { grid-template-columns: repeat(6, 1fr); }
+    .level-step { height: 9px; background: #e6eaf0; border: 1px solid #d9dee7; }
+    .level-step.done { background: var(--blue); border-color: var(--blue); }
+    .track-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+      color: var(--quiet);
+      font-size: 10px;
+    }
+    .badges { display: flex; flex-wrap: wrap; gap: 8px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 6px 10px;
+      background: var(--green-soft);
+      border: 1px solid #b8dec9;
+      border-radius: 2px;
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .empty {
+      padding: 18px;
+      background: var(--surface-soft);
+      color: var(--muted);
+      border: 1px dashed var(--line-strong);
+    }
+    .score-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .score-card { position: relative; min-height: 168px; padding: 20px; overflow: hidden; }
+    .score-card::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      right: 0;
+      height: 4px;
+      background: var(--blue);
+    }
+    .score-card.red::before { background: var(--red); }
+    .score-card.green::before { background: var(--green); }
+    .score-card.amber::before { background: var(--amber); }
+    .score-label { margin: 0; color: var(--muted); font-size: 13px; font-weight: 760; }
+    .score-value { margin: 12px 0 8px; font-size: 38px; line-height: 1; font-weight: 850; }
+    .score-card.long-value .score-value {
+      font-size: 19px;
+      letter-spacing: -0.03em;
+      white-space: nowrap;
+    }
+    .score-value small { color: var(--quiet); font-size: 15px; font-weight: 650; }
+    .score-card > p:last-child { margin: 0; color: var(--muted); font-size: 12px; }
+    .suite-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .suite-stat {
+      min-height: 126px;
+      padding: 18px;
+      border-top: 4px solid var(--blue);
+    }
+    .suite-stat.green { border-top-color: var(--green); }
+    .suite-stat.amber { border-top-color: var(--amber); }
+    .suite-stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 760;
+    }
+    .suite-stat strong {
+      display: block;
+      margin: 10px 0 4px;
+      color: var(--ink);
+      font-size: 28px;
+      line-height: 1.05;
+    }
+    .suite-stat p { margin: 0; color: var(--quiet); font-size: 11px; }
+    .suite-conclusion {
+      display: grid;
+      grid-template-columns: minmax(180px, 0.45fr) minmax(0, 1.55fr);
+      gap: 20px;
+      margin-top: 12px;
+      padding: 20px;
+      border-left: 5px solid var(--green);
+    }
+    .suite-stage {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding-right: 20px;
+      border-right: 1px solid var(--line);
+    }
+    .suite-stage span { color: var(--quiet); font-size: 11px; font-weight: 800; }
+    .suite-stage strong { margin-top: 4px; color: var(--green); font-size: 23px; }
+    .suite-conclusion-copy p { margin: 0; color: var(--muted); }
+    .suite-conclusion-copy p + p { margin-top: 8px; }
+    .suite-basis {
+      margin-top: 12px !important;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+      color: var(--quiet) !important;
+      font-size: 11px;
+    }
+    .suite-table-wrap {
+      margin-top: 12px;
+      overflow-x: auto;
+    }
+    .suite-table {
+      width: 100%;
+      min-width: 820px;
+      border-collapse: collapse;
+      background: var(--surface);
+    }
+    .suite-table th, .suite-table td {
+      padding: 13px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+    .suite-table th {
+      background: var(--surface-soft);
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .suite-table td { color: var(--ink); font-size: 12px; }
+    .suite-table td:first-child { font-weight: 820; }
+    .suite-role {
+      display: block;
+      margin-top: 3px;
+      color: var(--quiet);
+      font-size: 10.5px;
+      font-weight: 500;
+    }
+    .suite-status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 3px 7px;
+      border: 1px solid #b8dec9;
+      background: var(--green-soft);
+      color: var(--green);
+      font-size: 10px;
+      font-weight: 820;
+    }
+    .suite-status.wait {
+      border-color: #ead19a;
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+    .lifecycle {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border: 1px solid var(--line);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .life-step { position: relative; padding: 20px 18px 20px 24px; border-right: 1px solid var(--line); }
+    .life-step:last-child { border-right: 0; }
+    .life-step::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 5px;
+      background: var(--quiet);
+    }
+    .life-step.ok::before { background: var(--green); }
+    .life-step.wait::before { background: var(--amber); }
+    .life-step.block::before { background: var(--red); }
+    .life-step h3 { margin: 4px 0 6px; font-size: 16px; }
+    .life-step p { margin: 0; color: var(--muted); font-size: 12px; }
+    .life-kicker { color: var(--quiet); font-size: 10px; font-weight: 850; letter-spacing: 0.08em; }
+    .findings-panel { padding: 20px; }
+    .finding-tools {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 16px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .finding-tools p { margin: 0; color: var(--muted); font-size: 13px; }
+    .filters { display: flex; flex-wrap: wrap; gap: 6px; }
+    .filter {
+      min-height: 44px;
+      padding: 7px 11px;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 760;
+    }
+    .filter[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: white; }
+    .finding-list { display: grid; gap: 10px; }
+    .finding {
+      display: grid;
+      grid-template-columns: 86px minmax(0, 1fr);
+      gap: 14px;
+      padding: 15px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-left-width: 4px;
+    }
+    .finding[data-severity="critical"] { border-left-color: var(--red); }
+    .finding[data-severity="should_fix"] { border-left-color: var(--amber); }
+    .finding[data-severity="info"] { border-left-color: var(--blue); }
+    .finding-id { color: var(--red); font-weight: 850; }
+    .finding[data-severity="should_fix"] .finding-id { color: var(--amber); }
+    .finding[data-severity="info"] .finding-id { color: var(--blue); }
+    .finding h3 { margin: 0 0 4px; font-size: 15px; }
+    .finding p { margin: 0; color: var(--muted); font-size: 12px; }
+    .finding summary {
+      width: fit-content;
+      margin-top: 8px;
+      color: var(--blue);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .evidence {
+      margin-top: 8px;
+      padding: 9px 11px;
+      background: var(--surface-soft);
+      color: var(--muted);
+      font-size: 11px;
+      overflow-wrap: anywhere;
+    }
+    .tech-card { padding: 21px; }
+    .tech-card h2, .tech-card h3 { margin: 0 0 10px; font-size: 18px; }
+    .meta { margin: 0; }
+    .meta-row {
+      display: grid;
+      grid-template-columns: 150px minmax(0, 1fr);
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .meta-row:last-child { border-bottom: 0; }
+    .meta dt { color: var(--quiet); }
+    .meta dd { margin: 0; font-weight: 700; }
+    .tech-card ul { margin: 8px 0 0; padding-left: 20px; }
+    .tech-card li { margin: 5px 0; color: var(--muted); font-size: 13px; }
+    .raw {
+      max-height: 520px;
+      overflow: auto;
+      margin: 0;
+      padding: 16px;
+      background: #111827;
+      color: #e5edf8;
+      border-radius: 3px;
+      font-size: 11px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+    footer {
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+      color: var(--quiet);
+      font-size: 12px;
+    }
+
+    @media (max-width: 980px) {
+      .dna-hero { grid-template-columns: 1fr; }
+      .avatar-scene { padding-bottom: 0; }
+      .skill-avatar { width: min(78vw, 390px); }
+      .hero-follow { grid-template-columns: 1fr; }
+      .score-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .suite-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .lifecycle { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .life-step:nth-child(2) { border-right: 0; }
+      .life-step:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+    }
+    @media (max-width: 680px) {
+      .shell { width: min(calc(100% - 24px), var(--max)); }
+      .header-row { min-height: 72px; gap: 10px; }
+      .actions .button:not(.primary) { display: none; }
+      main { padding-top: 16px; }
+      .toolbar { align-items: stretch; flex-direction: column; gap: 8px; }
+      .tabs { display: grid; grid-template-columns: repeat(3, 1fr); }
+      .tab { padding-inline: 7px; font-size: 12px; }
+      .toolbar-note { display: none; }
+      .profile-declaration { padding: 16px 4px 22px; }
+      .profile-kicker { font-size: 11px; letter-spacing: 0.13em; }
+      .profile-declaration h1 { font-size: clamp(38px, 12vw, 58px); }
+      .type-copy { font-size: 15px; }
+      .dna-hero { gap: 18px; padding-top: 0; }
+      .trait-panel { padding: 20px 16px; }
+      .trait-head { align-items: start; flex-direction: column; gap: 1px; }
+      .trait-list { gap: 17px; }
+      .trait-percent { width: 39px; height: 39px; border-width: 3px; font-size: 10px; }
+      .trait-meter { padding: 0 20px; }
+      .trait-track { height: 26px; }
+      .identity-summary {
+        grid-template-columns: 80px minmax(0, 1fr);
+        gap: 14px;
+        padding: 20px;
+      }
+      .ability-level { min-height: 80px; }
+      .ability-level strong { font-size: 27px; }
+      .identity-copy h2 { font-size: 18px; }
+      .quest { padding: 20px; }
+      .dual-grid, .technical-grid, .score-grid, .lifecycle { grid-template-columns: 1fr; }
+      .suite-stat-grid, .suite-conclusion { grid-template-columns: 1fr; }
+      .suite-stage { padding: 0 0 14px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .life-step, .life-step:nth-child(2) { border-right: 0; border-bottom: 1px solid var(--line); }
+      .life-step:last-child { border-bottom: 0; }
+      .section-head { align-items: start; flex-direction: column; gap: 3px; }
+      .finding-tools { align-items: stretch; flex-direction: column; }
+      .filters { display: grid; grid-template-columns: repeat(2, 1fr); }
+      .finding { grid-template-columns: 1fr; gap: 5px; }
+      .meta-row { grid-template-columns: 1fr; gap: 2px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+    @media print {
+      @page { size: A4; margin: 13mm; }
+      body { background: white; font-size: 10pt; }
+      .topline, .actions, .toolbar, .filters { display: none !important; }
+      [hidden] { display: block !important; }
+      .panel, .lifecycle { box-shadow: none; break-inside: avoid; }
+      .shell { width: 100%; }
+      main { padding: 12px 0; }
+      .profile-declaration { padding-top: 0; }
+      .dna-hero { grid-template-columns: 0.7fr 1.3fr; }
+      .hero-follow { grid-template-columns: 1.25fr 0.75fr; }
+      #view-growth > .section { break-inside: avoid; }
+      .section-head { break-after: avoid; }
+      .score-grid { grid-template-columns: repeat(4, 1fr); }
+      .suite-stat-grid { grid-template-columns: repeat(4, 1fr); }
+      .suite-table-wrap { overflow: visible; }
+      .suite-table { min-width: 0; }
+      .lifecycle { grid-template-columns: repeat(4, 1fr); }
+      .technical-grid { grid-template-columns: repeat(2, 1fr); }
+      .finding { break-inside: avoid; }
+      details > * { display: block; }
+      details summary { display: none; }
+      .raw { max-height: none; background: white; color: black; border: 1px solid #999; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到成绩单正文</a>
+  <div class="topline" aria-hidden="true"></div>
+  <header class="site-header">
+    <div class="shell header-row">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">SD</div>
+        <div>
+          <p class="brand-title" id="brand-title">Skill DNA 成长成绩单</p>
+          <p class="subject-line">
+            <span id="subject-label">分析对象：</span>
+            <span class="subject-name" id="subject-name">待识别</span>
+          </p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="button" id="expand-all" type="button">展开全部证据</button>
+        <button class="button primary" id="print-report" type="button">打印 / 存为 PDF</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell" id="main">
+    <nav class="toolbar" aria-label="成绩单视图切换">
+      <div class="tabs" role="tablist" aria-label="报告视图">
+        <button class="tab" role="tab" type="button" id="tab-growth" aria-controls="view-growth" aria-selected="true" data-tab="growth">成长画像</button>
+        <button class="tab" role="tab" type="button" id="tab-detection" aria-controls="view-detection" aria-selected="false" data-tab="detection">检测结果</button>
+        <button class="tab" role="tab" type="button" id="tab-technical" aria-controls="view-technical" aria-selected="false" data-tab="technical">技术证据</button>
+      </div>
+      <span class="toolbar-note" id="toolbar-note">成长画像评价个人能力；项目交付结论在检测结果中单独展示</span>
+    </nav>
+
+    <section id="view-growth" role="tabpanel" aria-labelledby="tab-growth" data-view="growth">
+      <header class="profile-declaration">
+        <p class="profile-kicker">YOUR SKILL-BUILDING TYPE IS</p>
+        <h1 id="archetype-label">类型待解锁</h1>
+        <p class="profile-code" id="archetype-code">TYPE PENDING</p>
+        <p class="type-copy" id="archetype-summary"></p>
+        <p class="profile-subject">
+          <span id="profile-subject-label">分析对象：</span>
+          <strong id="profile-subject-name">待识别</strong>
+        </p>
+      </header>
+
+      <div class="dna-hero">
+        <figure class="avatar-scene">
+          <svg class="skill-avatar" viewBox="0 0 420 380" role="img" aria-labelledby="avatar-title avatar-desc">
+            <title id="avatar-title">原创 Skill 导航机器人</title>
+            <desc id="avatar-desc">一个使用几何多边形绘制、手持流程图和检查笔的导航机器人。</desc>
+            <ellipse cx="202" cy="340" rx="145" ry="18" fill="#d9d8dc"></ellipse>
+            <path d="M65 214C92 118 181 68 310 91c36 6 62 26 76 60" fill="none" stroke="#c8c5cf" stroke-width="5" stroke-dasharray="10 11"></path>
+            <circle cx="67" cy="215" r="9" fill="#3f9f9c"></circle>
+            <circle cx="386" cy="151" r="9" fill="#66518f"></circle>
+            <path d="M119 94l26-24 26 24-26 24z" fill="#3f9f9c"></path>
+            <path d="M327 67l17-16 17 16-17 16z" fill="#d5a13b"></path>
+
+            <g transform="translate(68 72)">
+              <path d="M95 74L164 37l66 41-16 77-54 33-74-37z" fill="#66518f"></path>
+              <path d="M113 76l51-27 46 28-13 54-38 24-51-26z" fill="#f0d4b8"></path>
+              <path d="M113 76l51-27 10 35-30 13z" fill="#785fa3"></path>
+              <path d="M174 84l36-7-13 54-29-14z" fill="#d7b395"></path>
+              <circle cx="143" cy="106" r="5" fill="#292a35"></circle>
+              <circle cx="177" cy="102" r="5" fill="#292a35"></circle>
+              <path d="M146 129l28 2" stroke="#493761" stroke-width="6" stroke-linecap="round"></path>
+              <path d="M159 37V13" stroke="#493761" stroke-width="7"></path>
+              <circle cx="159" cy="7" r="9" fill="#3f9f9c"></circle>
+
+              <path d="M113 158l92-6 37 98-126 12-32-72z" fill="#493761"></path>
+              <path d="M137 159l42-4 18 103-50 4z" fill="#66518f"></path>
+              <circle cx="180" cy="199" r="22" fill="#3f9f9c"></circle>
+              <path d="M190 188l-7 15-15 7 7-15z" fill="none" stroke="white" stroke-width="4"></path>
+
+              <path d="M93 175l-49 42 26 28 56-36z" fill="#3f9f9c"></path>
+              <circle cx="49" cy="227" r="15" fill="#f0d4b8"></circle>
+              <path d="M223 174l54 44-27 28-49-39z" fill="#785fa3"></path>
+              <circle cx="269" cy="226" r="15" fill="#f0d4b8"></circle>
+              <path d="M270 211l34-49" stroke="#292a35" stroke-width="7" stroke-linecap="round"></path>
+              <path d="M304 162l11-17" stroke="#d5a13b" stroke-width="11" stroke-linecap="round"></path>
+
+              <path d="M122 255l45-3-11 68H99z" fill="#66518f"></path>
+              <path d="M174 252l41-4 28 66-57 5z" fill="#493761"></path>
+              <path d="M93 316h69l-7 18H81z" fill="#292a35"></path>
+              <path d="M185 315h63l11 18h-77z" fill="#292a35"></path>
+            </g>
+
+            <g transform="translate(18 183) rotate(-5)">
+              <rect x="0" y="0" width="112" height="104" rx="5" fill="white" stroke="#493761" stroke-width="5"></rect>
+              <rect x="37" y="-8" width="38" height="18" rx="4" fill="#d5a13b"></rect>
+              <path d="M24 35h62M24 58h42M24 81h57" stroke="#c8c5cf" stroke-width="6" stroke-linecap="round"></path>
+              <circle cx="19" cy="35" r="5" fill="#3f9f9c"></circle>
+              <circle cx="19" cy="58" r="5" fill="#66518f"></circle>
+              <circle cx="19" cy="81" r="5" fill="#d5a13b"></circle>
+            </g>
+          </svg>
+          <figcaption class="avatar-caption">
+            <strong>Skill 导航员</strong>
+            把复杂承诺拆成路径、证据和下一关。
+          </figcaption>
+        </figure>
+
+        <article class="panel trait-panel" aria-labelledby="axis-title">
+          <div class="trait-intro">
+            <p class="eyebrow">DNA 证据轴</p>
+            <h2 id="axis-title">六项工程能力画像</h2>
+            <p>这是单向证据进度：100% 表示当前规则和测试范围内的满证据，不代表永久零风险。</p>
+          </div>
+          <div class="trait-list" id="axis-list"></div>
+        </article>
+      </div>
+
+      <div class="hero-follow">
+        <article class="panel identity-summary" aria-labelledby="ability-summary-title">
+          <div class="ability-level" aria-label="个人能力阶段">
+            <span>能力阶段</span>
+            <strong id="ability-level-id">—</strong>
+          </div>
+          <div class="identity-copy">
+            <p class="eyebrow" id="ability-summary-eyebrow">你的能力画像</p>
+            <h2 id="ability-summary-title">能力评价待生成</h2>
+            <p id="ability-summary-copy">完成检测后，这里会说明你已经表现出的能力和下一步成长方向。</p>
+            <div class="ability-tags" aria-label="个人能力摘要">
+              <span class="ability-tag" id="ability-level-label">尚未评估</span>
+              <span class="ability-tag primary" id="ability-type-label">类型待解锁</span>
+            </div>
+            <p class="identity-evidence">能力证据来自：<strong id="identity-source-name">待识别</strong></p>
+          </div>
+        </article>
+        <aside class="panel quest" aria-labelledby="quest-title">
+          <p class="eyebrow">个人能力下一关</p>
+          <h2 id="quest-title"></h2>
+          <p id="quest-action"></p>
+          <ul class="quest-practice" id="quest-practice" aria-label="本次能力练习"></ul>
+          <div class="acceptance"><strong>练成标准：</strong><span id="quest-acceptance"></span></div>
+        </aside>
+      </div>
+
+      <section class="section" aria-labelledby="dual-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">双成长线</p>
+            <h2 id="dual-title">业务准备度与 Skill 创作能力分开评价</h2>
+          </div>
+          <p>没有 Skill 时显示尚未开始，不当作失败</p>
+        </div>
+        <div class="dual-grid">
+          <article class="panel level-card" id="business-level-card"></article>
+          <article class="panel level-card" id="skill-level-card"></article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="badge-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">已解锁</p>
+            <h2 id="badge-title">徽章只奖励证据，不奖励文件长度</h2>
+          </div>
+        </div>
+        <article class="panel axis-panel">
+          <div class="badges" id="badge-list"></div>
+        </article>
+      </section>
+    </section>
+
+    <section id="view-detection" role="tabpanel" aria-labelledby="tab-detection" data-view="detection" hidden>
+      <section class="section" id="suite-overview-section" aria-labelledby="suite-overview-title" hidden>
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">整套项目</p>
+            <h2 id="suite-overview-title">四个正式 Skill 的交付体检</h2>
+          </div>
+          <p id="suite-snapshot">等待整套审计数据</p>
+        </div>
+        <div class="suite-stat-grid" id="suite-stat-grid"></div>
+        <article class="panel suite-conclusion">
+          <div class="suite-stage">
+            <span>当前项目阶段</span>
+            <strong id="suite-project-stage">待评估</strong>
+          </div>
+          <div class="suite-conclusion-copy">
+            <p id="suite-core-problem"></p>
+            <p id="suite-remaining-boundary"></p>
+            <p class="suite-basis" id="suite-basis"></p>
+          </div>
+        </article>
+        <div class="panel suite-table-wrap">
+          <table class="suite-table">
+            <thead>
+              <tr>
+                <th scope="col">正式 Skill</th>
+                <th scope="col">基础结构</th>
+                <th scope="col">边界规则</th>
+                <th scope="col">配套材料</th>
+                <th scope="col">静态安全</th>
+                <th scope="col">行为状态</th>
+              </tr>
+            </thead>
+            <tbody id="suite-skill-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="scores-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">原始检测</p>
+            <h2 id="scores-title">分析对象的原始检测结果</h2>
+          </div>
+          <p>页面不重新计算分数</p>
+        </div>
+        <div class="score-grid" id="score-grid"></div>
+      </section>
+
+      <section class="section" aria-labelledby="project-quest-title">
+        <article class="panel project-remediation">
+          <p class="eyebrow">项目优先整改</p>
+          <h2 id="project-quest-title"></h2>
+          <p id="project-quest-action"></p>
+          <div class="acceptance"><strong>验收标准：</strong><span id="project-quest-acceptance"></span></div>
+        </article>
+      </section>
+
+      <section class="section" aria-labelledby="life-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">工程闭环</p>
+            <h2 id="life-title">规划 → 实现 → 验证 → 交付</h2>
+          </div>
+          <p>静态通过不等于行为已经证明</p>
+        </div>
+        <div class="lifecycle" id="lifecycle"></div>
+      </section>
+
+      <section class="section" aria-labelledby="finding-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">问题清单</p>
+            <h2 id="finding-title">业务准备与 Skill 工程问题使用同一证据列表</h2>
+          </div>
+        </div>
+        <article class="panel findings-panel">
+          <div class="finding-tools">
+            <p id="finding-summary" aria-live="polite"></p>
+            <div class="filters" role="group" aria-label="问题筛选">
+              <button class="filter" type="button" data-filter="all" aria-pressed="true">全部</button>
+              <button class="filter" type="button" data-filter="critical" aria-pressed="false">严重</button>
+              <button class="filter" type="button" data-filter="should_fix" aria-pressed="false">应改</button>
+              <button class="filter" type="button" data-filter="business_readiness" aria-pressed="false">业务准备</button>
+            </div>
+          </div>
+          <div class="finding-list" id="finding-list"></div>
+        </article>
+      </section>
+    </section>
+
+    <section id="view-technical" role="tabpanel" aria-labelledby="tab-technical" data-view="technical" hidden>
+      <section class="section" aria-labelledby="tech-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">技术证据</p>
+            <h2 id="tech-title">来源、规则版本、限制和可复核 JSON</h2>
+          </div>
+        </div>
+        <div class="technical-grid">
+          <article class="panel tech-card">
+            <h3>结果身份</h3>
+            <dl class="meta" id="identity-meta"></dl>
+          </article>
+          <article class="panel tech-card">
+            <h3>数据来源</h3>
+            <dl class="meta" id="source-meta"></dl>
+          </article>
+          <article class="panel tech-card">
+            <h3>验证限制</h3>
+            <ul id="limitations"></ul>
+          </article>
+          <article class="panel tech-card">
+            <h3>规则说明</h3>
+            <ul>
+              <li>业务准备度与 Skill 工程成熟度不合并为总分。</li>
+              <li>stop_ship 会限制 Skill 等级。</li>
+              <li>没有行为证据不能进入 Lv3。</li>
+              <li>HTML 只展示 Python 生成的结果。</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+      <section class="section" aria-labelledby="json-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">机器可读</p>
+            <h2 id="json-title">当前成长画像 JSON</h2>
+          </div>
+        </div>
+        <pre class="raw" id="raw-json"></pre>
+      </section>
+    </section>
+
+    <footer>
+      由确定性评分器生成 · 单文件离线 HTML · 不执行目标 Skill · 不加载外部字体、CDN 或追踪脚本
+    </footer>
+  </main>
+
+  <script id="profile-data" type="application/json">__PROFILE_JSON__</script>
+  <script>
+    const profile = JSON.parse(document.getElementById("profile-data").textContent);
+    const $ = (selector) => document.querySelector(selector);
+    const make = (tag, className, text) => {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined && text !== null) node.textContent = String(text);
+      return node;
+    };
+    const subject = profile.subject || {
+      kind: "unknown",
+      label: "分析对象",
+      name: "未命名分析对象",
+      source: "not_supplied"
+    };
+    document.title = `${profile.title || "Skill DNA 成长成绩单"} · ${subject.name}`;
+    $("#brand-title").textContent = profile.title || "Skill DNA 成长成绩单";
+    $("#subject-label").textContent = `${subject.label || "分析对象"}：`;
+    $("#subject-name").textContent = subject.name || "未命名分析对象";
+    $("#profile-subject-label").textContent = "能力证据来自：";
+    $("#profile-subject-name").textContent = subject.name || "未命名分析对象";
+    $("#scores-title").textContent = `${subject.name || "分析对象"}的原始检测结果`;
+    if (profile.report_kind === "project") {
+      $("#toolbar-note").textContent = "默认展示项目交付体检；个人能力画像保留在成长视图";
+    }
+    const engineering = profile.skill_engineering || {};
+    const readiness = profile.business_readiness || {};
+    const archetype = engineering.archetype || {
+      label: "类型待解锁",
+      summary: "先完成一个可检查的 Skill 草稿。"
+    };
+    $("#archetype-label").textContent = archetype.label;
+    $("#archetype-code").textContent = String(archetype.id || "type-pending")
+      .replaceAll("-", " ")
+      .toUpperCase();
+    $("#archetype-summary").textContent = `${archetype.summary || ""} ${archetype.growth || ""}`.trim();
+    const abilityLevel = engineering.level || {};
+    $("#ability-level-id").textContent = abilityLevel.id || "—";
+    $("#ability-level-label").textContent = abilityLevel.label || "尚未评估";
+    $("#ability-type-label").textContent = archetype.label || "类型待解锁";
+    const personalInterpretation = engineering.personal_interpretation || {};
+    $("#ability-summary-eyebrow").textContent = personalInterpretation.eyebrow || "你的能力画像";
+    $("#ability-summary-title").textContent = personalInterpretation.headline
+      || "你正在形成自己的 Skill 创作方法";
+    $("#ability-summary-copy").textContent = personalInterpretation.summary
+      || "继续补充可检查的作品和验证证据，你的能力画像会逐步清晰。";
+    $("#identity-source-name").textContent = subject.name || "未命名分析对象";
+
+    const learningQuest = engineering.learning_quest || {};
+    $("#quest-title").textContent = learningQuest.title || "完成第一个能力练习";
+    $("#quest-action").textContent = learningQuest.action || "从一个可检查的小任务开始练习。";
+    $("#quest-acceptance").textContent = learningQuest.acceptance || "留下一个可复核的练习结果。";
+    const questPractice = $("#quest-practice");
+    const practicePoints = Array.isArray(learningQuest.practice_points)
+      ? learningQuest.practice_points
+      : [];
+    practicePoints.forEach((point) => {
+      const item = make("li");
+      item.append(make("strong", "", `${point.label || "练习"}：`));
+      item.append(document.createTextNode(point.text || ""));
+      questPractice.append(item);
+    });
+    if (!practicePoints.length) {
+      questPractice.append(make("li", "", "补充一个量化目标、判断分支和可复核结果。"));
+    }
+
+    const projectQuest = profile.next_quest || {};
+    $("#project-quest-title").textContent = projectQuest.title || "补充可评估输入";
+    $("#project-quest-action").textContent = projectQuest.action || "";
+    $("#project-quest-acceptance").textContent = projectQuest.acceptance || "";
+    if (profile.verdict !== "stop_ship") {
+      document.querySelector(".project-remediation").classList.add("review");
+    }
+
+    function renderLevelCard(target, heading, level, kind, emptyText) {
+      const card = $(target);
+      const head = make("div", "level-head");
+      head.append(make("h3", "", heading));
+      const lane = make("span", "status info", kind === "business" ? "业务成长" : "能力成长");
+      head.append(lane);
+      card.append(head);
+      if (!level) {
+        card.append(make("div", "level-value", "尚未开始"));
+        card.append(make("div", "level-label", emptyText));
+        card.append(make("div", "empty", "提供对应评分 JSON 后解锁这条成长线。"));
+        return;
+      }
+      card.append(make("div", "level-value", level.id));
+      card.append(make("div", "level-label", level.label));
+      const track = make("div", `level-track ${kind}`);
+      const maximum = Number(level.max_ordinal || (kind === "business" ? 6 : 5));
+      const ordinal = Number(level.ordinal || 0);
+      for (let index = 0; index <= maximum; index += 1) {
+        track.append(make("span", `level-step${index <= ordinal ? " done" : ""}`));
+      }
+      track.setAttribute("aria-label", `${heading} ${level.id}，共 ${maximum + 1} 个阶段`);
+      card.append(track);
+      const labels = make("div", "track-labels");
+      labels.append(make("span", "", kind === "business" ? "B0" : "Lv0"));
+      labels.append(make("span", "", kind === "business" ? "B6" : "Lv5"));
+      card.append(labels);
+    }
+
+    renderLevelCard(
+      "#business-level-card",
+      "业务工作准备度",
+      readiness.level,
+      "business",
+      "尚未进行业务准备度评估"
+    );
+    renderLevelCard(
+      "#skill-level-card",
+      "Skill 创作能力阶段",
+      engineering.level,
+      "skill",
+      "尚未提交可评估 Skill"
+    );
+
+    const axisList = $("#axis-list");
+    const dimensions = engineering.dimensions || {};
+    const traitMeta = {
+      intent_contract: {
+        description: "目标、用途、禁用场景和完成标准是否说清楚",
+        full: "使用条件、禁用场景、输出、验收和升级条件完整，适用的安全边界已有行为证据。"
+      },
+      workflow_execution: {
+        description: "步骤是否能稳定完成，并留下可检查的输出",
+        full: "核心路径和失败路径均经过可信实测，输入、输出与完成标准可复核。"
+      },
+      tooling_support: {
+        description: "参考资料、案例、状态和脚本是否配套",
+        full: "参考资料、案例、状态记录和所承诺脚本齐备，并在真实流程中可用。"
+      },
+      verification_learning: {
+        description: "是否经过测试、复盘，并形成下一版改进",
+        full: "核心流程测试、问题复盘、改进记录和回归结果形成完整闭环。"
+      },
+      safety_control: {
+        description: "外部动作、权限、确认和失败恢复是否安全",
+        full: "适用的授权、确认、越权拦截、写回和恢复控制均有证据；不适用项也有范围与目标未变化证据。"
+      },
+      portability_adaptation: {
+        description: "同一工作契约能否在不同 AI 或 Agent 平台复用",
+        full: "同一契约指纹和同一测试夹具指纹已在至少两个 AI / Agent 平台完成可信行为验证。"
+      }
+    };
+    const coverageStatus = {
+      0: "暂无有效证据",
+      25: "已有起步证据",
+      50: "静态证据较完整",
+      75: "已有行为证据",
+      100: "满证据条件成立"
+    };
+    const traitColors = ["#3f9f9c", "#66518f", "#d49b32", "#3d8a69", "#c45a55", "#3d7ca6"];
+    Object.entries(dimensions).forEach(([key, axis], index) => {
+      const row = make("article", "trait-row");
+      row.style.setProperty("--trait-color", traitColors[index % traitColors.length]);
+
+      const meta = traitMeta[key] || {
+        description: "该维度当前可被审计材料支持的程度",
+        full: "该维度在当前规则范围内要求的静态与行为证据全部满足。"
+      };
+      const head = make("div", "trait-head");
+      head.append(make("h3", "", axis.label));
+      head.append(make("p", "", meta.description));
+      row.append(head);
+
+      const state = axis.state === null || axis.state === undefined
+        ? null
+        : Math.max(0, Math.min(4, Number(axis.state)));
+      const coverage = state === null ? 0 : Math.round((state / 4) * 100);
+      const coverageText = state === null ? "—" : `${coverage}%`;
+      const status = state === null ? "尚未评估" : coverageStatus[coverage] || "证据状态待确认";
+
+      const labels = make("div", "trait-labels");
+      labels.append(make("span", "", "当前证据覆盖"));
+      labels.append(make("strong", "", status));
+      row.append(labels);
+
+      const meter = make("div", "trait-meter");
+      meter.setAttribute(
+        "aria-label",
+        state === null
+          ? `${axis.label} 尚未评估。达到满证据需：${meta.full}`
+          : `${axis.label}：当前证据覆盖 ${coverage}%。达到满证据需：${meta.full}`
+      );
+      meter.setAttribute("role", "img");
+      const track = make("span", "trait-track");
+      track.style.setProperty("--coverage-position", `${coverage}%`);
+      const fill = make("span", "trait-fill");
+      fill.style.width = `${coverage}%`;
+      track.append(fill);
+      track.append(make("span", "trait-percent", coverageText));
+      meter.append(track);
+      row.append(meter);
+      const standard = make("p", "trait-standard");
+      standard.append(make("strong", "", "达到 100%："));
+      standard.append(document.createTextNode(meta.full));
+      row.append(standard);
+      axisList.append(row);
+    });
+    if (!Object.keys(dimensions).length) axisList.append(make("div", "empty", "尚无 Skill 工程能力数据。"));
+
+    const badgeList = $("#badge-list");
+    const badges = [
+      ...(Array.isArray(readiness.badges) ? readiness.badges : []),
+      ...(Array.isArray(engineering.badges) ? engineering.badges : [])
+    ];
+    badges.forEach((badge) => badgeList.append(make("span", "badge", badge.label || badge.id)));
+    if (!badges.length) badgeList.append(make("div", "empty", "完成第一个证据门槛后解锁徽章。"));
+
+    const scoreGrid = $("#score-grid");
+    const scores = engineering.scores;
+    const verdictLabels = {
+      static_pass: "静态预检通过",
+      stop_ship: "存在高风险阻断",
+      execution_unverified: "行为验证未完成",
+      not_assessed: "未评估"
+    };
+    const executionLabels = {
+      not_safely_verified: "未做可信隔离行为验证",
+      not_assessed: "未评估",
+      verified: "行为验证已完成"
+    };
+    const suite = profile.suite;
+    if (suite && typeof suite === "object") {
+      $("#suite-overview-section").hidden = false;
+      const suiteSummary = suite.summary || {};
+      const testSummary = suiteSummary.regression_tests || {};
+      const git = suite.git || {};
+      $("#suite-snapshot").textContent =
+        `${suite.generated_at || "未知时间"} · ${suite.timezone || "未知时区"} · `
+        + `Git ${git.commit || "unknown"} (${git.working_tree || "unknown"})`;
+      const suiteStats = [
+        {
+          label: "正式 Skill",
+          value: suiteSummary.skills_total ?? "—",
+          note: "本次直接纳入审计的产品数量",
+          tone: "green"
+        },
+        {
+          label: "静态底线通过",
+          value: `${suiteSummary.static_floor_pass ?? 0} / ${suiteSummary.skills_total ?? 0}`,
+          note: "结构、边界和严重问题底线",
+          tone: suiteSummary.static_floor_pass === suiteSummary.skills_total ? "green" : "amber"
+        },
+        {
+          label: "安全预检通过",
+          value: `${suiteSummary.safety_static_pass ?? 0} / ${suiteSummary.skills_total ?? 0}`,
+          note: "只代表静态预检，不代表跨平台行为验证",
+          tone: suiteSummary.safety_static_pass === suiteSummary.skills_total ? "green" : "amber"
+        },
+        {
+          label: "回归测试",
+          value: testSummary.status === "passed" ? `${testSummary.total || 0} 项通过` : "未通过",
+          note: testSummary.command || "未提供测试命令",
+          tone: testSummary.status === "passed" ? "green" : "amber"
+        }
+      ];
+      suiteStats.forEach((stat) => {
+        const card = make("article", `panel suite-stat ${stat.tone || ""}`);
+        card.append(make("span", "", stat.label));
+        card.append(make("strong", "", stat.value));
+        card.append(make("p", "", stat.note));
+        $("#suite-stat-grid").append(card);
+      });
+      const conclusion = suite.conclusion || {};
+      $("#suite-project-stage").textContent = conclusion.project_stage || "待评估";
+      $("#suite-core-problem").textContent = conclusion.core_problem || "";
+      $("#suite-remaining-boundary").textContent = conclusion.remaining_boundary || "";
+      $("#suite-basis").textContent =
+        `审计口径：${suite.basis || "未记录"}；范围：${suite.scope || "未记录"}`;
+
+      (suite.skills || []).forEach((skill) => {
+        const row = document.createElement("tr");
+        const nameCell = document.createElement("td");
+        nameCell.append(make("strong", "", skill.name || "未命名 Skill"));
+        nameCell.append(make("span", "suite-role", skill.role || ""));
+        row.append(nameCell);
+        const scoreText = (score) =>
+          score && Number(score.max) >= 0 ? `${score.score} / ${score.max}` : "—";
+        row.append(make("td", "", scoreText(skill.basic)));
+        row.append(make("td", "", scoreText(skill.contract)));
+        row.append(make("td", "", scoreText(skill.support)));
+        const safetyCell = document.createElement("td");
+        safetyCell.append(
+          make(
+            "span",
+            `suite-status${skill.safety_verdict === "static_pass" ? "" : " wait"}`,
+            verdictLabels[skill.safety_verdict] || skill.safety_verdict || "未评估"
+          )
+        );
+        row.append(safetyCell);
+        row.append(
+          make(
+            "td",
+            "",
+            executionLabels[skill.execution_status] || skill.execution_status || "未评估"
+          )
+        );
+        $("#suite-skill-rows").append(row);
+      });
+    }
+
+    function scoreCard(label, value, suffix, text, tone) {
+      const card = make("article", `panel score-card ${tone || ""}`);
+      if (String(value ?? "").length > 6) card.classList.add("long-value");
+      card.append(make("p", "score-label", label));
+      const score = make("div", "score-value", value);
+      if (suffix) score.append(make("small", "", suffix));
+      card.append(score);
+      card.append(make("p", "", text));
+      scoreGrid.append(card);
+    }
+    if (scores) {
+      scoreCard("基础可用结构", scores.basic_usable.score, ` / ${scores.basic_usable.max}`, "文件、元信息、步骤和完成标准。", scores.basic_usable.score === scores.basic_usable.max ? "green" : "amber");
+      scoreCard("使用边界与检查规则", scores.contract_clarity.score, ` / ${scores.contract_clarity.max}`, "何时使用、何时不用、检查轴与验证。", scores.contract_clarity.score >= 3 ? "green" : "red");
+      scoreCard("配套材料", scores.support_kit.score, ` / ${scores.support_kit.max}`, "参考资料、案例、状态和脚本。", scores.support_kit.score === scores.support_kit.max ? "green" : "amber");
+      const safety = engineering.safety || {};
+      scoreCard(
+        "项目交付状态",
+        verdictLabels[safety.verdict] || safety.verdict || "未评估",
+        "",
+        `行为状态：${executionLabels[safety.execution_status] || safety.execution_status || "未评估"}`,
+        safety.verdict === "static_pass" ? "green" : "red"
+      );
+    } else {
+      scoreGrid.append(make("div", "empty", "尚未提供 Skill hard gates 结果。"));
+    }
+
+    const life = $("#lifecycle");
+    const businessOrdinal = readiness.level ? Number(readiness.level.ordinal || 0) : 0;
+    const skillOrdinal = engineering.level ? Number(engineering.level.ordinal || 0) : -1;
+    const lifeItems = [
+      [
+        "01 · 规划",
+        "目标和业务流程",
+        suite ? "ok" : businessOrdinal >= 2 ? "ok" : "wait",
+        suite
+          ? "四件套职责、输入输出和串联关系已经记录。"
+          : businessOrdinal >= 2
+            ? "业务目标和步骤已经形成。"
+            : "先完成目标澄清和流程成形。"
+      ],
+      ["02 · 实现", "Skill 结构与工具", skillOrdinal >= 2 ? "ok" : skillOrdinal >= 0 ? "wait" : "block", skillOrdinal >= 2 ? "静态结构与安全底线已通过。" : "Skill 尚未达到静态应用阶段。"],
+      ["03 · 验证", "行为与复盘证据", skillOrdinal >= 3 ? "ok" : "wait", skillOrdinal >= 3 ? "核心流程已有行为证据。" : "静态检查不能代替真实验证。"],
+      ["04 · 交付", "安全与跨平台", skillOrdinal >= 4 ? "ok" : profile.verdict === "stop_ship" ? "block" : "wait", skillOrdinal >= 4 ? "已具备受控交付证据。" : "需要安全、恢复和平台证据。"]
+    ];
+    lifeItems.forEach(([kicker, title, state, text]) => {
+      const item = make("article", `life-step ${state}`);
+      item.append(make("span", "life-kicker", kicker));
+      item.append(make("h3", "", title));
+      item.append(make("p", "", text));
+      life.append(item);
+    });
+
+    const allFindings = Array.isArray(profile.findings) ? profile.findings : [];
+    const findingList = $("#finding-list");
+    function renderFindings(filter) {
+      const visible = allFindings.filter((finding) =>
+        filter === "all" || finding.severity === filter || finding.lane === filter
+      );
+      findingList.replaceChildren();
+      visible.forEach((finding) => {
+        const article = make("article", "finding");
+        article.dataset.severity = finding.severity || "info";
+        article.append(make("div", "finding-id", finding.id));
+        const body = make("div", "");
+        body.append(make("h3", "", finding.message));
+        body.append(make("p", "", finding.lane === "business_readiness" ? "业务准备度" : "Skill 工程"));
+        const details = make("details", "");
+        details.append(make("summary", "", "查看证据"));
+        const evidenceBits = [
+          finding.source || "unknown",
+          finding.scope ? `范围：${finding.scope}` : "",
+          finding.confidence ? `可信度：${finding.confidence}` : "",
+          finding.verification_status ? `状态：${finding.verification_status}` : "",
+          finding.evidence || "没有附加位置"
+        ].filter(Boolean);
+        details.append(make("div", "evidence", evidenceBits.join(" · ")));
+        body.append(details);
+        article.append(body);
+        findingList.append(article);
+      });
+      if (!visible.length) findingList.append(make("div", "empty", "当前筛选没有问题。"));
+      $("#finding-summary").textContent = `当前显示 ${visible.length} / ${allFindings.length} 项`;
+    }
+    renderFindings("all");
+    document.querySelectorAll("[data-filter]").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll("[data-filter]").forEach((item) =>
+          item.setAttribute("aria-pressed", String(item === button))
+        );
+        renderFindings(button.dataset.filter);
+      });
+    });
+
+    function addMeta(target, key, value) {
+      const row = make("div", "meta-row");
+      row.append(make("dt", "", key));
+      row.append(make("dd", "", value));
+      $(target).append(row);
+    }
+    addMeta("#identity-meta", "对象类型", subject.label);
+    addMeta("#identity-meta", "分析对象", subject.name);
+    addMeta("#identity-meta", "名称来源", subject.source);
+    addMeta("#identity-meta", "规则版本", profile.ruleset_version);
+    addMeta("#identity-meta", "数据格式", profile.profile_schema_version);
+    addMeta("#identity-meta", "生成时间", profile.generated_at);
+    addMeta("#identity-meta", "结论", profile.verdict);
+    addMeta("#identity-meta", "问题总数", profile.counts ? profile.counts.total : 0);
+    Object.entries(profile.sources || {}).forEach(([key, value]) => addMeta("#source-meta", key, value));
+    (profile.limitations || []).forEach((item) => $("#limitations").append(make("li", "", item)));
+    $("#raw-json").textContent = JSON.stringify(profile, null, 2);
+
+    const tabButtons = [...document.querySelectorAll("[data-tab]")];
+    function activateTab(button, moveFocus = false) {
+      const target = button.dataset.tab;
+      tabButtons.forEach((item) => {
+        const selected = item === button;
+        item.setAttribute("aria-selected", String(selected));
+        item.tabIndex = selected ? 0 : -1;
+      });
+      document.querySelectorAll("[data-view]").forEach((view) => {
+        view.hidden = view.dataset.view !== target;
+      });
+      if (moveFocus) button.focus();
+    }
+    tabButtons.forEach((button, index) => {
+      button.addEventListener("click", () => activateTab(button));
+      button.addEventListener("keydown", (event) => {
+        const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
+        if (!keys.includes(event.key)) return;
+        event.preventDefault();
+        const nextIndex =
+          event.key === "Home" ? 0 :
+          event.key === "End" ? tabButtons.length - 1 :
+          event.key === "ArrowRight" ? (index + 1) % tabButtons.length :
+          (index - 1 + tabButtons.length) % tabButtons.length;
+        activateTab(tabButtons[nextIndex], true);
+      });
+    });
+    const defaultView = ["growth", "detection", "technical"].includes(profile.default_view)
+      ? profile.default_view
+      : "growth";
+    activateTab(tabButtons.find((item) => item.dataset.tab === defaultView) || tabButtons[0]);
+    $("#expand-all").addEventListener("click", (event) => {
+      const details = [...document.querySelectorAll("details")];
+      const shouldOpen = details.some((item) => !item.open);
+      details.forEach((item) => { item.open = shouldOpen; });
+      event.currentTarget.textContent = shouldOpen ? "收起全部证据" : "展开全部证据";
+    });
+    $("#print-report").addEventListener("click", () => window.print());
+  </script>
+</body>
+</html>
