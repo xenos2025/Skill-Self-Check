@@ -56,8 +56,9 @@ class ProfileEngineTests(unittest.TestCase):
         learning = profile["skill_engineering"]["learning_quest"]
         self.assertEqual(learning["lane"], "personal_capability")
         learning_text = json.dumps(learning, ensure_ascii=False)
-        self.assertIn("Harness", learning_text)
+        self.assertIn("业务试跑", learning_text)
         self.assertNotIn("CMD.", learning_text)
+        self.assertNotIn("Harness", learning_text)
         self.assertEqual(
             profile["subject"],
             {
@@ -131,15 +132,16 @@ class ProfileEngineTests(unittest.TestCase):
         learning = engineering["learning_quest"]
         self.assertEqual(
             learning["title"],
-            "练习把自动化脚本接入可验证的工程闭环",
+            "练习把自动化脚本做成同事能放心点的业务工具",
         )
         labels = [item["label"] for item in learning["practice_points"]]
         self.assertEqual(
             labels,
-            ["量化目标", "判断流程", "可复用脚本", "Harness 位置"],
+            ["量化目标", "判断流程", "可复用脚本", "业务试跑"],
         )
-        self.assertIn("目标 Skill 外部", learning["practice_points"][3]["text"])
+        self.assertIn("脱敏样例", learning["practice_points"][3]["text"])
         self.assertNotIn("CMD.", json.dumps(learning, ensure_ascii=False))
+        self.assertNotIn("Harness", json.dumps(learning, ensure_ascii=False))
 
     def test_explicit_subject_name_overrides_report_metadata(self) -> None:
         code, profile = run_script(
@@ -178,7 +180,192 @@ class ProfileEngineTests(unittest.TestCase):
             )
         self.assertEqual(code, 0, profile)
         self.assertEqual(profile["skill_engineering"]["level"]["id"], "Lv2")
-        self.assertEqual(profile["verdict"], "needs_evidence")
+        self.assertEqual(profile["verdict"], "ready_for_controlled_use")
+        self.assertIn("可受控试用", profile["verdict_summary"])
+        advanced = profile["advanced_audit"]
+        self.assertEqual(advanced["track"], "author_advanced")
+        self.assertFalse(advanced["required_for_enterprise"])
+        self.assertIn("作者进阶证据未附", advanced["note"])
+        self.assertIn("高级审计", advanced["next_quest"]["title"])
+        self.assertEqual(profile["next_quest"]["lane"], "enterprise_skill")
+
+    def test_enterprise_verdict_requires_contract_and_static_safety(self) -> None:
+        hard = json.loads(HARD.read_text(encoding="utf-8"))
+        safety = json.loads(SAFETY.read_text(encoding="utf-8"))
+        safety["verdict"] = "static_pass"
+        safety["counts"]["critical"] = 0
+        safety["findings"] = []
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            hard_path = root / "hard.json"
+            safety_path = root / "safety.json"
+            hard_path.write_text(json.dumps(hard), encoding="utf-8")
+            safety_path.write_text(json.dumps(safety), encoding="utf-8")
+            low_contract_code, low_contract = run_script(
+                "--hard-gates",
+                hard_path,
+                "--ship-safety",
+                safety_path,
+            )
+            no_safety_code, no_safety = run_script(
+                "--hard-gates",
+                hard_path,
+            )
+
+        self.assertEqual(low_contract_code, 0, low_contract)
+        self.assertEqual(low_contract["skill_engineering"]["level"]["id"], "Lv1")
+        self.assertFalse(
+            low_contract["skill_engineering"]["scores"]["enterprise_ready"]
+        )
+        self.assertEqual(low_contract["verdict"], "needs_evidence")
+        self.assertEqual(low_contract["next_quest"]["lane"], "skill_engineering")
+
+        self.assertEqual(no_safety_code, 0, no_safety)
+        self.assertEqual(
+            no_safety["skill_engineering"]["safety"]["verdict"],
+            "not_assessed",
+        )
+        self.assertFalse(no_safety["skill_engineering"]["scores"]["enterprise_ready"])
+        self.assertEqual(no_safety["verdict"], "needs_evidence")
+        self.assertNotIn("静态安全已过", no_safety["verdict_summary"])
+
+    def test_stop_ship_advanced_note_does_not_claim_controlled_use(self) -> None:
+        code, profile = run_script(
+            "--hard-gates",
+            HARD,
+            "--ship-safety",
+            SAFETY,
+        )
+        self.assertEqual(code, 0, profile)
+        self.assertEqual(profile["verdict"], "stop_ship")
+        advanced = profile["advanced_audit"]
+        self.assertIn("先达到企业主线门槛", advanced["note"])
+        self.assertNotIn("不影响企业主线「可受控试用」", advanced["note"])
+
+    def test_static_operational_metrics_do_not_change_level(self) -> None:
+        hard = json.loads(HARD.read_text(encoding="utf-8"))
+        hard["operational_metrics"] = {
+            "token_consumption": {
+                "status": "estimated",
+                "estimated_input_tokens": 321,
+                "scope": "SKILL.md static instruction text",
+                "method": "ceil(UTF-8 byte length / 4)",
+                "confidence": "low",
+                "evidence": "SKILL.md",
+            },
+            "runtime_duration": {
+                "status": "not_measured",
+                "duration_ms": None,
+            },
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            hard_path = Path(tmp) / "hard.json"
+            hard_path.write_text(json.dumps(hard), encoding="utf-8")
+            code, profile = run_script("--hard-gates", hard_path)
+        self.assertEqual(code, 0, profile)
+        engineering = profile["skill_engineering"]
+        self.assertEqual(engineering["level"]["id"], "Lv1")
+        metrics = engineering["operational_metrics"]
+        self.assertEqual(
+            metrics["token_consumption"]["estimated_input_tokens"],
+            321,
+        )
+        self.assertEqual(metrics["token_consumption"]["status"], "estimated")
+        self.assertEqual(
+            metrics["runtime_duration"]["status"],
+            "not_measured",
+        )
+        self.assertEqual(metrics["scoring_effect"], "informational_only")
+
+    def test_trusted_behavior_observations_override_static_estimate(self) -> None:
+        hard = json.loads(HARD.read_text(encoding="utf-8"))
+        hard["operational_metrics"] = {
+            "token_consumption": {
+                "status": "estimated",
+                "estimated_input_tokens": 321,
+            }
+        }
+        behavior = {
+            "schema_version": "1.1",
+            "operational_metrics": {
+                "token_consumption": {
+                    "status": "observed",
+                    "input_tokens": 800,
+                    "output_tokens": 200,
+                    "total_tokens": 1000,
+                    "runs": 1,
+                    "evidence": "evidence/run.json#usage",
+                },
+                "runtime_duration": {
+                    "status": "observed",
+                    "duration_ms": 1250,
+                    "runs": 1,
+                    "statistic": "single_run",
+                    "evidence": "evidence/run.json#timing",
+                },
+            },
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            hard_path = root / "hard.json"
+            behavior_path = root / "behavior.json"
+            hard_path.write_text(json.dumps(hard), encoding="utf-8")
+            behavior_path.write_text(json.dumps(behavior), encoding="utf-8")
+            code, profile = run_script(
+                "--hard-gates",
+                hard_path,
+                "--behavior",
+                behavior_path,
+            )
+        self.assertEqual(code, 0, profile)
+        metrics = profile["skill_engineering"]["operational_metrics"]
+        self.assertEqual(metrics["token_consumption"]["status"], "observed")
+        self.assertEqual(metrics["token_consumption"]["total_tokens"], 1000)
+        self.assertEqual(metrics["runtime_duration"]["status"], "observed")
+        self.assertEqual(metrics["runtime_duration"]["duration_ms"], 1250)
+
+    def test_local_metric_evidence_is_rejected(self) -> None:
+        hard = json.loads(HARD.read_text(encoding="utf-8"))
+        hard["operational_metrics"] = {
+            "token_consumption": {
+                "status": "estimated",
+                "estimated_input_tokens": 321,
+            }
+        }
+        behavior = {
+            "operational_metrics": {
+                "token_consumption": {
+                    "status": "observed",
+                    "total_tokens": 1000,
+                    "runs": 1,
+                    "evidence": "C:\\private\\run.json#usage",
+                },
+                "runtime_duration": {
+                    "status": "observed",
+                    "duration_ms": 1250,
+                    "runs": 1,
+                    "evidence": "C:\\private\\run.json#timing",
+                },
+            }
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            hard_path = root / "hard.json"
+            behavior_path = root / "behavior.json"
+            hard_path.write_text(json.dumps(hard), encoding="utf-8")
+            behavior_path.write_text(json.dumps(behavior), encoding="utf-8")
+            code, profile = run_script(
+                "--hard-gates",
+                hard_path,
+                "--behavior",
+                behavior_path,
+            )
+        self.assertEqual(code, 0, profile)
+        metrics = profile["skill_engineering"]["operational_metrics"]
+        self.assertEqual(metrics["token_consumption"]["status"], "estimated")
+        self.assertTrue(metrics["token_consumption"]["observation_rejected"])
+        self.assertEqual(metrics["runtime_duration"]["status"], "not_measured")
+        self.assertTrue(metrics["runtime_duration"]["observation_rejected"])
 
     def test_behavior_and_two_verified_platforms_unlock_expert_level(self) -> None:
         hard = json.loads(HARD.read_text(encoding="utf-8"))
@@ -237,9 +424,10 @@ class ProfileEngineTests(unittest.TestCase):
         interpretation = profile["skill_engineering"]["personal_interpretation"]
         self.assertEqual(
             interpretation["headline"],
-            "你已经能把六项 Skill 能力连成完整闭环",
+            "你已经能把目标、执行、材料、验收和安全连成闭环",
         )
-        self.assertIn("目前已进入专家阶段", interpretation["summary"])
+        self.assertIn("高级审计", interpretation["summary"])
+        self.assertIn("作者多平台", interpretation["summary"])
         self.assertTrue(
             all(
                 axis["state"] == 4
@@ -490,6 +678,77 @@ class ProfileEngineTests(unittest.TestCase):
             0,
         )
 
+    def test_invalid_package_suppresses_maturity_and_capability_labels(self) -> None:
+        hard = json.loads(HARD.read_text(encoding="utf-8"))
+        hard["package_health"] = {
+            "status": "invalid_skill_package",
+            "assessable": False,
+            "checks": {
+                "name_matches_root": {
+                    "status": "fail",
+                    "blocking": True,
+                },
+                "portable_paths": {
+                    "status": "fail",
+                    "blocking": True,
+                },
+            },
+            "installability": {
+                "status": "fail",
+                "static_only": True,
+                "blocking_checks": [
+                    "name_matches_root",
+                    "portable_paths",
+                ],
+            },
+            "summary": {
+                "blocking_check_count": 2,
+                "warning_check_count": 1,
+                "files_scanned": 12,
+            },
+        }
+        hard["findings"].append(
+            {
+                "id": "PKG.2",
+                "severity": "critical",
+                "message": "Declared Skill name does not match package root",
+                "evidence": "frontmatter name and root basename differ",
+                "source": "script",
+                "scope": "package identity",
+                "confidence": "high",
+                "verification_status": "verified",
+            }
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            hard_path = Path(tmp) / "hard.json"
+            hard_path.write_text(json.dumps(hard), encoding="utf-8")
+            code, profile = run_script(
+                "--hard-gates",
+                hard_path,
+                "--ship-safety",
+                SAFETY,
+            )
+
+        self.assertEqual(code, 0, profile)
+        self.assertEqual(profile["verdict"], "invalid_skill_package")
+        engineering = profile["skill_engineering"]
+        self.assertEqual(engineering["status"], "invalid_package")
+        self.assertIsNone(engineering["level"])
+        self.assertEqual(engineering["archetype"]["id"], "structure-pending")
+        self.assertFalse(engineering["badges"])
+        self.assertEqual(profile["next_quest"]["lane"], "package_health")
+        self.assertEqual(
+            engineering["scores"]["interpretation"],
+            "partial_file_diagnostics_only",
+        )
+        self.assertTrue(
+            all(
+                record["state"] is None
+                and record["status"] == "not_assessable"
+                for record in engineering["dimensions"].values()
+            )
+        )
+
     def test_html_is_single_file_offline_view_of_same_profile(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -517,6 +776,9 @@ class ProfileEngineTests(unittest.TestCase):
         self.assertIn("YOUR SKILL-BUILDING TYPE IS", html)
         self.assertIn("DNA 证据轴", html)
         self.assertIn('class="skill-avatar"', html)
+        self.assertIn('id="avatar-role-name"', html)
+        self.assertIn('id="avatar-role-level"', html)
+        self.assertNotIn("<strong>Skill 导航员</strong>", html)
         self.assertIn("达到 100%", html)
         self.assertNotIn("待补证据", html)
         self.assertIn("你的能力画像", html)
@@ -525,7 +787,18 @@ class ProfileEngineTests(unittest.TestCase):
         self.assertIn("个人能力下一关", html)
         self.assertIn('id="quest-practice"', html)
         self.assertIn("练成标准", html)
-        self.assertIn("项目优先整改", html)
+        self.assertIn("企业主线 · 下一步", html)
+        self.assertIn("高级审计 · 作者轨道", html)
+        advanced_tag = re.search(
+            r'<details\b[^>]*\bid="advanced-audit-section"[^>]*>',
+            html,
+            re.I,
+        )
+        self.assertIsNotNone(advanced_tag)
+        self.assertNotRegex(advanced_tag.group(0), re.compile(r"\bopen\b", re.I))
+        self.assertIn('class="advanced-audit-summary"', html)
+        self.assertIn('window.addEventListener("beforeprint"', html)
+        self.assertIn('window.addEventListener("afterprint"', html)
         self.assertIn('id="project-quest-title"', html)
         self.assertIn("项目交付状态", html)
         self.assertNotIn("暂停交付", html)
@@ -536,7 +809,9 @@ class ProfileEngineTests(unittest.TestCase):
         self.assertNotIn("__PROFILE_JSON__", html)
         self.assertNotRegex(html, re.compile(r"<script[^>]+src=", re.I))
         self.assertNotRegex(html, re.compile(r"<link[^>]+href=[\"']https?://", re.I))
-        self.assertIn('"profile_schema_version": "0.2"', html)
+        self.assertIn('"profile_schema_version": "0.5"', html)
+        self.assertIn("Token 消耗", html)
+        self.assertIn("运行时长", html)
 
 
 if __name__ == "__main__":

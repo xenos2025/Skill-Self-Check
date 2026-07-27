@@ -23,7 +23,7 @@ from typing import Any
 from profile_engine import build_profile, force_utf8_streams, render_html
 
 
-SUITE_SCHEMA_VERSION = "0.2"
+SUITE_SCHEMA_VERSION = "0.4"
 ROLE_LABELS = {
     "agent-work-readiness": "把口头工作整理成可评分的 Agent 工作包",
     "skill-self-check": "检查 Skill 结构、边界和配套材料",
@@ -215,6 +215,49 @@ def aggregate_hard_reports(
         for report in reports
     ]
     support_score, support_max, support_complete = aggregate_support(reports)
+    token_records = [
+        ((report.get("operational_metrics") or {}).get("token_consumption") or {})
+        for report in reports
+    ]
+    estimated_token_values = [
+        int(record.get("estimated_input_tokens"))
+        for record in token_records
+        if record.get("status") == "estimated"
+        and isinstance(record.get("estimated_input_tokens"), int)
+        and not isinstance(record.get("estimated_input_tokens"), bool)
+        and int(record.get("estimated_input_tokens")) >= 0
+    ]
+    token_estimate_complete = len(estimated_token_values) == len(reports)
+    package_records = [
+        report.get("package_health")
+        if isinstance(report.get("package_health"), dict)
+        else {}
+        for report in reports
+    ]
+    package_statuses = [
+        str(record.get("status") or "not_assessed")
+        for record in package_records
+    ]
+    package_invalid = any(
+        status == "invalid_skill_package" for status in package_statuses
+    )
+    package_all_valid = bool(package_records) and all(
+        status == "valid_skill_package" for status in package_statuses
+    )
+    aggregate_package_status = (
+        "invalid_skill_package"
+        if package_invalid
+        else "valid_skill_package"
+        if package_all_valid
+        else "not_assessed"
+    )
+    aggregate_package_assessable = (
+        False
+        if package_invalid
+        else True
+        if package_all_valid
+        else None
+    )
     basic_point_names = set().union(
         *[
             set((score.get("points") or {}).keys())
@@ -259,7 +302,7 @@ def aggregate_hard_reports(
     basic_max = min(int(score.get("max") or 5) for score in basic_scores)
     contract_max = min(int(score.get("max") or 5) for score in contract_scores)
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.2",
         "audit_level": "suite_static_contract_check",
         "skill_dir": root.name,
         "skill_md": "skills/*/SKILL.md",
@@ -325,6 +368,107 @@ def aggregate_hard_reports(
                 int((report.get("counts") or {}).get("nice") or 0)
                 for report in reports
             ),
+        },
+        "operational_metrics": {
+            "token_consumption": {
+                "status": (
+                    "estimated" if token_estimate_complete else "not_assessed"
+                ),
+                "estimated_input_tokens": (
+                    sum(estimated_token_values)
+                    if token_estimate_complete
+                    else None
+                ),
+                "scope": "all shipped SKILL.md static instruction text",
+                "method": "sum of per-Skill ceil(UTF-8 byte length / 4)",
+                "confidence": "low",
+                "evidence": "skills/*/SKILL.md",
+            },
+            "runtime_duration": {
+                "status": "not_measured",
+                "duration_ms": None,
+                "scope": "shipped Skill execution",
+                "evidence": None,
+            },
+        },
+        "package_health": {
+            "status": aggregate_package_status,
+            "assessable": aggregate_package_assessable,
+            "checks": {
+                "all_shipped_skills_are_valid_packages": {
+                    "status": (
+                        "pass"
+                        if package_all_valid
+                        else "fail"
+                        if package_invalid
+                        else "not_assessed"
+                    ),
+                    "blocking": package_invalid,
+                }
+            },
+            "installability": {
+                "status": (
+                    "pass"
+                    if package_all_valid
+                    else "fail"
+                    if package_invalid
+                    else "not_assessed"
+                ),
+                "static_only": True,
+                "blocking_checks": (
+                    ["all_shipped_skills_are_valid_packages"]
+                    if package_invalid
+                    else []
+                ),
+            },
+            "summary": {
+                "blocking_check_count": sum(
+                    int(
+                        (
+                            record.get("summary")
+                            if isinstance(record.get("summary"), dict)
+                            else {}
+                        ).get("blocking_check_count")
+                        or 0
+                    )
+                    for record in package_records
+                ),
+                "warning_check_count": sum(
+                    int(
+                        (
+                            record.get("summary")
+                            if isinstance(record.get("summary"), dict)
+                            else {}
+                        ).get("warning_check_count")
+                        or 0
+                    )
+                    for record in package_records
+                ),
+                "files_scanned": sum(
+                    int(
+                        (
+                            record.get("summary")
+                            if isinstance(record.get("summary"), dict)
+                            else {}
+                        ).get("files_scanned")
+                        or 0
+                    )
+                    for record in package_records
+                ),
+                "valid_package_count": sum(
+                    1
+                    for status in package_statuses
+                    if status == "valid_skill_package"
+                ),
+                "skill_count": len(package_statuses),
+            },
+            "skills": [
+                {
+                    "name": record["name"],
+                    "status": package_statuses[index],
+                }
+                for index, record in enumerate(records)
+            ],
         },
         "findings": findings,
         "limitations": [
@@ -430,8 +574,16 @@ def behavior_evidence(
     )
     safe_local_processes = passed and static_safety_pass and fixed_local_process_scope
     target_unchanged = bool(target_integrity.get("unchanged"))
+    duration_seconds = test_summary.get("duration_seconds")
+    observed_duration_ms = (
+        round(float(duration_seconds) * 1000, 3)
+        if isinstance(duration_seconds, (int, float))
+        and not isinstance(duration_seconds, bool)
+        and duration_seconds >= 0
+        else None
+    )
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "core_flow_tested": passed,
         "pdca_evidence": passed,
         "safe_external_actions": safe_local_processes,
@@ -450,6 +602,24 @@ def behavior_evidence(
             },
         },
         "platforms": [],
+        "operational_metrics": {
+            "runtime_duration": {
+                "status": (
+                    "observed"
+                    if observed_duration_ms is not None
+                    else "not_measured"
+                ),
+                "duration_ms": observed_duration_ms,
+                "runs": 1 if observed_duration_ms is not None else None,
+                "statistic": "total",
+                "scope": "local regression suite",
+                "evidence": (
+                    "suite-audit.json#summary.regression_tests"
+                    if observed_duration_ms is not None
+                    else None
+                ),
+            }
+        },
         "evidence": {
             "core_flow_tested": "tests/test_*.py",
             "pdca_evidence": "CHANGELOG.md + regression suite",
@@ -549,6 +719,9 @@ def audit_suite(root: Path, *, run_tests: bool = True) -> dict[str, Any]:
                 "basic": scores.get("basic_usable"),
                 "contract": scores.get("contract_clarity"),
                 "support": scores.get("support_kit"),
+                "package_status": (
+                    (record["hard"].get("package_health") or {}).get("status")
+                ),
                 "ship_floor_met": bool(scores.get("ship_floor_met")),
                 "hard_counts": record["hard"].get("counts") or {},
                 "safety_verdict": record["safety"].get("verdict"),
@@ -566,6 +739,11 @@ def audit_suite(root: Path, *, run_tests: bool = True) -> dict[str, Any]:
         "skills_total": len(records),
         "static_floor_pass": sum(
             1 for row in skill_rows if row["ship_floor_met"]
+        ),
+        "valid_skill_packages": sum(
+            1
+            for row in skill_rows
+            if row["package_status"] == "valid_skill_package"
         ),
         "safety_static_pass": sum(
             1 for row in skill_rows if row["safety_verdict"] == "static_pass"

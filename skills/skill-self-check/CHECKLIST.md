@@ -16,6 +16,34 @@ Plain-language items for auditing a target skill. Optional Matt-style terms appe
 - `support_kit` n/applicable — references (资料), examples (案例), memory (落地记忆), scripts (脚本); explicit `N/A` / `不适用` does not dock; **does not** affect ship floor
 - `ship_floor_met` — `basic_usable >= 4` and zero script Critical
 
+**Package health preflight (script, before scores)**
+
+- `single_skill_root` — one installable root; fixtures under `examples/` do not
+  count as competing product roots
+- `name_matches_root` — frontmatter `name` equals the root directory basename
+- `standard_topology` — product material lives under `agents/`, `assets/`,
+  `examples/`, `references/`, or `scripts/`; populated output/build folders block
+- `portable_paths` — no machine-specific absolute paths in the instruction or
+  bundled reference/agent text
+- `resource_links` — explicit `agents/`, `assets/`, `references/`, or `scripts/`
+  references resolve
+- `file_hygiene` and `resource_uniqueness` — suspicious names/residue and
+  duplicate large resources are reported as cleanup items
+- `package_health.assessable=false` stops maturity levels, types, badges, and
+  delivery-pass language. Raw source scores remain diagnostics only.
+
+**Operational metrics (script, informational only)**
+
+- `token_consumption` — low-confidence static estimate for `SKILL.md` input,
+  or trusted observed input/output/total token usage; carries a `budget`
+  block (`within` / `exceeded` against the recommended input-token ceiling)
+- `runtime_duration` — trusted target-run duration; static checks report
+  `not_measured`
+- `loop_guard` — line-window scan for loop/retry directives, stop signals,
+  and unbounded phrasing; `pass` / `warn` / `not_applicable`
+- No metric changes the source scores or ship floor, but loop-guard and
+  token-budget breaches emit `EFF.*` should_fix findings (see Pass 4).
+
 **Severity**
 
 | Level | When |
@@ -23,6 +51,23 @@ Plain-language items for auditing a target skill. Optional Matt-style terms appe
 | Critical | Hard gate fail, or review skill missing named check axes |
 | Should fix | Predictability or verification gap that will cause inconsistent runs |
 | Nice | Polish, token trim, optional anatomy sections for reference-only skills |
+
+---
+
+## Pass 0 — Package health (script-owned)
+
+| # | Check (plain) | Fail if | Sev |
+|---|----------------|---------|-----|
+| PKG.1 | Exactly one installable Skill root | Root missing, competing root, or declared-name child makes the root ambiguous | Critical |
+| PKG.2 | Frontmatter name equals root basename | Names differ | Critical |
+| PKG.3 | Top-level layout is installable | Generated/runtime files are inside the Skill package | Critical |
+| PKG.3b | Non-standard directories are consolidated | Unclassified top-level content remains | Should fix |
+| PKG.4 | Bundled instructions use portable paths | Real machine-specific absolute path appears | Critical |
+| PKG.5 | Explicit resource links resolve | Referenced bundled path is missing | Critical |
+| PKG.6 | Filenames and residue are portable | Archive/temp/system residue or unsafe filename remains | Should fix |
+| PKG.7 | Large resources are unambiguous | Duplicate large files exist in multiple package locations | Should fix |
+
+Only `valid_skill_package` proceeds to maturity interpretation.
 
 ---
 
@@ -98,6 +143,18 @@ Plain-language items for auditing a target skill. Optional Matt-style terms appe
 | 4.7 | Default tool/approach given; escape hatch only when needed | Laundry list of five equivalent libraries | Should fix |
 | 4.8 | Scripts (if any) documented: when to run, expected output | Scripts present with no usage | Should fix |
 
+**Efficiency guards (script-owned, `EFF.*`)**
+
+| # | Check (plain) | Fail if | Sev |
+|---|----------------|---------|-----|
+| EFF.1 | Every loop/retry instruction has a nearby stop condition (max attempts / timeout / escalate to human) | Retry or rerun directive with no bound in the surrounding lines | Should fix |
+| EFF.2 | No unbounded refinement loops | "until perfect" / 直到满意 / 不断优化 with no run-bound exit | Should fix |
+| EFF.3 | Static instruction load within token budget | Estimated `SKILL.md` input exceeds the recommended ceiling (move material into `references/`) | Should fix |
+
+Anti-loop instructions ("do not rerun for the same evidence" / 不要重复运行)
+count as guards, not loops. Static scanning cannot prove termination —
+behavior-observed token and runtime evidence stays the stronger signal.
+
 ---
 
 ## Pass 6 — Support kit (script-owned; blue light)
@@ -156,6 +213,64 @@ is [references/gap-questions.md](references/gap-questions.md).
 
 ---
 
+## Default audit vs advanced audit
+
+| Track | What it covers | Who it is for |
+| --- | --- | --- |
+| **Default audit** | Pass 0–5, Pass 7, PKG/EFF, dual reports, scorecards without `--behavior` | Enterprise authors building a usable business Skill employee |
+| **Advanced audit** (optional) | `--behavior` JSON, Harness-style evidence, multi-platform fingerprints, Lv3–Lv5 author unlocks | Skill authors / maintainers — not the enterprise default bar |
+
+Default audit success = package valid + ship floor + clear next business practice.
+Missing behavior JSON does **not** mean “tonight’s certification failed.”
+
+## Pass 7 — Fix verification (script-owned)
+
+Only runs when fixes were actually applied. Compare the post-fix state against
+the `hard_gates.py` JSON captured **before** the edits:
+
+```bash
+python scripts/verify_fix.py <target> --baseline <pre-fix hard-gates.json>
+```
+
+| # | Check (plain) | Fail if | Sev |
+|---|----------------|---------|-----|
+| 7.1 | Post-fix re-check ran against a pre-fix baseline | "已修复" claimed with no `verify_fix.py` output | Critical |
+| 7.2 | Report carries the before/after table (3 scores, ship floor, package health, resolved / introduced counts) | Only the after-state is shown | Should fix |
+| 7.3 | No `new_critical` in the delta | The rewrite introduced a Critical that was not there before | Critical |
+| 7.4 | Every `introduced` finding is fixed or listed as remaining work | New findings silently dropped from the report | Should fix |
+| 7.5 | Score movement described honestly | `not_comparable` dimensions reported as gains or losses | Should fix |
+
+Verdicts: `improved` (progress, no hard regression) · `unchanged` (nothing the
+script measures moved) · `mixed` (progress plus new problems) · `regressed`
+(new Critical, lost ship floor, or a score drop). Exit code is 1 on a hard
+regression, or on any new finding when `--strict` is passed.
+
+Findings that vanish because a check stopped applying are not progress: a Skill
+that loses its steps also loses `6.1`/`6.2`. The script suppresses that illusion
+by ignoring disappearing minor items whenever something hard broke in the same
+run, and by marking dimensions whose maximum changed as `not_comparable`.
+
+Rewrite recipes for the mechanical IDs live in
+[references/fix-templates.md](references/fix-templates.md).
+
+---
+
+## Advanced audit (optional)
+
+Skip this band unless the author explicitly wants author-track maturity
+(Lv3+) or multi-platform proof.
+
+| # | Check (plain) | Fail if | Sev |
+|---|----------------|---------|-----|
+| A.1 | Trusted behavior JSON supplied when claiming Lv3+ | Level claimed from static files alone | Nice (advanced) |
+| A.2 | `core_flow_tested` + `pdca_evidence` with shareable evidence refs | Booleans true without evidence references | Should fix (advanced) |
+| A.3 | Cross-platform records share contract/fixture SHA-256 | Two platforms with different fixtures counted as comparable | Should fix (advanced) |
+
+See growth scorecard `references/profile-contract.md` (Dual track) and
+`references/platform-evidence.md`.
+
+---
+
 ## Mini glossary (optional)
 
 | Term | Meaning |
@@ -170,6 +285,8 @@ is [references/gap-questions.md](references/gap-questions.md).
 | Leading word | Short pretrained concept that anchors behavior |
 | Verification | Exit checklist with evidence |
 | Rationalizations | Excuses agents use to skip steps, plus rebuttals |
+| Hard regression | New Critical, lost ship floor, or a score drop after a fix |
+| not_comparable | A dimension whose maximum changed, so before/after scores mean different things |
 | PDCA | Plan → Do → Check → Act closed loop inside the skill |
 | SMART | Specific / Measurable / Achievable / Relevant / run-bound exit for outcomes |
 | 5W2H | What / Why / Who / When / Where / How / How much — interview clarity |

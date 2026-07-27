@@ -12,6 +12,7 @@ Exit: 0 if basic_usable >= 4 and no critical hard-gate fails; else 1
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -49,10 +50,54 @@ TIME_SENSITIVE_RE = re.compile(
     r"september|october|november|december|\d{4})\b"
 )
 WINDOWS_PATH_RE = re.compile(r"(?i)(?:^|[\s`])[a-z0-9_\-./]+\\[a-z0-9_\-.\\]+")
+ABSOLUTE_WINDOWS_PATH_RE = re.compile(
+    r"(?i)(?<![a-z0-9])(?:[a-z]:[\\/]|\\\\[^\\\s]+\\[^\\\s]+)"
+    r"[^\s`\"'<>|]*"
+)
+ABSOLUTE_POSIX_PATH_RE = re.compile(
+    r"(?<![\w.])/(?:Users|home|tmp|var|opt|mnt|Volumes)/"
+    r"[^\s`\"'<>|]*"
+)
+RESOURCE_PATH_RE = re.compile(
+    r"(?i)(?<![a-z0-9_.-])"
+    r"((?:agents|assets|references|scripts)/[^\s`\"'()<>\[\]{}]+)"
+)
 NOOP_RE = re.compile(
     r"(?i)\b(be careful|think step by step|write good code|always be thorough)\b"
 )
 NEGATION_RE = re.compile(r"(?i)\b(don't|do not|never|avoid)\b")
+# Efficiency guards: loop directives must carry an explicit stop condition,
+# otherwise an agent can burn tokens in an open-ended fix/retry cycle.
+LOOP_DIRECTIVE_RE = re.compile(
+    r"(?i)\b(retry|retries|retrying|re-?run(ning)?|run (it |them )?again|"
+    r"try again|repeat(ing)?|iterate|iterating|loop (until|over|through|back)|"
+    r"keep looping)\b"
+    r"|(重试|重跑|再试|重新运行|重新执行|重复执行|重复运行|再来一遍|"
+    r"循环执行|再检查一遍|改完再跑|再跑一次)"
+)
+LOOP_NEGATION_RE = re.compile(
+    r"(?i)\b(don't|do not|never|avoid|instead of)\b"
+    r"|(不要|不得|避免|禁止|勿|无需|不用|不必|别再)"
+)
+LOOP_STOP_RE = re.compile(
+    r"(?i)\b(max(imum)?\s+(attempts?|retries|iterations?|tries)|at most|"
+    r"no more than|only once|once|twice|one more time|up to \d+|"
+    r"\d+\s+(times|attempts?|retries)|timeout|time limit|"
+    r"stop (when|if|after)|then stop|give up|abort|escalate|"
+    r"ask the user|hand (it )?back|mark (it )?as failed|"
+    r"report (the )?(error|failure))\b"
+    r"|(最多|上限|不超过|为限|[一两二三四五六七八九十\d]+\s*次|超时|时限|"
+    r"停止|中止|终止|放弃|升级|转人工|人工(处理|介入|判断|决定)|报错|"
+    r"标记(为)?失败|记录失败)"
+)
+UNBOUNDED_LOOP_RE = re.compile(
+    r"(?i)\b(until (it( is|'s)? )?(perfect|satisfied|happy|good enough)|"
+    r"keep (refining|polishing|improving|trying)|"
+    r"as many times as (needed|necessary)|repeat as needed)\b"
+    r"|(直到满意|直到完美|直到没有问题|不断(优化|打磨|重试|重复)|"
+    r"反复(打磨|优化|重试)|无限(次|循环)|一直(改|试|重试|优化))"
+)
+TOKEN_BUDGET_INPUT_TOKENS = 8000
 NUMBERED_STEP_RE = re.compile(r"(?m)^\s*\d+\.\s+\S")
 CHECKBOX_RE = re.compile(r"(?m)^\s*[-*]\s*\[[ xX]\]\s+")
 HEADING_RE = re.compile(r"(?m)^(#{1,6})\s+(.+?)\s*$")
@@ -93,6 +138,45 @@ SCRIPT_CLAIM_RE = re.compile(
 EXAMPLE_HEADING_RE = re.compile(
     r"(?im)^(#{1,6})\s+.*(example|examples|案例|示例|样例|worked example)\s*$"
 )
+STANDARD_PACKAGE_DIRS = {"agents", "assets", "examples", "references", "scripts"}
+RUNTIME_DIR_NAMES = {
+    "build",
+    "dist",
+    "export",
+    "exports",
+    "generated",
+    "output",
+    "outputs",
+    "results",
+    "生成结果",
+    "生成的图片",
+    "生成的图像",
+    "生成的模特图",
+}
+RESIDUE_NAMES = {
+    ".ds_store",
+    "desktop.ini",
+    "thumbs.db",
+}
+RESIDUE_SUFFIXES = {
+    ".7z",
+    ".bak",
+    ".gz",
+    ".rar",
+    ".tar",
+    ".tmp",
+    ".zip",
+}
+TEXT_RESOURCE_SUFFIXES = {
+    ".json",
+    ".md",
+    ".txt",
+    ".yaml",
+    ".yml",
+}
+HASH_MIN_BYTES = 64 * 1024
+HASH_MAX_FILE_BYTES = 25 * 1024 * 1024
+HASH_MAX_FILES = 500
 
 
 def read_skill_text(path: Path) -> tuple[str, str | None]:
@@ -151,6 +235,433 @@ def parse_frontmatter(text: str) -> tuple[dict[str, str], str, bool]:
     if key:
         data[key] = " ".join(buf).strip()
     return data, body, True
+
+
+def package_finding(
+    item_id: str,
+    severity: str,
+    message: str,
+    evidence: str = "",
+    scope: str = "skill package",
+) -> dict:
+    return {
+        "id": item_id,
+        "severity": severity,
+        "message": message,
+        "evidence": evidence,
+        "source": "script",
+        "scope": scope,
+        "confidence": "high",
+        "verification_status": "verified",
+    }
+
+
+def iter_package_files(skill_dir: Path) -> list[Path]:
+    files: list[Path] = []
+    for path in skill_dir.rglob("*"):
+        if not path.is_file():
+            continue
+        relative = path.relative_to(skill_dir)
+        if any(
+            part in {".git", ".playwright-cli", "__pycache__"}
+            for part in relative.parts
+        ):
+            continue
+        files.append(path)
+    return files
+
+
+def read_text_resource(path: Path) -> str | None:
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        return None
+    for encoding in ("utf-8-sig", "utf-8", "gb18030"):
+        try:
+            return raw.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return None
+
+
+def is_path_placeholder(value: str) -> bool:
+    lowered = value.casefold()
+    return any(
+        marker in lowered
+        for marker in (
+            "<",
+            ">",
+            "${",
+            "$env:",
+            "%userprofile%",
+            "/absolute/path",
+            "/path/to",
+            "\\path\\to",
+            "your-",
+            "your_",
+        )
+    )
+
+
+def collect_absolute_path_evidence(
+    skill_dir: Path, files: list[Path]
+) -> list[str]:
+    evidence: list[str] = []
+    candidates = [
+        path
+        for path in files
+        if path.name == "SKILL.md"
+        or (
+            path.suffix.casefold() in TEXT_RESOURCE_SUFFIXES
+            and path.relative_to(skill_dir).parts[0]
+            in {"agents", "references"}
+        )
+    ]
+    for path in candidates:
+        text = read_text_resource(path)
+        if text is None:
+            continue
+        for line_number, line in enumerate(text.splitlines(), 1):
+            hits = [
+                match.group(0)
+                for pattern in (
+                    ABSOLUTE_WINDOWS_PATH_RE,
+                    ABSOLUTE_POSIX_PATH_RE,
+                )
+                for match in pattern.finditer(line)
+            ]
+            if any(not is_path_placeholder(hit) for hit in hits):
+                relative = path.relative_to(skill_dir).as_posix()
+                evidence.append(f"{relative}:{line_number}")
+    return sorted(set(evidence))
+
+
+def clean_resource_token(token: str) -> str:
+    return token.rstrip(".,;:!?，。；：！？、）】》")
+
+
+def collect_resource_link_evidence(
+    skill_dir: Path, source_text: str
+) -> tuple[list[str], int]:
+    missing: list[str] = []
+    references = {
+        clean_resource_token(match.group(1)).replace("\\", "/")
+        for match in RESOURCE_PATH_RE.finditer(source_text)
+    }
+    for reference in sorted(references):
+        target = skill_dir.joinpath(*reference.split("/"))
+        if not target.exists():
+            missing.append(reference)
+    return missing, len(references)
+
+
+def collect_duplicate_groups(
+    skill_dir: Path, files: list[Path]
+) -> tuple[list[dict], bool]:
+    eligible = []
+    for path in files:
+        try:
+            size = path.stat().st_size
+        except OSError:
+            continue
+        if HASH_MIN_BYTES <= size <= HASH_MAX_FILE_BYTES:
+            eligible.append((path, size))
+    eligible.sort(key=lambda item: item[0].as_posix().casefold())
+    truncated = len(eligible) > HASH_MAX_FILES
+    groups: dict[tuple[int, str], list[str]] = {}
+    for path, size in eligible[:HASH_MAX_FILES]:
+        digest = hashlib.sha256()
+        try:
+            with path.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    digest.update(chunk)
+        except OSError:
+            continue
+        key = (size, digest.hexdigest())
+        groups.setdefault(key, []).append(path.relative_to(skill_dir).as_posix())
+    duplicates = [
+        {
+            "file_count": len(paths),
+            "bytes_each": size,
+            "paths": paths[:8],
+        }
+        for (size, _), paths in groups.items()
+        if len(paths) > 1
+    ]
+    duplicates.sort(key=lambda item: (-item["bytes_each"], item["paths"][0]))
+    return duplicates[:10], truncated
+
+
+def assess_package_health(
+    skill_dir: Path,
+    frontmatter: dict[str, str] | None,
+    source_text: str,
+) -> tuple[dict, list[dict]]:
+    """Assess whether the target is one installable Skill package.
+
+    Content scores remain useful diagnostics, but maturity scoring must only
+    consume them when this preflight is assessable.
+    """
+    findings: list[dict] = []
+    files = iter_package_files(skill_dir)
+    declared_name = str((frontmatter or {}).get("name") or "").strip()
+    skill_md_present = (skill_dir / "SKILL.md").is_file()
+    nested_roots = sorted(
+        path.parent.relative_to(skill_dir).as_posix()
+        for path in files
+        if path.name == "SKILL.md"
+        and path.parent != skill_dir
+        and path.relative_to(skill_dir).parts[0] != "examples"
+    )
+    named_child = (
+        skill_dir / declared_name
+        if declared_name and declared_name != skill_dir.name
+        else None
+    )
+    pseudo_root = bool(named_child and named_child.is_dir())
+    single_root_ok = skill_md_present and not nested_roots and not pseudo_root
+    if not skill_md_present:
+        findings.append(
+            package_finding(
+                "PKG.1",
+                "critical",
+                "Target is not a Skill package root because SKILL.md is missing",
+                "SKILL.md",
+                "package root",
+            )
+        )
+    if nested_roots:
+        findings.append(
+            package_finding(
+                "PKG.1b",
+                "critical",
+                "Multiple non-fixture Skill roots were found under one target",
+                f"nested_roots={len(nested_roots)}",
+                "package root",
+            )
+        )
+    if pseudo_root:
+        findings.append(
+            package_finding(
+                "PKG.1c",
+                "critical",
+                "A child directory repeats the declared Skill name, so the package root is ambiguous",
+                f"declared-name child directory exists; contains_SKILL.md={bool((named_child / 'SKILL.md').is_file())}",
+                "package root",
+            )
+        )
+
+    name_matches = bool(declared_name) and declared_name == skill_dir.name
+    if declared_name and not name_matches:
+        findings.append(
+            package_finding(
+                "PKG.2",
+                "critical",
+                "Declared Skill name does not match the package root directory",
+                "frontmatter name and root basename differ",
+                "package identity",
+            )
+        )
+
+    top_dirs = sorted(
+        path.name for path in skill_dir.iterdir() if path.is_dir()
+    )
+    runtime_dirs = [
+        name for name in top_dirs if name.casefold() in RUNTIME_DIR_NAMES
+    ]
+    nonstandard_dirs = [
+        name
+        for name in top_dirs
+        if name.casefold() not in STANDARD_PACKAGE_DIRS
+        and name not in runtime_dirs
+        and not (declared_name and name == declared_name)
+    ]
+    populated_runtime_dirs = [
+        name
+        for name in runtime_dirs
+        if _dir_has_files(skill_dir / name)
+    ]
+    if populated_runtime_dirs:
+        findings.append(
+            package_finding(
+                "PKG.3",
+                "critical",
+                "Runtime or generated output files are mixed into the installable Skill package",
+                f"populated_output_dirs={len(populated_runtime_dirs)}",
+                "package topology",
+            )
+        )
+    elif runtime_dirs:
+        findings.append(
+            package_finding(
+                "PKG.3",
+                "should_fix",
+                "Runtime/output directories should live outside the installable Skill package",
+                f"output_dirs={len(runtime_dirs)}",
+                "package topology",
+            )
+        )
+    if nonstandard_dirs:
+        findings.append(
+            package_finding(
+                "PKG.3b",
+                "should_fix",
+                "Non-standard top-level content directories need consolidation into assets/, references/, scripts/, agents/, or examples/",
+                f"nonstandard_dirs={len(nonstandard_dirs)}",
+                "package topology",
+            )
+        )
+
+    absolute_path_evidence = collect_absolute_path_evidence(skill_dir, files)
+    if absolute_path_evidence:
+        findings.append(
+            package_finding(
+                "PKG.4",
+                "critical",
+                "Machine-specific absolute paths make the Skill package non-portable",
+                "; ".join(absolute_path_evidence[:12]),
+                "path portability",
+            )
+        )
+
+    missing_resources, resource_reference_count = collect_resource_link_evidence(
+        skill_dir, source_text
+    )
+    if missing_resources:
+        findings.append(
+            package_finding(
+                "PKG.5",
+                "critical",
+                "One or more explicitly referenced package resources do not exist",
+                f"missing_references={len(missing_resources)}",
+                "resource links",
+            )
+        )
+
+    residue_files = [
+        path.relative_to(skill_dir).as_posix()
+        for path in files
+        if path.name.casefold() in RESIDUE_NAMES
+        or path.suffix.casefold() in RESIDUE_SUFFIXES
+    ]
+    irregular_names = [
+        path.relative_to(skill_dir).as_posix()
+        for path in files
+        if len(path.name) > 120
+        or path.name != path.name.strip()
+        or re.search(r"[<>:\"|?*]", path.name)
+    ]
+    if residue_files:
+        findings.append(
+            package_finding(
+                "PKG.6",
+                "should_fix",
+                "Archive, temporary, or operating-system residue files are present",
+                f"residue_files={len(residue_files)}",
+                "file hygiene",
+            )
+        )
+    if irregular_names:
+        findings.append(
+            package_finding(
+                "PKG.6b",
+                "should_fix",
+                "One or more filenames are non-portable or excessively long",
+                f"irregular_names={len(irregular_names)}",
+                "filename health",
+            )
+        )
+
+    duplicate_groups, hash_scan_truncated = collect_duplicate_groups(
+        skill_dir, files
+    )
+    if duplicate_groups:
+        findings.append(
+            package_finding(
+                "PKG.7",
+                "should_fix",
+                "Duplicate large resources increase package ambiguity and size",
+                f"duplicate_groups={len(duplicate_groups)}",
+                "resource uniqueness",
+            )
+        )
+
+    checks = {
+        "single_skill_root": {
+            "status": "pass" if single_root_ok else "fail",
+            "blocking": not single_root_ok,
+            "nested_root_count": len(nested_roots),
+            "declared_name_child": pseudo_root,
+        },
+        "name_matches_root": {
+            "status": "pass" if name_matches else "fail",
+            "blocking": not name_matches,
+            "declared_name": declared_name or None,
+            "root_name": skill_dir.name,
+        },
+        "standard_topology": {
+            "status": (
+                "fail"
+                if populated_runtime_dirs
+                else "warn"
+                if runtime_dirs or nonstandard_dirs
+                else "pass"
+            ),
+            "blocking": bool(populated_runtime_dirs),
+            "top_level_directory_count": len(top_dirs),
+            "nonstandard_directory_count": len(nonstandard_dirs),
+            "runtime_directory_count": len(runtime_dirs),
+            "populated_runtime_directory_count": len(populated_runtime_dirs),
+        },
+        "portable_paths": {
+            "status": "fail" if absolute_path_evidence else "pass",
+            "blocking": bool(absolute_path_evidence),
+            "absolute_path_reference_count": len(absolute_path_evidence),
+        },
+        "resource_links": {
+            "status": "fail" if missing_resources else "pass",
+            "blocking": bool(missing_resources),
+            "reference_count": resource_reference_count,
+            "missing_count": len(missing_resources),
+        },
+        "file_hygiene": {
+            "status": "warn" if residue_files or irregular_names else "pass",
+            "blocking": False,
+            "residue_count": len(residue_files),
+            "irregular_name_count": len(irregular_names),
+        },
+        "resource_uniqueness": {
+            "status": "warn" if duplicate_groups else "pass",
+            "blocking": False,
+            "duplicate_group_count": len(duplicate_groups),
+            "scan_truncated": hash_scan_truncated,
+            "groups": duplicate_groups,
+        },
+    }
+    blocking_checks = [
+        key for key, record in checks.items() if record.get("blocking")
+    ]
+    warning_checks = [
+        key for key, record in checks.items() if record.get("status") == "warn"
+    ]
+    assessable = not blocking_checks
+    return {
+        "status": (
+            "valid_skill_package" if assessable else "invalid_skill_package"
+        ),
+        "assessable": assessable,
+        "checks": checks,
+        "installability": {
+            "status": "pass" if assessable else "fail",
+            "static_only": True,
+            "blocking_checks": blocking_checks,
+        },
+        "summary": {
+            "blocking_check_count": len(blocking_checks),
+            "warning_check_count": len(warning_checks),
+            "files_scanned": len(files),
+        },
+    }, findings
 
 
 def heading_map(body: str) -> dict[str, str]:
@@ -348,6 +859,109 @@ def assess_support_kit(
     return kit, findings
 
 
+def assess_efficiency(
+    body: str, body_line_offset: int, estimated_tokens: int | None
+) -> tuple[dict, list[dict]]:
+    """Static loop-guard and token-budget signals (EFF.*).
+
+    Deterministic proxies only: a static scan cannot prove a run terminates,
+    but it catches loop/retry instructions that ship without a stop condition
+    and instruction files whose baseline token load is already oversized.
+    Findings are should_fix — they warn, they do not block the ship floor.
+    """
+    findings: list[dict] = []
+    lines = body.splitlines()
+    directive_lines: list[int] = []
+    unguarded_lines: list[int] = []
+    unbounded_lines: list[int] = []
+    for idx, line in enumerate(lines):
+        file_lineno = idx + 1 + body_line_offset
+        if UNBOUNDED_LOOP_RE.search(line):
+            unbounded_lines.append(file_lineno)
+        match = LOOP_DIRECTIVE_RE.search(line)
+        if not match:
+            continue
+        # An anti-loop instruction ("do not rerun for the same evidence") is a
+        # guard, not a loop. Negations may sit on the previous wrapped line.
+        negation_scope = (lines[idx - 1] if idx else "") + " " + line[: match.start()]
+        if LOOP_NEGATION_RE.search(negation_scope):
+            continue
+        directive_lines.append(file_lineno)
+        window = " ".join(lines[max(0, idx - 1) : idx + 3])
+        if not LOOP_STOP_RE.search(window):
+            unguarded_lines.append(file_lineno)
+    if unguarded_lines:
+        findings.append(
+            package_finding(
+                "EFF.1",
+                "should_fix",
+                "Loop/retry instruction has no nearby stop condition; add max "
+                "attempts, a timeout, or an escalate-to-human exit",
+                "SKILL.md lines "
+                + ", ".join(str(n) for n in unguarded_lines[:8]),
+                "loop guard",
+            )
+        )
+    if unbounded_lines:
+        findings.append(
+            package_finding(
+                "EFF.2",
+                "should_fix",
+                "Unbounded refinement phrasing ('until perfect' / 直到满意 / "
+                "不断优化); give the loop a run-bound exit criterion",
+                "SKILL.md lines "
+                + ", ".join(str(n) for n in unbounded_lines[:8]),
+                "loop guard",
+            )
+        )
+    over_budget = (
+        estimated_tokens is not None
+        and estimated_tokens > TOKEN_BUDGET_INPUT_TOKENS
+    )
+    if over_budget:
+        findings.append(
+            package_finding(
+                "EFF.3",
+                "should_fix",
+                f"Static instruction load is ~{estimated_tokens} tokens "
+                f"(> {TOKEN_BUDGET_INPUT_TOKENS} recommended); move long "
+                "material into references/ to cut per-run cost",
+                "SKILL.md",
+                "token budget",
+            )
+        )
+    efficiency = {
+        "loop_guard": {
+            "label": "循环护栏",
+            "status": (
+                "warn"
+                if unguarded_lines or unbounded_lines
+                else "pass"
+                if directive_lines
+                else "not_applicable"
+            ),
+            "loop_directive_count": len(directive_lines),
+            "guarded_count": len(directive_lines) - len(unguarded_lines),
+            "unguarded_lines": unguarded_lines[:12],
+            "unbounded_phrase_lines": unbounded_lines[:12],
+            "scope": "SKILL.md static instruction text",
+            "method": "line-window scan for loop directives, stop signals, and unbounded phrasing",
+            "evidence": "SKILL.md",
+        },
+        "token_budget": {
+            "max_recommended_input_tokens": TOKEN_BUDGET_INPUT_TOKENS,
+            "status": (
+                "not_assessed"
+                if estimated_tokens is None
+                else "exceeded"
+                if over_budget
+                else "within"
+            ),
+        },
+    }
+    return efficiency, findings
+
+
 def detect_check_axes(body: str) -> tuple[bool, list[str]]:
     """Heuristic: a list of 2+ short axis-like bullets under check/review/axis headings."""
     axes: list[str] = []
@@ -453,6 +1067,10 @@ def check_skill(skill_dir: Path) -> dict:
 
     if not skill_md.is_file():
         fail("1.1", "critical", "Missing SKILL.md in skill directory")
+        package_health, package_findings = assess_package_health(
+            skill_dir, None, ""
+        )
+        findings.extend(package_findings)
         return finalize(
             skill_dir,
             None,
@@ -467,11 +1085,16 @@ def check_skill(skill_dir: Path) -> dict:
                 "modules": {},
                 "kit_complete": False,
             },
+            package_health=package_health,
         )
 
     text, fallback_encoding = read_skill_text(skill_md)
     fm, body, has_fm = parse_frontmatter(text)
     line_count = text.count("\n") + (0 if text.endswith("\n") else 1)
+    package_health, package_findings = assess_package_health(
+        skill_dir, fm, text
+    )
+    findings.extend(package_findings)
 
     if fallback_encoding:
         fail(
@@ -711,6 +1334,13 @@ def check_skill(skill_dir: Path) -> dict:
             f"High negation density ({neg_count} don't/never/avoid hits); prefer positive targets",
         )
 
+    estimated_tokens = (len(text.encode("utf-8")) + 3) // 4
+    body_line_offset = len(text.splitlines()) - len(body.splitlines())
+    efficiency, efficiency_findings = assess_efficiency(
+        body, body_line_offset, estimated_tokens
+    )
+    findings.extend(efficiency_findings)
+
     support_kit, kit_findings = assess_support_kit(skill_dir, body, has_steps)
     findings.extend(kit_findings)
 
@@ -729,6 +1359,9 @@ def check_skill(skill_dir: Path) -> dict:
         contract_score,
         disable_model,
         support_kit,
+        text,
+        package_health,
+        efficiency,
     )
 
 
@@ -745,6 +1378,9 @@ def finalize(
     contract_score: int | None = None,
     disable_model: bool = False,
     support_kit: dict | None = None,
+    source_text: str | None = None,
+    package_health: dict | None = None,
+    efficiency: dict | None = None,
 ) -> dict:
     if basic is None:
         basic = sum(1 for v in points.values() if v)
@@ -757,12 +1393,51 @@ def finalize(
             "modules": {},
             "kit_complete": False,
         }
+    if package_health is None:
+        package_health = {
+            "status": "not_assessed",
+            "assessable": False,
+            "checks": {},
+            "installability": {
+                "status": "not_assessed",
+                "static_only": True,
+                "blocking_checks": [],
+            },
+            "summary": {
+                "blocking_check_count": 0,
+                "warning_check_count": 0,
+                "files_scanned": 0,
+            },
+        }
     critical = [f for f in findings if f["severity"] == "critical"]
     should = [f for f in findings if f["severity"] == "should_fix"]
     nice = [f for f in findings if f["severity"] == "nice"]
     ship_floor = basic >= 4 and len(critical) == 0
+    estimated_tokens = (
+        (len(source_text.encode("utf-8")) + 3) // 4
+        if source_text is not None
+        else None
+    )
+    if efficiency is None:
+        efficiency = {
+            "loop_guard": {
+                "label": "循环护栏",
+                "status": "not_assessed",
+                "loop_directive_count": 0,
+                "guarded_count": 0,
+                "unguarded_lines": [],
+                "unbounded_phrase_lines": [],
+                "scope": "SKILL.md static instruction text",
+                "method": "line-window scan for loop directives, stop signals, and unbounded phrasing",
+                "evidence": None,
+            },
+            "token_budget": {
+                "max_recommended_input_tokens": TOKEN_BUDGET_INPUT_TOKENS,
+                "status": "not_assessed",
+            },
+        }
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.3",
         "audit_level": "static_contract_check",
         "skill_dir": str(skill_dir),
         "skill_md": str(skill_dir / "SKILL.md"),
@@ -786,6 +1461,27 @@ def finalize(
             "should_fix": len(should),
             "nice": len(nice),
         },
+        "operational_metrics": {
+            "token_consumption": {
+                "status": (
+                    "estimated" if estimated_tokens is not None else "not_assessed"
+                ),
+                "estimated_input_tokens": estimated_tokens,
+                "scope": "SKILL.md static instruction text",
+                "method": "ceil(UTF-8 byte length / 4)",
+                "confidence": "low",
+                "evidence": "SKILL.md" if estimated_tokens is not None else None,
+                "budget": efficiency["token_budget"],
+            },
+            "runtime_duration": {
+                "status": "not_measured",
+                "duration_ms": None,
+                "scope": "audited Skill execution",
+                "evidence": None,
+            },
+            "loop_guard": efficiency["loop_guard"],
+        },
+        "package_health": package_health,
         "findings": [f for f in findings if f["severity"] != "info"],
         "notes": [f for f in findings if f["severity"] == "info"],
         "limitations": [
@@ -817,7 +1513,7 @@ def main() -> int:
         print(
             json.dumps(
                 {
-                    "schema_version": "1.0",
+                    "schema_version": "1.3",
                     "audit_level": "static_contract_check",
                     "target_platform": "generic",
                     "error": f"path not found: {args.skill_dir}",

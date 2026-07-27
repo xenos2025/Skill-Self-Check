@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import runpy
 import subprocess
 import sys
 import tempfile
@@ -22,6 +23,35 @@ SCRIPT = (
 
 
 class SuiteScorecardTests(unittest.TestCase):
+    def test_regression_duration_becomes_observed_runtime_metric(self) -> None:
+        script_dir = str(SCRIPT.parent)
+        sys.path.insert(0, script_dir)
+        try:
+            module = runpy.run_path(str(SCRIPT))
+        finally:
+            sys.path.remove(script_dir)
+        behavior = module["behavior_evidence"](
+            {
+                "status": "passed",
+                "total": 56,
+                "duration_seconds": 3.5,
+            },
+            {
+                "verdict": "static_pass",
+                "counts": {"critical": 0},
+                "external_actions": [],
+            },
+            {"unchanged": True},
+        )
+        runtime = behavior["operational_metrics"]["runtime_duration"]
+        self.assertEqual(runtime["status"], "observed")
+        self.assertEqual(runtime["duration_ms"], 3500)
+        self.assertEqual(runtime["statistic"], "total")
+        self.assertEqual(
+            runtime["evidence"],
+            "suite-audit.json#summary.regression_tests",
+        )
+
     def test_private_run_writes_personal_and_project_scorecards(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "suite-audit"
@@ -64,11 +94,36 @@ class SuiteScorecardTests(unittest.TestCase):
             self.assertEqual(project["default_view"], "detection")
             self.assertEqual(personal["suite"]["summary"]["skills_total"], 4)
             self.assertEqual(
+                personal["suite"]["suite_schema_version"],
+                "0.4",
+            )
+            self.assertEqual(
+                personal["suite"]["summary"]["valid_skill_packages"],
+                4,
+            )
+            self.assertEqual(
                 personal["suite"]["summary"]["static_floor_pass"],
                 4,
             )
             self.assertTrue(personal["suite"]["summary"]["target_unchanged"])
             self.assertTrue(personal["suite"]["target_integrity"]["unchanged"])
+            self.assertEqual(
+                personal["skill_engineering"]["package_health"]["status"],
+                "valid_skill_package",
+            )
+            metrics = personal["skill_engineering"]["operational_metrics"]
+            self.assertEqual(
+                metrics["token_consumption"]["status"],
+                "estimated",
+            )
+            self.assertGreater(
+                metrics["token_consumption"]["estimated_input_tokens"],
+                0,
+            )
+            self.assertEqual(
+                metrics["runtime_duration"]["status"],
+                "not_measured",
+            )
             finding_ids = {
                 item["id"] for item in personal["suite"]["findings"]
             }

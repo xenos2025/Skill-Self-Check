@@ -33,9 +33,11 @@ credentials.json
 .mcp.local.json
 **/.mcp.json
 
-# IDE
+# IDE / local agent tooling
 .vscode/
 .idea/
+.cursor/
+.playwright-cli/
 *.swp
 *.swo
 *~

@@ -12,7 +12,7 @@ Static review of a target skill. Output a ranked fix report. Edit the target onl
 
 **Sources fused (plain-language checks):** Matt Pocock predictability levers, Addy Osmani skill anatomy / verification, Cursor `create-skill` hard rules, plus **PDCA** and **SMART** outcome contracts. Full items live in [CHECKLIST.md](CHECKLIST.md); mapping in [references/pdca-smart.md](references/pdca-smart.md).
 
-**Authority split:** Hard gates + scores = **script** ([scripts/hard_gates.py](scripts/hard_gates.py)). Qualitative judgment (including PDCA/SMART) = model. Script Critical pass/fail and numeric scores stay authoritative.
+**Authority split:** Hard gates + scores = **script** ([scripts/hard_gates.py](scripts/hard_gates.py)); fix verification = **script** ([scripts/verify_fix.py](scripts/verify_fix.py)). Qualitative judgment (including PDCA/SMART) = model. Script Critical pass/fail, numeric scores, and before/after deltas stay authoritative.
 
 ## When to use
 
@@ -29,6 +29,10 @@ Static review of a target skill. Output a ranked fix report. Edit the target onl
 
 This audit always reports on:
 
+- **Package health preflight** — one installable root, name/root alignment,
+  standard top-level directories, portable paths, valid resource references,
+  filename/residue hygiene, duplicate resources, and static installability
+  (script; blocks maturity assessment)
 - **Hard structure** — frontmatter, name, description shape (script)
 - **Basic usable score** — 0–5 ship floor (script)
 - **Contract clarity score** — 0–5 including named check axes / when-not / verification (script)
@@ -37,6 +41,14 @@ This audit always reports on:
 - **Anatomy** — workflow quality, rationalizations (model + script hints)
 - **PDCA loop** — Plan / Do / Check / Act all explicit (model; see references)
 - **SMART outcomes** — Specific, Measurable, Achievable, Relevant, run-bound exit (model)
+- **Token consumption** — static `SKILL.md` input estimate with a recommended
+  budget ceiling, replaced by trusted input/output/total usage when behavior
+  evidence supplies it (script)
+- **Runtime duration** — target execution time only from trusted behavior
+  evidence; otherwise `not_measured` (script)
+- **Loop guard** — every loop/retry instruction carries a stop condition
+  (max attempts / timeout / escalate); open-ended refinement phrasing is
+  flagged so a Skill cannot ship a runaway self-loop (script `EFF.*`)
 
 ## Inputs
 
@@ -67,9 +79,19 @@ Windows 可以使用 `py -3`。真实输出目录必须在被检查 Skill 和其
 - 两份成绩单共用的 JSON 来源，以及证明审计前后目标未变化的
   `audit-manifest.json`。
 
-可选加上 `--work-package 工作包.json` 和 `--behavior 可信行为证据.json`。
-没有行为证据时，等级不会越过静态证据上限。目标未变化只证明**本次审计只读**，
-不能替代目标 Skill 自身的运行与安全验证。
+一键入口先读取 `hard-gates.json.package_health`。如果状态为
+`invalid_skill_package`，仍生成完整问题清单和原始局部诊断，但必须停止
+Lv0–Lv5、能力类型、徽章和“可交付”结论；两份 HTML 都要明确显示
+“不是标准 Skill 包 · 暂停成熟度评分”。
+
+可选加上 `--work-package 工作包.json`。
+
+**高级审计（可选，作者轨道）：** 另加 `--behavior 可信行为证据.json` 才会解锁
+成长成绩单 Lv3+ / 跨平台指纹。企业默认认证**不要求**这份文件：Ship floor
+已过且无 Critical 时，成绩单主结论仍是「可受控试用」；缺行为证据只记在
+`advanced_audit` 旁注里。
+
+目标未变化只证明**本次审计只读**，不能替代目标 Skill 在真实业务里的试跑验收。
 
 **完成标准：** 两份 HTML 指向同一个 Skill，项目成绩单保留原始分数，
 `audit-manifest.json` 中 `target.unchanged=true`。
@@ -84,20 +106,40 @@ python scripts/hard_gates.py /absolute/path/to/target-skill --pretty
 
 On Windows, `py -3` is fine if `python` is missing.
 
+If there is any chance the user will say 「按意见改」, keep this run as the
+**baseline** for Pass 7 — save the stdout JSON to a file outside the target:
+
+```bash
+python scripts/hard_gates.py /absolute/path/to/target-skill > /private/path/baseline.json
+```
+
 如果已经使用上面的新手入口，直接读取其 `hard-gates.json`，不要为了相同证据
 重复运行。
 
 - Read **stdout JSON** as the source of truth for scores and script findings.
 - Stderr one-liner is for humans; parse scores from stdout JSON only.
 - Exit code 1 means ship floor not met — still continue the review.
+- Read `package_health` before interpreting any score. Only
+  `status=valid_skill_package` and `assessable=true` unlock maturity scoring.
+  An invalid package keeps raw scores as partial file diagnostics only.
 - `scores.support_kit` is the blue light: materials / examples / memory / scripts. `kit_complete=false` is Should fix, not Critical.
+- `operational_metrics.token_consumption` and
+  `operational_metrics.runtime_duration` are informational dimensions. They do
+  not change `ship_floor_met` or the three source scores.
 
-**Completion criterion:** JSON parsed; `scores.basic_usable`, `scores.contract_clarity`, `scores.support_kit`, and `findings` available. Leave numeric scores exactly as the script emitted them.
+**Completion criterion:** JSON parsed; `package_health`,
+`scores.basic_usable`, `scores.contract_clarity`, `scores.support_kit`, and
+`findings` are available. Leave numeric scores exactly as the script emitted
+them, and translate them into maturity only when package health is valid.
 
 ### Pass 1 — Hard gates (script-owned)
 
 Map script `findings` with `severity: critical|should_fix|nice` into the report.  
 You may **explain** and suggest rewrites; you may **not** mark a script Critical as passed.
+
+`PKG.*` and `EFF.*` are mechanical: the fix does not depend on the user's
+business, so write the rewrite yourself using
+[references/fix-templates.md](references/fix-templates.md) instead of asking.
 
 **Completion criterion:** Every script Critical appears under Critical with 建议改法.
 
@@ -120,9 +162,15 @@ Split the gaps before writing rewrites:
 
 ### Pass 4 — Prune (model)
 
-Use checklist Pass 4. Trust script `line_count` and time-sensitive / path hints.
+Use checklist Pass 4. Trust script `line_count`, time-sensitive / path hints,
+and the efficiency guards (`EFF.1` unguarded loop, `EFF.2` unbounded
+refinement, `EFF.3` token budget). For every `EFF.*` finding, propose the
+concrete stop condition or the exact material to move into `references/`;
+[references/fix-templates.md](references/fix-templates.md) has the paste-ready
+forms for each ID.
 
-**Completion criterion:** Concrete cut-or-move suggestions listed.
+**Completion criterion:** Concrete cut-or-move suggestions listed; every
+`EFF.*` finding has a paste-ready bound or split.
 
 ### Pass 5 — PDCA + SMART (+ 5W2H if interview skill)
 
@@ -153,7 +201,7 @@ Rules:
 - Put **script scores** in the technical 分数表 verbatim from JSON
 - Translate technical terms in the business report: Critical → 必须先解决,
   Should fix → 建议尽快改进, ship floor → 基础使用门槛
-- Do not expose raw JSON or unexplained exit codes in the business report
+- Keep raw JSON and bare exit codes out of the business report; say what they mean instead
 - Fill **PDCA×SMART** matrix (Pass 5) — model-owned, not inventing script scores
 - Rank findings: Critical → Should fix → Nice
 - Each finding: **问题** → **为什么** → **建议改法** (paste-ready when helpful)
@@ -170,6 +218,44 @@ technical report includes script scores, PDCA×SMART, all script Criticals with
 rewrites, Pass 2–5 coverage, and an offer to apply fixes or interview for
 decision-owned gaps.
 
+## Pass 7 — 改完复检（only after fixes are applied）
+
+Applies when the user said 「按意见改」 and you edited the target. A rewrite can
+resolve four findings and quietly introduce a fifth, so the claim "已修复" has to
+come from the script output below, not from memory.
+
+```bash
+python scripts/verify_fix.py /absolute/path/to/target-skill \
+  --baseline /private/path/baseline.json \
+  --pretty
+```
+
+Missing baseline? Say so, then run `hard_gates.py` once for a plain after-state
+and report it as an after-state only — guessing the before-state is worse than
+admitting you lack it.
+
+Read the result:
+
+| 字段 | 含义 | 动作 |
+| --- | --- | --- |
+| `verdict: improved` | 有改善，没有硬回退 | 交付，并列出 `introduced` 里新冒出来的项 |
+| `verdict: unchanged` | 分数与 finding 都没动 | 改动没落盘，或没被任何检查覆盖——查清楚再说修好了 |
+| `verdict: mixed` | 有改有坏 | 先处理 `new_critical`，本 Pass 最多再走一轮；第二轮仍是 `mixed` 就停下，把剩余项列成待办交给用户 |
+| `verdict: regressed` | 新增 Critical 或分数下降 | 回滚这次改动 |
+| `findings.introduced` | 复检才出现的项 | 逐条说明；`newly_surfaced_non_critical` 常是新适用的检查，不是你改坏了 |
+| `scores.*.direction: not_comparable` | 该维度满分变了 | 说明适用范围变化，不要谎报涨跌 |
+
+`introduced` 里的非 Critical 项不阻断交付，但必须出现在报告里。CI 想把它们也
+当失败，加 `--strict`。
+
+Then put a before/after table in both reports: 三项分数、ship floor、
+`package_health`、已解决数、新增数、剩余 Critical。
+
+**Completion criterion:** `verify_fix.py` ran against the pre-fix baseline, the
+report shows the before/after table, and any `introduced` finding is either
+fixed or explicitly listed as remaining work. 改完就宣布完成、没有复检输出的，
+本 Pass 未完成。
+
 ## Verification
 
 - [ ] `hard_gates.py` was executed on the target directory
@@ -177,12 +263,16 @@ decision-owned gaps.
 - [ ] `audit-manifest.json` 证明审计前后目标未变化
 - [ ] Both reports share the same scores, counts, finding IDs, and conclusion
 - [ ] Technical report scores match JSON exactly
+- [ ] Token consumption states `estimated`, `observed`, or `not_assessed` with scope
+- [ ] Runtime duration is `observed` only with trusted behavior evidence; otherwise `not_measured`
 - [ ] Business report contains no unexplained technical terms
 - [ ] No script Critical was overridden
 - [ ] User was advised whether ship floor is met
 - [ ] PDCA×SMART matrix filled (Plan/Do/Check/Act × S/M/A/R/T notes)
 - [ ] Every PDCA `missing` cell mapped to a finding or dated waiver
 - [ ] Decision-owned gaps were asked, not invented (or left as `unknown — 待用户确认`)
+- [ ] 应用了修改时：`verify_fix.py` 跑过改前基线，报告含前后对照表
+- [ ] 应用了修改时：复检新增的 finding 已逐条交代（修掉或列为剩余项）
 
 ## Common Rationalizations
 
@@ -195,6 +285,9 @@ decision-owned gaps.
 | "Time-bound needs a calendar date" | For skills, T means run-bound exit (Verification / handoff), unless the domain is truly dated ops. |
 | "User didn't say when NOT to use it — I'll write a sensible default" | Exclusions, triggers and acceptance evidence are the user's business decisions. Ask one question; a plausible invention scores well and still runs wrong. |
 | "Asking is slower, I'll fill everything in" | Ask only decision-owned Critical / Should fix gaps, max three per round. The rest you still rewrite yourself. |
+| "改完读一遍就知道修好了" | 分数和 finding 由脚本判定。跑 `verify_fix.py`，用前后对照说话。 |
+| "复检冒出新 finding，说明脚本有问题" | 补上步骤之后，配套材料检查才开始适用。这是新暴露出来的检查范围，照常列进报告。 |
+| "PKG/EFF 也得先问用户" | 这两类是机械问题，答案与业务无关。照 fix-templates 直接改。 |
 
 ## Red Flags
 
@@ -205,6 +298,8 @@ decision-owned gaps.
 - Calling a skill "done" with no Check (Verification) or Act (fix path)
 - Writing exclusions, triggers or acceptance evidence the user never stated
 - Interrogating the user with a long question list instead of three at a time
+- Claiming findings are fixed without a `verify_fix.py` before/after table
+- Hiding findings that only appeared after the rewrite
 
 ## Out of scope
 

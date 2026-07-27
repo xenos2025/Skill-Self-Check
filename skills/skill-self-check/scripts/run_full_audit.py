@@ -14,6 +14,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -153,6 +154,7 @@ def audit(
     if not target.is_dir() or not (target / "SKILL.md").is_file():
         raise ValueError("被检查目录必须存在，并且包含 SKILL.md")
     ensure_private_output(target, output)
+    audit_started_ns = time.perf_counter_ns()
 
     skill_root = Path(__file__).resolve().parents[1]
     skills_root = skill_root.parent
@@ -200,7 +202,7 @@ def audit(
         load_json(behavior_path)
         if behavior_path is not None
         else {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "source": "not_supplied",
             "platforms": [],
             "limitations": [
@@ -211,8 +213,16 @@ def audit(
     after = target_fingerprint(target)
     unchanged = before["digest"] == after["digest"]
     generated_at = datetime.now().astimezone().isoformat(timespec="seconds")
+    package_health = (
+        hard.get("package_health")
+        if isinstance(hard.get("package_health"), dict)
+        else {}
+    )
+    package_status = str(
+        package_health.get("status") or "not_assessed"
+    )
     manifest = {
-        "schema_version": "1.0",
+        "schema_version": "1.2",
         "generated_at": generated_at,
         "audit_mode": "read_only_static",
         "target": {
@@ -223,6 +233,7 @@ def audit(
             "unchanged": unchanged,
         },
         "checks": {
+            "package_health": package_status,
             "hard_gates": "completed",
             "ship_safety": "completed",
             "business_readiness": (
@@ -251,11 +262,15 @@ def audit(
         safety,
         behavior,
         "Skill 成长与项目成绩单",
-        title_name,
+        subject_name,
     )
     personal = dict(base_profile)
     personal["title"] = f"{title_name} · 个人能力成绩单"
-    personal["default_view"] = "growth"
+    personal["default_view"] = (
+        "detection"
+        if base_profile.get("verdict") == "invalid_skill_package"
+        else "growth"
+    )
     personal["report_kind"] = "personal_capability"
     personal["audit_manifest"] = {
         "target_unchanged": unchanged,
@@ -273,6 +288,24 @@ def audit(
     write_json(output / "behavior.json", behavior, pretty)
     if readiness is not None:
         write_json(output / "readiness.json", readiness, pretty)
+    audit_duration_ms = round(
+        (time.perf_counter_ns() - audit_started_ns) / 1_000_000,
+        3,
+    )
+    audit_execution = {
+        "status": "observed",
+        "duration_ms": audit_duration_ms,
+        "unit": "ms",
+        "scope": (
+            "audit checks, target fingerprinting, profile composition, "
+            "and source-report serialization"
+        ),
+        "excludes": "final profile and HTML artifact serialization",
+        "clock": "monotonic",
+    }
+    manifest["audit_execution"] = audit_execution
+    personal["audit_execution"] = audit_execution
+    project["audit_execution"] = audit_execution
     write_json(output / "audit-manifest.json", manifest, pretty)
     write_json(output / "personal-profile.json", personal, pretty)
     write_json(output / "project-profile.json", project, pretty)
@@ -291,6 +324,7 @@ def audit(
         "personal_level": (
             ((personal.get("skill_engineering") or {}).get("level") or {}).get("id")
         ),
+        "audit_duration_ms": audit_duration_ms,
         "target_unchanged": unchanged,
         "output_directory": str(output),
         "artifacts": sorted(path.name for path in output.iterdir()),

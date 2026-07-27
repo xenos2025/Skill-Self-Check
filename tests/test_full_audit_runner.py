@@ -105,6 +105,18 @@ class FullAuditRunnerTests(unittest.TestCase):
             )
             self.assertTrue(manifest["target"]["unchanged"])
             self.assertEqual(manifest["audit_mode"], "read_only_static")
+            self.assertEqual(
+                manifest["checks"]["package_health"],
+                "valid_skill_package",
+            )
+            self.assertEqual(
+                manifest["audit_execution"]["status"],
+                "observed",
+            )
+            self.assertGreaterEqual(
+                manifest["audit_execution"]["duration_ms"],
+                0,
+            )
             personal = json.loads(
                 (output / "personal-profile.json").read_text(encoding="utf-8")
             )
@@ -113,10 +125,119 @@ class FullAuditRunnerTests(unittest.TestCase):
             )
             self.assertEqual(personal["default_view"], "growth")
             self.assertEqual(project["default_view"], "detection")
+            self.assertEqual(project["sources"]["behavior"], "not_supplied")
+            self.assertIn(
+                "没有把静态声明当作行为验证",
+                " ".join(project["limitations"]),
+            )
+            metrics = project["skill_engineering"]["operational_metrics"]
+            self.assertEqual(
+                metrics["token_consumption"]["status"],
+                "estimated",
+            )
+            self.assertGreater(
+                metrics["token_consumption"]["estimated_input_tokens"],
+                0,
+            )
+            self.assertEqual(
+                metrics["runtime_duration"]["status"],
+                "not_measured",
+            )
+            self.assertEqual(
+                project["audit_execution"]["duration_ms"],
+                manifest["audit_execution"]["duration_ms"],
+            )
             self.assertIn(
                 "sample-skill",
                 (output / "personal-scorecard.html").read_text(encoding="utf-8"),
             )
+            self.assertIn(
+                "Token 消耗",
+                (output / "project-scorecard.html").read_text(encoding="utf-8"),
+            )
+
+    def test_invalid_package_is_reported_without_a_maturity_level(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            target = root / "workspace"
+            target.mkdir()
+            (target / "SKILL.md").write_text(
+                """---
+name: actual-skill
+description: Reviews local assets when a user requests a package check.
+---
+
+# Actual Skill
+
+## When to use
+
+Use when local assets need review.
+
+## When NOT to use
+
+Do not use for external sends.
+
+## Process
+
+1. Read `assets/missing.png`.
+2. Write results under `D:\\old-workspace\\outputs`.
+
+## Verification
+
+- [ ] The local package was checked.
+""",
+                encoding="utf-8",
+            )
+            (target / "actual-skill").mkdir()
+            outputs = target / "outputs"
+            outputs.mkdir()
+            (outputs / "generated.png").write_bytes(b"x" * 100)
+            output = root / "private-report"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    str(target),
+                    "--out-dir",
+                    str(output),
+                    "--pretty",
+                ],
+                cwd=REPO,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            project = json.loads(
+                (output / "project-profile.json").read_text(encoding="utf-8")
+            )
+            personal = json.loads(
+                (output / "personal-profile.json").read_text(encoding="utf-8")
+            )
+            manifest = json.loads(
+                (output / "audit-manifest.json").read_text(encoding="utf-8")
+            )
+            html = (output / "project-scorecard.html").read_text(
+                encoding="utf-8"
+            )
+
+        self.assertEqual(project["verdict"], "invalid_skill_package")
+        self.assertEqual(
+            project["skill_engineering"]["status"],
+            "invalid_package",
+        )
+        self.assertIsNone(project["skill_engineering"]["level"])
+        self.assertEqual(personal["default_view"], "detection")
+        self.assertEqual(
+            manifest["checks"]["package_health"],
+            "invalid_skill_package",
+        )
+        self.assertIn("package-health-banner", html)
+        self.assertIn("不是标准 Skill 包 · 暂停成熟度评分", html)
+        self.assertIn("局部文件诊断", html)
+        self.assertNotIn('"level": {"id": "Lv', html)
 
     def test_report_is_refused_inside_target(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

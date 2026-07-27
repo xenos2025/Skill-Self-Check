@@ -81,19 +81,46 @@ class ProductSkillTests(unittest.TestCase):
     def test_product_skill_meets_ship_floor(self) -> None:
         code, report = run_script(PRODUCT_SKILL)
         self.assertEqual(code, 0, report["findings"])
-        self.assertEqual(report["schema_version"], "1.0")
+        self.assertEqual(report["schema_version"], "1.3")
         self.assertEqual(report["audit_level"], "static_contract_check")
         self.assertEqual(report["target_platform"], "generic")
         self.assertTrue(report["limitations"])
         self.assertEqual(report["scores"]["basic_usable"]["score"], 5)
         self.assertEqual(report["scores"]["contract_clarity"]["score"], 5)
         self.assertEqual(report["counts"]["critical"], 0)
+        package = report["package_health"]
+        self.assertEqual(package["status"], "valid_skill_package")
+        self.assertTrue(package["assessable"])
+        self.assertEqual(
+            package["installability"]["status"],
+            "pass",
+        )
         kit = report["scores"]["support_kit"]
         self.assertTrue(kit["kit_complete"])
         self.assertEqual(kit["modules"]["references"]["status"], "pass")
         self.assertEqual(kit["modules"]["examples"]["status"], "pass")
         self.assertEqual(kit["modules"]["scripts"]["status"], "pass")
         self.assertEqual(kit["modules"]["memory"]["status"], "na")
+        metrics = report["operational_metrics"]
+        token = metrics["token_consumption"]
+        self.assertEqual(token["status"], "estimated")
+        self.assertEqual(
+            token["estimated_input_tokens"],
+            (len((PRODUCT_SKILL / "SKILL.md").read_bytes()) + 3) // 4,
+        )
+        self.assertEqual(token["confidence"], "low")
+        self.assertEqual(token["budget"]["status"], "within")
+        self.assertEqual(
+            metrics["runtime_duration"]["status"],
+            "not_measured",
+        )
+        self.assertIn(
+            metrics["loop_guard"]["status"], {"pass", "not_applicable"}
+        )
+        self.assertEqual(
+            [f["id"] for f in report["findings"] if f["id"].startswith("EFF")],
+            [],
+        )
 
     def test_dual_report_templates_are_wired(self) -> None:
         skill_text = (PRODUCT_SKILL / "SKILL.md").read_text(encoding="utf-8")
@@ -111,7 +138,18 @@ class ProductSkillTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             code, report = run_script(Path(tmp))
         self.assertEqual(code, 1)
-        self.assertEqual([f["id"] for f in report["findings"]], ["1.1"])
+        self.assertEqual(
+            [f["id"] for f in report["findings"]],
+            ["1.1", "PKG.1"],
+        )
+        self.assertEqual(
+            report["package_health"]["status"],
+            "invalid_skill_package",
+        )
+        self.assertEqual(
+            report["operational_metrics"]["token_consumption"]["status"],
+            "not_assessed",
+        )
 
 
 class ChineseSkillTests(unittest.TestCase):
@@ -256,6 +294,146 @@ class SupportKitTests(unittest.TestCase):
         ids = [f["id"] for f in report["findings"]]
         self.assertIn("6.3", ids)
         self.assertEqual(report["scores"]["support_kit"]["modules"]["memory"]["status"], "fail")
+
+
+class PackageHealthTests(unittest.TestCase):
+    def test_workspace_like_target_blocks_maturity_assessment(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "project-workspace"
+            root.mkdir()
+            body = ZH_SKILL.format(name="fixed-model-tryon").replace(
+                "1. 读取目标文件",
+                "1. 读取 `assets/model-reference.jpg`\n"
+                "   并写入 `D:\\\\old-workspace\\\\生成的模特图`\n"
+                "2. 读取 `references/missing.md`\n"
+                "3. 读取目标文件",
+            )
+            (root / "SKILL.md").write_text(body, encoding="utf-8")
+            (root / "assets").mkdir()
+            model_bytes = b"x" * (70 * 1024)
+            (root / "assets" / "model-reference.jpg").write_bytes(model_bytes)
+            child_assets = root / "fixed-model-tryon" / "assets"
+            child_assets.mkdir(parents=True)
+            (child_assets / "model-reference.jpg").write_bytes(model_bytes)
+            outputs = root / "outputs"
+            outputs.mkdir()
+            (outputs / "generated.png").write_bytes(b"y" * (70 * 1024))
+            nonstandard = root / "style-library"
+            nonstandard.mkdir()
+            (nonstandard / "look.jpg").write_bytes(b"z" * (70 * 1024))
+
+            code, report = run_script(root)
+
+        self.assertEqual(code, 1)
+        package = report["package_health"]
+        self.assertEqual(package["status"], "invalid_skill_package")
+        self.assertFalse(package["assessable"])
+        self.assertEqual(package["installability"]["status"], "fail")
+        self.assertGreaterEqual(
+            package["summary"]["blocking_check_count"],
+            4,
+        )
+        checks = package["checks"]
+        self.assertEqual(checks["single_skill_root"]["status"], "fail")
+        self.assertEqual(checks["name_matches_root"]["status"], "fail")
+        self.assertEqual(checks["standard_topology"]["status"], "fail")
+        self.assertEqual(checks["portable_paths"]["status"], "fail")
+        self.assertEqual(checks["resource_links"]["status"], "fail")
+        self.assertEqual(checks["resource_uniqueness"]["status"], "warn")
+        ids = {finding["id"] for finding in report["findings"]}
+        self.assertTrue(
+            {"PKG.1c", "PKG.2", "PKG.3", "PKG.3b", "PKG.4", "PKG.5", "PKG.7"}
+            <= ids
+        )
+        package_findings = [
+            finding
+            for finding in report["findings"]
+            if finding["id"].startswith("PKG.")
+        ]
+        self.assertTrue(
+            all(finding["verification_status"] == "verified" for finding in package_findings)
+        )
+
+
+class EfficiencyGateTests(unittest.TestCase):
+    def test_unguarded_retry_is_flagged(self) -> None:
+        body = ZH_SKILL.replace(
+            "2. 输出报告\n   完成标准: 报告含分数",
+            "2. 输出报告\n   完成标准: 报告含分数\n3. 如果生成失败就重试",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            code, report = run_script(write_skill(Path(tmp), "loopy-skill", body))
+        self.assertEqual(code, 0, report["findings"])
+        ids = [f["id"] for f in report["findings"]]
+        self.assertIn("EFF.1", ids)
+        guard = report["operational_metrics"]["loop_guard"]
+        self.assertEqual(guard["status"], "warn")
+        self.assertEqual(guard["loop_directive_count"], 1)
+        self.assertEqual(guard["guarded_count"], 0)
+        self.assertTrue(guard["unguarded_lines"])
+
+    def test_bounded_retry_passes(self) -> None:
+        body = ZH_SKILL.replace(
+            "2. 输出报告\n   完成标准: 报告含分数",
+            "2. 输出报告\n   完成标准: 报告含分数\n"
+            "3. 如果生成失败最多重试 2 次，仍失败则停止并报告错误",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            code, report = run_script(write_skill(Path(tmp), "bounded-skill", body))
+        self.assertEqual(code, 0, report["findings"])
+        ids = [f["id"] for f in report["findings"]]
+        self.assertNotIn("EFF.1", ids)
+        guard = report["operational_metrics"]["loop_guard"]
+        self.assertEqual(guard["status"], "pass")
+        self.assertEqual(guard["loop_directive_count"], 1)
+        self.assertEqual(guard["guarded_count"], 1)
+
+    def test_negated_loop_instruction_is_not_a_directive(self) -> None:
+        body = ZH_SKILL.replace(
+            "2. 输出报告\n   完成标准: 报告含分数",
+            "2. 输出报告\n   完成标准: 报告含分数\n"
+            "3. 不要为了相同证据\n   重复运行检查脚本",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            code, report = run_script(write_skill(Path(tmp), "guarded-skill", body))
+        self.assertEqual(code, 0, report["findings"])
+        ids = [f["id"] for f in report["findings"]]
+        self.assertNotIn("EFF.1", ids)
+        guard = report["operational_metrics"]["loop_guard"]
+        self.assertEqual(guard["loop_directive_count"], 0)
+
+    def test_unbounded_refinement_phrase_is_flagged(self) -> None:
+        body = ZH_SKILL.replace(
+            "2. 输出报告\n   完成标准: 报告含分数",
+            "2. 输出报告\n   完成标准: 报告含分数\n3. 不断优化文案直到满意",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            code, report = run_script(write_skill(Path(tmp), "endless-skill", body))
+        self.assertEqual(code, 0, report["findings"])
+        ids = [f["id"] for f in report["findings"]]
+        self.assertIn("EFF.2", ids)
+        guard = report["operational_metrics"]["loop_guard"]
+        self.assertEqual(guard["status"], "warn")
+        self.assertTrue(guard["unbounded_phrase_lines"])
+
+    def test_oversized_instruction_text_exceeds_token_budget(self) -> None:
+        padding = "\n".join(
+            f"- 规则第 {i} 条：所有输出必须先给出证据再给结论。" for i in range(700)
+        )
+        body = ZH_SKILL.replace(
+            "## 常见借口",
+            f"## 附加规则\n\n{padding}\n\n## 常见借口",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            code, report = run_script(write_skill(Path(tmp), "huge-skill", body))
+        ids = [f["id"] for f in report["findings"]]
+        self.assertIn("EFF.3", ids)
+        token = report["operational_metrics"]["token_consumption"]
+        self.assertEqual(token["budget"]["status"], "exceeded")
+        self.assertGreater(
+            token["estimated_input_tokens"],
+            token["budget"]["max_recommended_input_tokens"],
+        )
 
 
 if __name__ == "__main__":

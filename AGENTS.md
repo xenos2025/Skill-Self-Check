@@ -29,9 +29,12 @@ Guidance for coding agents working **on this repository**.
 4. Keep Python stdlib-only unless CONTRIBUTING is updated.
 5. Do not commit secrets, client PII, or real audit reports inside this repo.
 6. After scoring logic changes, run the matching tests (or
-   `python -m unittest discover tests -v`), note before/after in the PR, and
-   refresh smoke reports when hard-gate numbers move.
-7. Real scorecard `--out-dir` values must stay outside the audited Skill and
+ `python -m unittest discover tests -v`), note before/after in the PR, and
+ refresh smoke reports when hard-gate numbers move.
+7. After editing a shipped Skill's `SKILL.md`, capture a `hard_gates.py`
+ baseline first and report the `verify_fix.py` delta instead of asserting the
+ findings are fixed.
+8. Real scorecard `--out-dir` values must stay outside the audited Skill and
    this source repository.
 
 ## Quick commands
@@ -42,6 +45,10 @@ python skills/skill-self-check/scripts/hard_gates.py skills/skill-self-check --p
 python skills/skill-self-check/scripts/hard_gates.py \
   skills/skill-self-check/examples/fixtures/bad-commit-helper --pretty
 python skills/skill-ship-safety/scripts/ship_safety.py skills/skill-self-check --pretty
+python skills/skill-self-check/scripts/hard_gates.py skills/skill-self-check \
+ > "$HOME/Documents/skill-audits/baseline.json"
+python skills/skill-self-check/scripts/verify_fix.py skills/skill-self-check \
+ --baseline "$HOME/Documents/skill-audits/baseline.json" --pretty
 python skills/skill-self-check/scripts/run_full_audit.py skills/skill-self-check \
   --out-dir "$HOME/Documents/skill-audits/agent-demo" --pretty
 ```

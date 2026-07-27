@@ -1,17 +1,28 @@
 ---
 name: skill-growth-scorecard
-description: Combines readiness, hard-gate, ship-safety, and optional behavior JSON into deterministic offline personal and project scorecards. Use when users want a Skill growth type and level, a suite audit scorecard, one next quest, or a printable offline result without changing the audited Skill.
+description: >-
+  Combines readiness, hard-gate, ship-safety, and optional advanced-audit
+  behavior JSON into offline personal and project scorecards for building
+  usable business Skill employees. Use when users want a growth type, level,
+  enterprise next practice, suite audit scorecard, or printable offline result
+  without changing the audited Skill.
 ---
 
 # Skill Growth Scorecard
 
 Create one friendly growth profile from several independent checks. Preserve the
-original audit facts. Present the growth view as a personal capability profile
-based on the current work sample; keep project delivery verdicts in detection
-and technical evidence rather than turning them into personal labels.
+original audit facts. Default narrative helps enterprises build **usable
+business Skill employees** — clear triggers, steps, acceptance, stop rules —
+not multi-platform certification engineering.
+
+Present the growth view as a personal capability profile based on the current
+work sample; keep project delivery verdicts in detection and technical evidence
+rather than turning them into personal labels.
 
 ## When to use
 
+- Someone finished a business Skill draft and wants a plain scorecard: can we
+  trial it, what’s the one next practice.
 - `readiness_gates.py` has produced a business-readiness JSON report.
 - `hard_gates.py` or `ship_safety.py` has produced a Skill audit JSON report.
 - A beginner needs a plain-language type, level, strength, and next quest.
@@ -24,19 +35,33 @@ and technical evidence rather than turning them into personal labels.
 
 - Inventing a score without running the applicable deterministic scripts.
 - Treating a Skill type as the author's personality.
+- Treating missing advanced-audit behavior JSON as “the Skill failed enterprise use”
+  when the enterprise mainline gate already passed.
 - Replacing a missing behavior test with model confidence.
 - Publishing a real client report inside this open-source repository.
 - Executing the audited Skill or its external actions.
 
 ## Check axes
 
+- **Enterprise mainline** — package health, ship floor, static safety, plain
+  next practice (trial one real scenario / tighten acceptance).
+- **Advanced audit (optional)** — behavior JSON, failure recovery, portable
+  contract, two-platform fingerprints; shown in `advanced_audit`, not as the
+  default next quest.
 - **Business readiness** — B0–B6 and the first failed gate.
-- **Skill maturity** — Lv0–Lv5 with hard caps for missing safety or behavior evidence.
-- **Skill type** — six versioned engineering dimensions.
-- **Next quest** — first blocking business or engineering gate.
+- **Package health** — the Skill must be one installable, portable package
+  before any Lv0–Lv5 or type is displayed.
+- **Skill maturity** — Lv0–Lv5; Lv3+ are author-track unlocks.
+- **Skill type** — six versioned dimensions.
+- **Next quest** — enterprise practice after the enterprise-ready gate; advanced steps stay
+  under `advanced_audit.next_quest`.
 - **Personal learning quest** — separate from project remediation.
 - **View agreement** — growth, detection, and technical evidence stay aligned.
 - **Capability vs delivery** — personal language stays separate from project status.
+- **Token consumption** — estimated static input or trusted observed usage,
+  shown separately from evidence coverage and levels.
+- **Runtime duration** — trusted target-run timing or an explicit
+  `not_measured` state.
 - **Privacy** — no full local path, secret, or customer detail in the share layer.
 - **Browser behavior** — tabs, filters, evidence, print, desktop, and mobile.
 
@@ -58,6 +83,10 @@ All inputs are optional individually, but at least one is required:
 
 1. **Run the source checks.**
    Run only the checks that have valid inputs. Mark unavailable reports as not supplied.
+   Read `hard_gates.package_health` before computing Skill maturity. When it is
+   invalid, preserve raw diagnostics but emit `skill_engineering.status =
+   invalid_package`, `level = null`, null dimension states, no capability badge,
+   and the root verdict `invalid_skill_package`.
    **Done when:** each available report is saved as UTF-8 JSON.
 
 2. **Generate the profile.**
@@ -121,18 +150,23 @@ All inputs are optional individually, but at least one is required:
 
 - No Skill audit: engineering state is `not_started`, not a failure.
 - `stop_ship`: engineering maturity is capped at Lv1.
-- Static floor plus static safety pass can reach Lv2.
-- Lv3 requires explicit core-flow and PDCA behavior evidence.
-- Lv4 requires failure recovery plus evidence for every applicable safety
-  control. A genuinely inapplicable external-action or write-back control needs
-  explicit scope evidence; write-back N/A also needs `target_unchanged=true`.
-- Lv5 requires a portable contract and at least two verified platform records
-  that share the same contract and fixture SHA-256 identifiers.
+- Static floor plus static safety pass can reach Lv2 — **enterprise mainline
+  “ready enough to trial”**.
+- Root `verdict` is `ready_for_controlled_use` when package health is
+  assessable, ship floor and the contract minimum are met, static safety passes,
+  and Critical count is zero. Missing behavior JSON is an advanced-audit note,
+  not an enterprise fail.
+- Root `next_quest` after that enterprise-ready gate is enterprise practice
+  (real scenario / acceptance / materials). Author steps live in
+  `advanced_audit.next_quest`.
+- Lv3+ (advanced audit): core-flow + PDCA behavior evidence; Lv4 adds failure
+  recovery and applicable safety controls; Lv5 adds portable contract + two
+  verified platforms with the same SHA-256 contract/fixture IDs.
 
 Read the complete schema and type rules in
 [`references/profile-contract.md`](references/profile-contract.md).
-Use [`references/platform-evidence.md`](references/platform-evidence.md) when
-preparing comparable evidence on a second Agent platform.
+Use [`references/platform-evidence.md`](references/platform-evidence.md) only
+for **advanced audit** comparable platform evidence.
 
 ## Output contract
 
@@ -143,14 +177,19 @@ renders:
    character, six single-direction evidence-coverage axes, strengths, badges,
    a concrete `personal_interpretation`, and a personal learning quest; it does not show
    project delivery verdict badges or product-explanation meta copy;
-2. Detection Results — project source scores, delivery status, lifecycle,
-   highest-priority remediation, findings, and filters;
+2. Detection Results — project source scores, informational token/runtime
+   metrics, delivery status, lifecycle, highest-priority remediation, findings,
+   and filters;
 3. Technical Evidence — ruleset, sources, execution status, limitations, JSON.
+
+All views render the package-health banner before score content. An invalid
+package must say that maturity is paused; the detection view may show raw source
+scores only with a partial-diagnostic label.
 
 Whole-suite profiles additionally render an audited Skill matrix, test summary,
 snapshot basis, project conclusion, and verified qualitative findings. Suite
-aggregation uses the weakest shipped Skill for each static score; it never
-averages away a weak or blocking Skill.
+aggregation uses the weakest shipped Skill for each static score, so a weak or
+blocking Skill stays visible in the suite result.
 
 All three views show or preserve the analyzed `subject`. Printed and saved
 scorecards must remain attributable to one Skill or work process.
@@ -159,6 +198,9 @@ not personality probabilities, complementary gap scores, or a new combined
 score. The only displayed percentage is the current evidence coverage; 100%
 means that dimension's declared full-evidence criteria are met within the
 current rules and test scope.
+Token consumption and runtime duration are not seventh and eighth evidence
+axes: they remain quantitative operational metrics, and profile type, level,
+verdict, and ship floor are computed independently of them.
 
 Persistent comparison is **N/A** inside this stateless generator. A caller may
 store previous profile JSON in an approved private workspace and compare it in a
@@ -170,9 +212,12 @@ future invocation.
 - [ ] Missing reports remain `not_started` or `needs_confirmation`.
 - [ ] `stop_ship` is visible in detection and technical evidence, caps the
       engineering-derived ability level, and is not shown as a personal badge.
-- [ ] No behavior evidence means no Lv3 or higher.
+- [ ] No behavior evidence means no Lv3 or higher (advanced audit); enterprise
+      `ready_for_controlled_use` may still hold at Lv2.
+- [ ] Root `next_quest` is enterprise practice after the enterprise-ready gate;
+      advanced steps appear only under `advanced_audit`.
 - [ ] `not_applicable` is accepted only with its required scope and integrity
-      evidence; omission never becomes a free pass.
+      evidence; omission counts as missing evidence.
 - [ ] Two-platform credit uses distinct platform names with the same
       `contract_id` and `fixture_id`.
 - [ ] Type, level, badge, and next quest rules are deterministic.
@@ -183,6 +228,10 @@ future invocation.
       not display finding IDs or tell the person to repair a project command.
 - [ ] The Detection view still displays the root project `next_quest`.
 - [ ] Growth and audit views use the same counts and finding IDs.
+- [ ] Invalid package health suppresses levels, types, badges, and delivery-pass
+      language while preserving raw diagnostics.
+- [ ] Token and runtime values preserve `estimated` / `observed` /
+      `not_measured` status, and levels and verdicts hold without them.
 - [ ] The header, technical evidence, and JSON identify the analyzed subject.
 - [ ] HTML contains no external font, CDN, tracker, or network dependency.
 - [ ] Full local paths and client details are not placed in the share layer.
@@ -197,7 +246,8 @@ future invocation.
 | --- | --- |
 | “The type looks advanced, so it can ship.” | Delivery follows safety and behavior gates, not the type. |
 | “No Skill exists, so give it Lv0.” | Use `not_started`; continue the business-readiness next quest. |
-| “Static pass proves the workflow works.” | Stop at Lv2 until behavior evidence exists. |
+| “Static pass proves the workflow works.” | Enterprise may trial at Lv2; advanced audit still needs behavior evidence for Lv3+. |
+| “Missing behavior JSON means the Skill failed.” | If the enterprise-ready gate passed, say ready for controlled use and park author evidence under advanced audit. |
 | “One total score is easier.” | Keep business and engineering levels separate. |
 | “The HTML can calculate the level.” | Calculate in Python; HTML only renders JSON. |
 | “A full path helps technical users.” | Keep full paths in private source reports, not the profile/share layer. |

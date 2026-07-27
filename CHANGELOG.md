@@ -8,6 +8,29 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Closed-loop fix verification: `skill-self-check/scripts/verify_fix.py` compares
+  a Skill against the `hard_gates.py` JSON captured before the edits and reports
+  score movement, resolved / introduced / persisting findings, ship-floor and
+  package-health transitions, and estimated token savings. Findings that only
+  disappear because a check stopped applying no longer read as progress, and
+  dimensions whose maximum changed are marked `not_comparable` instead of being
+  reported as a gain or a drop. Exit code 1 on a hard regression (new Critical,
+  severity escalation, lost ship floor, or a score drop); `--strict` also fails
+  on newly surfaced non-critical findings. UTF-16 baselines produced by
+  PowerShell redirection are accepted.
+- `skill-self-check` Pass 7 (fix verification) wired into `SKILL.md`,
+  `CHECKLIST.md` (checks 7.1–7.5), and a before/after table in both report
+  templates, so "已修复" has to come from a re-run rather than from memory.
+- `skill-self-check/references/fix-templates.md`: paste-ready rewrites for every
+  mechanical finding (`EFF.1`–`EFF.3`, `PKG.1`–`PKG.7`), including which fixes
+  the model writes itself and which need the user to move or delete files.
+- Efficiency guards in `hard_gates.py` (schema 1.3): `EFF.1` flags loop/retry
+  instructions without a nearby stop condition (max attempts / timeout /
+  escalate), `EFF.2` flags unbounded "until perfect" / 直到满意 refinement
+  phrasing, and `EFF.3` flags static instruction text above the recommended
+  input-token budget. Anti-loop instructions count as guards; results surface
+  as a `loop_guard` metric and a token `budget` block, wired into both report
+  templates and the checklist.
 - README scorecard gallery: personal Growth and project Detection screenshots
   under `assets/scorecards/`, plus CN/EN copy explaining the two offline HTML
   views and how to regenerate a suite demo.
@@ -90,6 +113,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- README: beginner path now includes fix verification (`verify_fix.py`) and
+  spells out enterprise mainline vs optional advanced audit; not a full rewrite.
+- Scorecards and self-check docs use a **dual track**: enterprise mainline
+  (usable business Skill employee — package health, ship floor, static safety,
+  plain next practice) vs optional **advanced audit** (behavior JSON, failure
+  recovery, portable contract, two-platform fingerprints). Growth profile
+  schema/ruleset **0.5**: after ship floor, root `verdict` is
+  `ready_for_controlled_use` without behavior evidence; author steps move to
+  `advanced_audit.next_quest`. Lv4–Lv5 labels marked as author track. HTML
+  shows a separate advanced-audit panel. Learning quests drop Harness /
+  cross-platform as the default practice.
+- `skill-self-check` now bounds its own retry instructions and states the
+  package-health rule positively, clearing the `EFF.1` and `2.5` findings it
+  raised against itself.
+- `skill-growth-scorecard` states its four aggregation and metric-isolation
+  rules as positive targets, clearing its `2.5` negation-density finding. All
+  four shipped Skills now audit at 5/5, 5/5, kit 3/3 with zero findings.
 - `CONTRIBUTING.md` and `AGENTS.md` updated for the four-skill pack: full
   unittest discover, scorecard private-output rules, script ownership map, and
   platform-evidence pointers.

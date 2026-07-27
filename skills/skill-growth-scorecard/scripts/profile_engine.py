@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import sys
 from datetime import datetime
@@ -16,15 +17,15 @@ from pathlib import Path
 from typing import Any
 
 
-PROFILE_SCHEMA_VERSION = "0.2"
-RULESET_VERSION = "0.2"
+PROFILE_SCHEMA_VERSION = "0.5"
+RULESET_VERSION = "0.5"
 LEVELS = [
     ("Lv0", "灵感草稿"),
     ("Lv1", "初学者 · 起步创作者"),
     ("Lv2", "入门应用 · 实用搭建者"),
     ("Lv3", "中级应用 · 稳定实践者"),
-    ("Lv4", "高级应用 · 闭环工程师"),
-    ("Lv5", "专家级 · 跨平台架构师"),
+    ("Lv4", "高级审计 · 闭环作者"),
+    ("Lv5", "高级审计 · 作者多平台"),
 ]
 
 ARCHETYPES = [
@@ -33,28 +34,28 @@ ARCHETYPES = [
         "label": "流程探路者",
         "dimensions": ("intent_contract", "workflow_execution"),
         "summary": "擅长把目标铺成一条完整路线。",
-        "growth": "继续把每个承诺连接到验证和安全证据。",
+        "growth": "继续把每个承诺连到验收清单和出错时的停手规则。",
     },
     {
         "id": "steady-builder",
         "label": "稳健搭建者",
         "dimensions": ("intent_contract", "tooling_support"),
         "summary": "结构清楚，重视说明和配套材料。",
-        "growth": "把静态结构推进到可重复运行的行为证据。",
+        "growth": "用一次真实业务试跑检验说明书，缺什么就补什么。",
     },
     {
         "id": "automation-craftsperson",
         "label": "自动化工匠",
         "dimensions": ("workflow_execution", "tooling_support"),
         "summary": "善于把任务做成脚本和可执行工具。",
-        "growth": "补强默认关闭和失败恢复；适用时验证写回一致性，只读边界也要留下证据。",
+        "growth": "补强默认关闭和失败停手；别让脚本绕过人工确认。",
     },
     {
         "id": "loop-coach",
         "label": "闭环教练",
         "dimensions": ("verification_learning", "intent_contract"),
         "summary": "重视检查、复盘和持续改进。",
-        "growth": "保持验证质量，同时控制流程复杂度。",
+        "growth": "保持验收清楚，同时控制流程不要过长。",
     },
     {
         "id": "safety-guardian",
@@ -65,10 +66,10 @@ ARCHETYPES = [
     },
     {
         "id": "platform-architect",
-        "label": "跨平台架构师",
+        "label": "规则适配者",
         "dimensions": ("portability_adaptation", "intent_contract"),
-        "summary": "擅长用稳定契约降低平台迁移成本。",
-        "growth": "用真实平台证据控制抽象复杂度。",
+        "summary": "擅长用稳定契约降低换工具时的返工。",
+        "growth": "先把业务契约写稳；多平台验证留给高级审计。",
     },
 ]
 
@@ -88,8 +89,8 @@ PERSONAL_HEADLINES = {
     "automation-craftsperson": "你擅长把复杂任务做成可执行工具",
     "loop-coach": "你擅长用检查和复盘让 Skill 越用越稳",
     "safety-guardian": "你会先把权限和风险关进清楚的规则里",
-    "platform-architect": "你擅长用稳定规则适配不同 Agent 平台",
-    "balanced": "你已经能把六项 Skill 能力连成完整闭环",
+    "platform-architect": "你擅长用稳定规则降低换工具时的返工",
+    "balanced": "你已经能把目标、执行、材料、验收和安全连成闭环",
 }
 
 PERSONAL_STRENGTHS = {
@@ -113,21 +114,21 @@ PERSONAL_STRENGTHS = {
         "从这份 Skill 的权限与风险设计看，你已经表现出在执行前设置边界和确认机制的能力。"
     ),
     "platform-architect": (
-        "从这份 Skill 的契约与适配设计看，你已经表现出用稳定规则降低平台迁移成本的能力。"
+        "从这份 Skill 的契约设计看，你已经表现出用稳定规则降低换工具返工的能力。"
     ),
     "balanced": (
         "从这份 Skill 的完整证据链看，你已经能把目标、执行、工具、"
-        "验证、安全和平台适配连成闭环。"
+        "验收和安全连成闭环。"
     ),
 }
 
 LEVEL_INTERPRETATIONS = {
     0: "目前还在草稿阶段，重点是先让目标、边界和完成标准可被检查。",
     1: "目前仍处于起步阶段。",
-    2: "目前已进入入门应用阶段，静态结构已经达到受控试用的基础线。",
-    3: "目前已进入中级应用阶段，测试与复盘开始形成稳定习惯。",
-    4: "目前已进入高级应用阶段，已经能够同时处理执行、安全和失败恢复。",
-    5: "目前已进入专家阶段，已经具备用同一套规则服务多个 Agent 平台的能力。",
+    2: "目前已进入入门应用阶段，静态结构已经达到企业受控试用的基础线。",
+    3: "目前已进入中级应用阶段；作者进阶证据开始齐全（高级审计轨道）。",
+    4: "目前已进入高级审计阶段，执行、安全和失败恢复证据更完整。",
+    5: "目前已进入作者多平台阶段；这是高级审计轨道，不是企业默认合格线。",
 }
 
 LEVEL_LEARNING_QUESTS = {
@@ -137,7 +138,7 @@ LEVEL_LEARNING_QUESTS = {
         "practice_points": [
             {
                 "label": "量化目标",
-                "text": "写清输入、预期输出、成功阈值和停止条件。",
+                "text": "写清输入、预期输出、成功标准和停止条件。",
             },
             {
                 "label": "情况判断",
@@ -151,125 +152,156 @@ LEVEL_LEARNING_QUESTS = {
         "acceptance": "完成一个不依赖口头补充也能被他人复述和检查的小型 Skill 草稿。",
     },
     1: {
-        "title": "练习把 Skill 做成可判断、可复用、可验证的工程单元",
-        "action": "选取当前 Skill 中最小的一条流程，用脱敏材料完成以下四项练习。",
+        "title": "练习把 Skill 写成同事也能照着做的业务说明书",
+        "action": "选取当前 Skill 中最小的一条流程，用真实业务语言完成以下四项练习。",
         "practice_points": [
             {
                 "label": "量化目标",
-                "text": "补齐输入、输出、成功阈值、停止条件和升级条件。",
+                "text": "补齐输入、输出、成功标准、停止条件和升级找谁。",
             },
             {
                 "label": "判断流程",
-                "text": "分别设计正常、资料不足、无权限和执行失败时的处理路径。",
+                "text": "分别写清正常、资料不足、无权限和做砸了时该怎么停。",
             },
             {
-                "label": "可复用组件",
-                "text": "把重复说明、模板或脚本整理成可传入参数、可返回状态的独立模块。",
+                "label": "可复用材料",
+                "text": "把重复说明、表格或模板放到资料/案例里，正文只留步骤。",
             },
             {
-                "label": "Harness 位置",
-                "text": "把 Harness（测试驱动器）放在目标 Skill 外部，用脱敏输入调用它、记录结果并检查规则；Harness 不负责真实业务发送。",
+                "label": "业务试跑",
+                "text": "用一条脱敏或过期业务样例走完流程，对照验收清单勾选，不触发真实对外发送。",
             },
         ],
-        "acceptance": "用一个脱敏案例跑通 Harness，四类判断都有可复核结果，且不触发真实发送或外部写入。",
+        "acceptance": "样例试跑后，验收清单可勾选；缺口已写回说明书。",
     },
     2: {
-        "title": "练习用行为证据替代“应该能用”",
-        "action": "为一条已经达到静态底线的核心流程建立可重复测试。",
+        "title": "练习用一次真实场景证明能交给人用",
+        "action": "选一个本周会发生的真实场景，按说明书走完并人工勾验收。",
         "practice_points": [
             {
-                "label": "脱敏夹具",
-                "text": "准备固定输入、预期输出和不会影响真实业务的数据。",
+                "label": "真实场景",
+                "text": "用业务原话写下触发条件，而不是空泛口号。",
             },
             {
-                "label": "核心与异常",
-                "text": "同时测试正常路径、缺少数据和执行失败路径。",
+                "label": "验收凭据",
+                "text": "写清看什么算做对：表格字段、截图、数字或单据状态。",
             },
             {
-                "label": "结果断言",
-                "text": "让测试自动判断输出、状态和停止条件是否正确。",
+                "label": "何时不用",
+                "text": "写清必须人拍板的事（报价、放行、拒单等）。",
             },
             {
-                "label": "复盘记录",
-                "text": "保存问题、修改和回归结果，说明下一版改变了什么。",
+                "label": "失败停手",
+                "text": "写清最多试几次、超时或转给谁；禁止开放式打磨。",
             },
         ],
-        "acceptance": "核心路径与至少一条异常路径可以重复测试，并留下测试结果和一次改进记录。",
+        "acceptance": "一次真实试跑后，验收可勾选，或缺口已改回 SKILL.md。",
     },
     3: {
-        "title": "练习让 Agent 在越界和失败时正确停下",
-        "action": (
-            "围绕最接近真实风险的一条流程练习边界与恢复；如有外部动作就检查权限、"
-            "确认和写回，只读 Skill 则检查越权写入、异常输入和中断恢复。"
-        ),
+        "title": "练习让业务 Skill 在越界时停得住",
+        "action": "围绕最接近真实风险的一条流程，写清权限、确认和失败停手。",
         "practice_points": [
             {
-                "label": "权限矩阵",
-                "text": "写清允许、禁止、必须人工确认、只读和需要升级的动作。",
+                "label": "权限边界",
+                "text": "写清允许、禁止、必须人工确认的动作。",
             },
             {
-                "label": "默认预演",
-                "text": "真实发送或写入默认关闭；只读 Skill 还要验证不会暗中修改目标文件。",
+                "label": "默认关闭",
+                "text": "真实发送或写入默认关闭；先预演再人工确认。",
             },
             {
-                "label": "写回一致性",
-                "text": "适用时验证失败或重试不重复写入；不适用时留下只读范围证据。",
+                "label": "重试上限",
+                "text": "失败最多重试几次，到头交给谁，不要原样空转。",
             },
             {
-                "label": "失败恢复",
-                "text": "用 Harness 模拟中断、超时和无权限，验证 Agent 会停止并留下证据。",
+                "label": "异常输入",
+                "text": "缺字段、空表、权限不够时要停下并说明原因。",
             },
         ],
-        "acceptance": (
-            "无授权、重复执行和中途失败三类测试都能安全停止或恢复；不适用项有"
-            "明确范围和证据，且没有真实副作用。"
-        ),
+        "acceptance": "无授权、重复执行和中途失败都能安全停下，且没有真实副作用。",
     },
     4: {
-        "title": "练习把业务契约与 Agent 平台分开",
-        "action": "保持同一套业务输入输出不变，把平台差异收进独立适配层。",
+        "title": "练习把业务说法写稳，少绑死某一个工具",
+        "action": "保持同一套业务输入输出不变，把工具差异收成可替换说明。",
         "practice_points": [
             {
                 "label": "稳定契约",
-                "text": "固定输入、输出、错误状态和验收规则，不写入单一模型特性。",
+                "text": "固定输入、输出、错误状态和验收规则。",
             },
             {
-                "label": "平台适配",
-                "text": "把工具调用、目录、权限和消息格式放进平台适配器。",
+                "label": "工具可替换",
+                "text": "步骤写做什么，具体软件名放到资料里备选。",
             },
             {
-                "label": "双平台测试",
-                "text": "使用同一脱敏夹具在至少两个 AI 或 Agent 平台运行。",
+                "label": "同事可读",
+                "text": "让没写过这份 Skill 的同事只看说明书也能判断对错。",
             },
             {
-                "label": "差异记录",
-                "text": "记录哪些差异由适配层解决，哪些必须升级给人工判断。",
+                "label": "改完复检",
+                "text": "改完后重新跑结构检查，确认没有改坏基础门槛。",
             },
         ],
-        "acceptance": "同一契约和夹具在两个平台得到可比较结果，平台差异没有污染核心流程。",
+        "acceptance": "说明书不依赖单一聊天工具口头习惯，验收仍可独立判断。",
     },
     5: {
-        "title": "练习维护一个可以长期演进的 Agent 工程",
-        "action": "把关注点从单次通过提升到规模、版本和长期回归。",
+        "title": "练习把这份 Skill 交给团队长期用",
+        "action": "把关注点从单次跑通提升到同事下周还能用。",
         "practice_points": [
             {
-                "label": "回归基线",
-                "text": "固定关键场景、性能边界和安全门槛，版本变化后自动复查。",
+                "label": "回归样例",
+                "text": "固定一两个脱敏样例，改版后重新勾验收。",
             },
             {
-                "label": "版本迁移",
-                "text": "记录契约、适配层和依赖变化，并提供兼容或迁移说明。",
+                "label": "版本说明",
+                "text": "记录改了哪条规则、为什么改、谁批准。",
             },
             {
-                "label": "规模证据",
-                "text": "观察真实任务量下的失败率、恢复时间和人工接管比例。",
+                "label": "使用反馈",
+                "text": "收集失败率和需要人工接管的原因，回写说明书。",
             },
             {
                 "label": "经验传递",
-                "text": "把设计理由、常见错误和验证方法整理成团队可以复用的规范。",
+                "text": "把常见借口和危险信号写成团队能复用的表。",
             },
         ],
-        "acceptance": "下一版本仍通过回归、安全和跨平台门槛，并能解释关键设计为什么这样做。",
+        "acceptance": "下一版仍过基础门槛，且能向同事解释关键规则为什么这样写。",
+    },
+}
+
+# Author / maintainer track — not the enterprise default next step.
+ADVANCED_AUDIT_QUESTS = {
+    2: {
+        "title": "（高级审计）补核心流程行为证据",
+        "action": "用脱敏夹具验证核心路径，并保存 PDCA 复盘到行为证据 JSON。",
+        "acceptance": "core_flow_tested 和 pdca_evidence 均为 true。",
+        "unlocks": {"id": "Lv3", "label": LEVELS[3][1]},
+    },
+    3: {
+        "title": "（高级审计）证明适用的安全边界和失败恢复",
+        "action": (
+            "有外部动作时验证默认关闭和写回一致性；只读 Skill 则验证不越权写入，"
+            "并补齐中断与异常输入的恢复证据。"
+        ),
+        "acceptance": "适用项有行为证据，不适用项有明确范围，失败场景可以安全停止或恢复。",
+        "unlocks": {"id": "Lv4", "label": LEVELS[4][1]},
+    },
+    4: {
+        "title": "（高级审计）完成跨平台可比验证",
+        "action": (
+            "使用同一份契约和同一套脱敏夹具在至少两个 Agent 平台运行，"
+            "分别保存结果证据。"
+        ),
+        "acceptance": (
+            "两个平台记录均为 verified，且 contract_id 与 fixture_id "
+            "是相同的 SHA-256 指纹。"
+        ),
+        "unlocks": {"id": "Lv5", "label": LEVELS[5][1]},
+    },
+    5: {
+        "title": "（高级审计）保持长期运行与多平台证据",
+        "action": "记录真实规模、回归和版本变化；平台适配变更不污染业务契约。",
+        "acceptance": "下一版本仍通过高级审计门槛。",
+        "unlocks": {"id": "Lv5", "label": LEVELS[5][1]},
     },
 }
 
@@ -508,10 +540,14 @@ def build_learning_quest(
         for item in template["practice_points"]
     ]
     if str(archetype.get("id") or "") == "automation-craftsperson" and level_ordinal == 1:
-        title = "练习把自动化脚本接入可验证的工程闭环"
+        title = "练习把自动化脚本做成同事能放心点的业务工具"
         practice_points[2] = {
             "label": "可复用脚本",
             "text": "把重复逻辑整理成可传入参数、可返回状态、失败时给出明确原因的公共命令。",
+        }
+        practice_points[3] = {
+            "label": "业务试跑",
+            "text": "用一条脱敏样例跑通脚本，对照验收勾选；默认关闭真实发送或写入。",
         }
 
     weakest = sorted(
@@ -580,6 +616,175 @@ def valid_evidence_reference(value: Any) -> bool:
     if ".." in path_part.split("/"):
         return False
     return True
+
+
+def nonnegative_number(value: Any) -> int | float | None:
+    """Return a finite non-negative number without treating booleans as usage."""
+    if isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(number) or number < 0:
+        return None
+    return int(number) if number.is_integer() else number
+
+
+def positive_run_count(value: Any) -> int | None:
+    number = nonnegative_number(value)
+    if number is None or int(number) != number or number < 1:
+        return None
+    return int(number)
+
+
+def nonnegative_integer(value: Any) -> int | None:
+    number = nonnegative_number(value)
+    if number is None or int(number) != number:
+        return None
+    return int(number)
+
+
+def operational_metrics(
+    hard: dict[str, Any] | None,
+    behavior: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Prefer trusted observations, otherwise preserve explicit static limits."""
+    hard_metrics = (
+        hard.get("operational_metrics")
+        if hard and isinstance(hard.get("operational_metrics"), dict)
+        else {}
+    )
+    behavior_metrics = (
+        behavior.get("operational_metrics")
+        if behavior and isinstance(behavior.get("operational_metrics"), dict)
+        else {}
+    )
+    observed_tokens = (
+        behavior_metrics.get("token_consumption")
+        if isinstance(behavior_metrics.get("token_consumption"), dict)
+        else {}
+    )
+    token_evidence = str(observed_tokens.get("evidence") or "").strip()
+    token_runs = positive_run_count(observed_tokens.get("runs"))
+    input_tokens = nonnegative_integer(observed_tokens.get("input_tokens"))
+    output_tokens = nonnegative_integer(observed_tokens.get("output_tokens"))
+    total_tokens = nonnegative_integer(observed_tokens.get("total_tokens"))
+    if total_tokens is None and input_tokens is not None and output_tokens is not None:
+        total_tokens = input_tokens + output_tokens
+    token_components_consistent = not (
+        total_tokens is not None
+        and input_tokens is not None
+        and output_tokens is not None
+        and total_tokens != input_tokens + output_tokens
+    )
+    token_observation_valid = (
+        str(observed_tokens.get("status") or "").casefold() == "observed"
+        and total_tokens is not None
+        and token_components_consistent
+        and token_runs is not None
+        and valid_evidence_reference(token_evidence)
+    )
+    if token_observation_valid:
+        token_metric = {
+            "label": "Token 消耗",
+            "status": "observed",
+            "total_tokens": total_tokens,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "runs": token_runs,
+            "unit": "tokens",
+            "scope": "audited Skill behavior runs",
+            "method": "trusted provider or harness usage metadata",
+            "confidence": "observed",
+            "evidence": token_evidence,
+            "source": "behavior",
+        }
+    else:
+        static_tokens = (
+            hard_metrics.get("token_consumption")
+            if isinstance(hard_metrics.get("token_consumption"), dict)
+            else {}
+        )
+        estimated_tokens = nonnegative_integer(
+            static_tokens.get("estimated_input_tokens")
+        )
+        static_available = (
+            str(static_tokens.get("status") or "").casefold() == "estimated"
+            and estimated_tokens is not None
+        )
+        token_metric = {
+            "label": "Token 消耗",
+            "status": "estimated" if static_available else "not_assessed",
+            "estimated_input_tokens": (
+                estimated_tokens if static_available else None
+            ),
+            "unit": "tokens",
+            "scope": (
+                str(static_tokens.get("scope") or "SKILL.md static instruction text")
+                if static_available
+                else "audited Skill execution"
+            ),
+            "method": (
+                str(static_tokens.get("method") or "static estimate")
+                if static_available
+                else None
+            ),
+            "confidence": (
+                str(static_tokens.get("confidence") or "low")
+                if static_available
+                else "not_assessed"
+            ),
+            "evidence": (
+                sanitize_evidence(static_tokens.get("evidence"))
+                if static_available
+                else None
+            ),
+            "source": "hard_gates" if static_available else "not_supplied",
+            "observation_rejected": bool(observed_tokens)
+            and not token_observation_valid,
+        }
+
+    observed_runtime = (
+        behavior_metrics.get("runtime_duration")
+        if isinstance(behavior_metrics.get("runtime_duration"), dict)
+        else {}
+    )
+    runtime_evidence = str(observed_runtime.get("evidence") or "").strip()
+    runtime_runs = positive_run_count(observed_runtime.get("runs"))
+    duration_ms = nonnegative_number(observed_runtime.get("duration_ms"))
+    runtime_observation_valid = (
+        str(observed_runtime.get("status") or "").casefold() == "observed"
+        and duration_ms is not None
+        and runtime_runs is not None
+        and valid_evidence_reference(runtime_evidence)
+    )
+    runtime_metric = {
+        "label": "运行时长",
+        "status": "observed" if runtime_observation_valid else "not_measured",
+        "duration_ms": duration_ms if runtime_observation_valid else None,
+        "runs": runtime_runs if runtime_observation_valid else None,
+        "unit": "ms",
+        "statistic": (
+            str(observed_runtime.get("statistic") or "single_run")
+            if runtime_observation_valid
+            else None
+        ),
+        "scope": (
+            "audited Skill behavior runs"
+            if runtime_observation_valid
+            else "audited Skill execution"
+        ),
+        "evidence": runtime_evidence if runtime_observation_valid else None,
+        "source": "behavior" if runtime_observation_valid else "not_supplied",
+        "observation_rejected": bool(observed_runtime)
+        and not runtime_observation_valid,
+    }
+    return {
+        "token_consumption": token_metric,
+        "runtime_duration": runtime_metric,
+        "scoring_effect": "informational_only",
+    }
 
 
 def behavior_applicability(
@@ -713,6 +918,185 @@ def engineering_profile(
             "findings": [],
             "scores": None,
             "safety": None,
+            "operational_metrics": operational_metrics(hard, behavior),
+            "package_health": {
+                "status": "not_assessed",
+                "assessable": None,
+                "checks": {},
+                "summary": {},
+            },
+        }
+
+    package_health = (
+        hard.get("package_health")
+        if isinstance(hard.get("package_health"), dict)
+        else {}
+    )
+    package_status = str(
+        package_health.get("status") or "not_assessed"
+    ).casefold()
+    package_invalid = package_status == "invalid_skill_package" or (
+        package_status != "not_assessed"
+        and package_health.get("assessable") is False
+    )
+    if package_invalid:
+        hard_scores = (
+            hard.get("scores") if isinstance(hard.get("scores"), dict) else {}
+        )
+        basic = (
+            hard_scores.get("basic_usable")
+            if isinstance(hard_scores.get("basic_usable"), dict)
+            else {}
+        )
+        contract = (
+            hard_scores.get("contract_clarity")
+            if isinstance(hard_scores.get("contract_clarity"), dict)
+            else {}
+        )
+        support = (
+            hard_scores.get("support_kit")
+            if isinstance(hard_scores.get("support_kit"), dict)
+            else {}
+        )
+        raw_findings = clean_findings(
+            hard.get("findings") or [],
+            "skill_engineering",
+            "hard_gates",
+        ) + clean_findings(
+            safety.get("findings") if safety else [],
+            "skill_engineering",
+            "ship_safety",
+        )
+        safety_counts = (
+            safety.get("counts")
+            if safety and isinstance(safety.get("counts"), dict)
+            else {}
+        )
+        safety_verdict = str(
+            safety.get("verdict") if safety else "not_assessed"
+        )
+        package_summary = (
+            package_health.get("summary")
+            if isinstance(package_health.get("summary"), dict)
+            else {}
+        )
+        blocking_count = int_value(
+            package_summary.get("blocking_check_count")
+        )
+        return {
+            "status": "invalid_package",
+            "level": None,
+            "dimensions": {
+                key: {
+                    "label": label,
+                    "state": None,
+                    "status": "not_assessable",
+                }
+                for key, label in DIMENSION_LABELS.items()
+            },
+            "archetype": {
+                "id": "structure-pending",
+                "label": "结构待整理",
+                "summary": "当前目标还不是一个边界清楚、可安装的标准 Skill 包。",
+                "growth": "先整理包根、目录、路径和资源，再评价创作成熟度。",
+                "evidence_dimensions": [],
+            },
+            "personal_interpretation": {
+                "eyebrow": "当前不可生成能力画像",
+                "headline": "先把项目工作区整理成一个标准 Skill 包",
+                "summary": (
+                    "原始文件检查仍可用于修复，但这些局部信号不能代表 Skill "
+                    "创作成熟度。完成包结构前置门后再生成 Lv0–Lv5。"
+                ),
+            },
+            "learning_quest": {
+                "lane": "package_health",
+                "title": "完成 Skill 包结构整理",
+                "action": "先恢复唯一、可安装、可移植的 Skill 包边界。",
+                "summary": "把唯一可安装 Skill 根与运行素材、输出产物分开。",
+                "practice_points": [
+                    {
+                        "label": "唯一根",
+                        "text": "只保留一个与 frontmatter name 同名的 Skill 根目录。",
+                    },
+                    {
+                        "label": "资源归位",
+                        "text": "将固定资源归入 assets/、references/、scripts/ 或 agents/。",
+                    },
+                    {
+                        "label": "路径与产物",
+                        "text": "移除本机绝对路径，并把生成结果放到包外。",
+                    },
+                ],
+                "acceptance": (
+                    "package_health.status=valid_skill_package，且所有阻断检查清零。"
+                ),
+            },
+            "badges": [],
+            "next_quest": {
+                "lane": "package_health",
+                "title": "先恢复可安装的标准 Skill 结构",
+                "action": (
+                    "统一根目录与 frontmatter name，整理非标准目录，修复绝对路径和"
+                    "缺失资源引用，并把运行输出移出 Skill 包。"
+                ),
+                "acceptance": (
+                    "hard_gates.py 返回 package_health.assessable=true，"
+                    "blocking_check_count=0。"
+                ),
+                "unlocks": {"id": "maturity_assessment", "label": "成熟度评分"},
+            },
+            "findings": raw_findings,
+            "scores": {
+                "basic_usable": {
+                    "score": int_value(basic.get("score")),
+                    "max": int_value(basic.get("max"), 5),
+                },
+                "contract_clarity": {
+                    "score": int_value(contract.get("score")),
+                    "max": int_value(contract.get("max"), 5),
+                },
+                "support_kit": {
+                    "score": int_value(support.get("score")),
+                    "max": int_value(support.get("max")),
+                },
+                "ship_floor_met": bool(hard_scores.get("ship_floor_met")),
+                "enterprise_ready": False,
+                "interpretation": "partial_file_diagnostics_only",
+            },
+            "portability": verified_platform_summary(behavior),
+            "operational_metrics": operational_metrics(hard, behavior),
+            "package_health": {
+                "status": "invalid_skill_package",
+                "assessable": False,
+                "checks": package_health.get("checks") or {},
+                "summary": {
+                    "blocking_check_count": blocking_count,
+                    "warning_check_count": int_value(
+                        package_summary.get("warning_check_count")
+                    ),
+                    "files_scanned": int_value(
+                        package_summary.get("files_scanned")
+                    ),
+                },
+                "installability": package_health.get("installability") or {},
+            },
+            "safety": {
+                "verdict": safety_verdict,
+                "counts": {
+                    "critical": int_value(safety_counts.get("critical")),
+                    "should_fix": int_value(
+                        safety_counts.get("should_fix")
+                    ),
+                    "info": int_value(safety_counts.get("info")),
+                },
+                "execution_status": str(
+                    (safety.get("execution") or {}).get("status")
+                    if safety and isinstance(safety.get("execution"), dict)
+                    else "not_assessed"
+                ),
+                "interpretation": "secondary_to_invalid_package",
+            },
         }
 
     scores = hard.get("scores") if isinstance(hard.get("scores"), dict) else {}
@@ -801,7 +1185,7 @@ def engineering_profile(
     platform_count = int(platform_summary["verified_platform_count"])
 
     level_ordinal = 0 if basic_score < 3 else 1
-    static_ready = (
+    enterprise_ready = (
         basic_score >= 4
         and contract_score >= 3
         and ship_floor
@@ -809,10 +1193,10 @@ def engineering_profile(
         and safety_verdict == "static_pass"
         and safety_critical == 0
     )
-    if static_ready:
+    if enterprise_ready:
         level_ordinal = 2
     if (
-        static_ready
+        enterprise_ready
         and core_flow_tested
         and pdca_evidence
     ):
@@ -962,47 +1346,20 @@ def engineering_profile(
             "acceptance": "ship_safety.py 返回 static_pass 且 critical=0。",
             "unlocks": {"id": "Lv2", "label": LEVELS[2][1]},
         }
-    elif level_ordinal == 2:
-        next_quest = {
-            "lane": "skill_engineering",
-            "title": "补核心流程行为证据",
-            "action": "用脱敏夹具验证核心路径，并保存 PDCA 复盘。",
-            "acceptance": "core_flow_tested 和 pdca_evidence 均有可信证据。",
-            "unlocks": {"id": "Lv3", "label": LEVELS[3][1]},
-        }
-    elif level_ordinal == 3:
-        next_quest = {
-            "lane": "skill_engineering",
-            "title": "证明适用的安全边界和失败恢复",
-            "action": (
-                "有外部动作时验证默认关闭和写回一致性；只读 Skill 则验证不越权写入，"
-                "并补齐中断与异常输入的恢复证据。"
-            ),
-            "acceptance": "适用项有行为证据，不适用项有明确范围，失败场景可以安全停止或恢复。",
-            "unlocks": {"id": "Lv4", "label": LEVELS[4][1]},
-        }
-    elif level_ordinal == 4:
-        next_quest = {
-            "lane": "skill_engineering",
-            "title": "完成跨平台验证",
-            "action": (
-                "使用同一份契约和同一套脱敏夹具在至少两个 Agent 平台运行，"
-                "分别保存结果证据。"
-            ),
-            "acceptance": (
-                "两个平台记录均为 verified，且 contract_id 与 fixture_id "
-                "是相同的 SHA-256 指纹。"
-            ),
-            "unlocks": {"id": "Lv5", "label": LEVELS[5][1]},
-        }
     else:
-        next_quest = {
-            "lane": "skill_engineering",
-            "title": "保持长期运行证据",
-            "action": "记录真实规模、回归和版本变化。",
-            "acceptance": "下一版本仍通过全部门槛。",
-            "unlocks": {"id": "Lv5", "label": LEVELS[5][1]},
-        }
+        # Enterprise mainline once static floor / safety are met.
+        kit_complete = bool((support or {}).get("kit_complete"))
+        next_quest = enterprise_next_quest_after_floor(
+            kit_complete=kit_complete,
+            support_max=support_max,
+            contract_score=contract_score,
+        )
+
+    advanced_audit = build_advanced_audit(
+        level_ordinal,
+        behavior,
+        enterprise_ready=enterprise_ready,
+    )
 
     dimension_payload = {
         key: {
@@ -1019,6 +1376,13 @@ def engineering_profile(
             "label": level_label,
             "ordinal": level_ordinal,
             "max_ordinal": 5,
+            "track_note": (
+                "高级审计 · 作者轨道"
+                if level_ordinal >= 4
+                else "企业主线"
+                if level_ordinal >= 2
+                else "起步"
+            ),
         },
         "dimensions": dimension_payload,
         "archetype": archetype,
@@ -1035,6 +1399,7 @@ def engineering_profile(
         ),
         "badges": badges,
         "next_quest": next_quest,
+        "advanced_audit": advanced_audit,
         "findings": critical_findings,
         "scores": {
             "basic_usable": {"score": basic_score, "max": basic_max},
@@ -1044,8 +1409,20 @@ def engineering_profile(
             },
             "support_kit": {"score": support_score, "max": support_max},
             "ship_floor_met": ship_floor,
+            "enterprise_ready": enterprise_ready,
         },
         "portability": platform_summary,
+        "operational_metrics": operational_metrics(hard, behavior),
+        "package_health": (
+            package_health
+            if package_health
+            else {
+                "status": "not_assessed",
+                "assessable": None,
+                "checks": {},
+                "summary": {},
+            }
+        ),
         "safety": {
             "verdict": safety_verdict,
             "counts": {
@@ -1067,10 +1444,93 @@ def engineering_profile(
     }
 
 
+def build_advanced_audit(
+    level_ordinal: int,
+    behavior: dict[str, Any] | None,
+    *,
+    enterprise_ready: bool,
+) -> dict[str, Any]:
+    """Author-track next steps; never replaces the enterprise next_quest."""
+    quest_key = 2 if level_ordinal <= 2 else min(level_ordinal, 5)
+    template = ADVANCED_AUDIT_QUESTS[quest_key]
+    has_core = bool_value(behavior, "core_flow_tested") and bool_value(
+        behavior, "pdca_evidence"
+    )
+    if level_ordinal >= 5:
+        status = "satisfied"
+        note = "高级审计轨道已满足多平台门槛；仍非企业日常必做项。"
+    elif level_ordinal >= 3:
+        status = "in_progress"
+        note = "已有部分作者进阶证据；跨平台与完整闭环仍属高级审计。"
+    elif has_core:
+        status = "in_progress"
+        note = "已附行为证据；继续高级审计可解锁更高作者等级。"
+    else:
+        status = "available"
+        note = (
+            "作者进阶证据未附；不影响企业主线「可受控试用」结论。"
+            if enterprise_ready
+            else "先达到企业主线门槛，再考虑作者进阶证据。"
+        )
+    return {
+        "track": "author_advanced",
+        "label": "高级审计 · 作者轨道",
+        "status": status,
+        "note": note,
+        "required_for_enterprise": False,
+        "next_quest": {
+            "lane": "advanced_audit",
+            "title": template["title"],
+            "action": template["action"],
+            "acceptance": template["acceptance"],
+            "unlocks": template["unlocks"],
+        },
+    }
+
+
+def enterprise_next_quest_after_floor(
+    *,
+    kit_complete: bool,
+    support_max: int,
+    contract_score: int,
+) -> dict[str, Any]:
+    """Default remediation once the Skill is good enough for controlled business use."""
+    if support_max > 0 and not kit_complete:
+        return {
+            "lane": "enterprise_skill",
+            "title": "补齐同事会用到的配套材料",
+            "action": "把字段表、样例或话术模板放进资料/案例，正文只留步骤和验收。",
+            "acceptance": "support_kit 齐全，或明确标记不适用模块。",
+            "unlocks": None,
+        }
+    if contract_score < 5:
+        return {
+            "lane": "enterprise_skill",
+            "title": "把何时不用和验收凭据说得更清楚",
+            "action": "用业务原话补触发场景、必须人拍板的事，以及看什么单据/字段算完成。",
+            "acceptance": "同事只看说明书就能判断该不该用、做得对不对。",
+            "unlocks": None,
+        }
+    return {
+        "lane": "enterprise_skill",
+        "title": "用真实业务场景试跑一单",
+        "action": (
+            "选一个本周真实会发生的场景，按说明书走完，对照验收清单人工勾选；"
+            "缺什么就改回 SKILL.md。"
+        ),
+        "acceptance": "验收清单可全部勾选，或已记下缺口并改回说明书。",
+        "unlocks": None,
+    }
+
+
 def choose_next_quest(
     readiness: dict[str, Any],
     engineering: dict[str, Any],
 ) -> dict[str, Any]:
+    if engineering.get("status") == "invalid_package":
+        quest = engineering.get("next_quest")
+        if isinstance(quest, dict):
+            return quest
     readiness_level = readiness.get("level")
     if readiness_level and int_value(readiness_level.get("ordinal")) < 5:
         quest = readiness.get("next_quest")
@@ -1121,23 +1581,48 @@ def build_profile(
         if isinstance(engineering.get("safety"), dict)
         else {}
     )
+    engineering_scores = (
+        engineering.get("scores")
+        if isinstance(engineering.get("scores"), dict)
+        else {}
+    )
+    enterprise_ready = bool(engineering_scores.get("enterprise_ready"))
+    # Enterprise mainline: package + contract + static safety must agree.
+    # Missing author behavior / multi-platform evidence stays on advanced_audit.
     verdict = (
-        "stop_ship"
+        "invalid_skill_package"
+        if engineering.get("status") == "invalid_package"
+        else "stop_ship"
         if engineering_safety.get("verdict") == "stop_ship"
         or counts["critical"] > 0
-        else "needs_evidence"
-        if engineering.get("status") == "assessed"
-        and engineering.get("level", {}).get("ordinal", 0) < 4
         else "ready_for_controlled_use"
+        if engineering.get("status") == "assessed" and enterprise_ready
+        else "needs_evidence"
         if engineering.get("status") == "assessed"
         else "planning"
     )
+    advanced_audit = (
+        engineering.get("advanced_audit")
+        if isinstance(engineering.get("advanced_audit"), dict)
+        else None
+    )
+    if advanced_audit is None and engineering.get("status") == "assessed":
+        level_ordinal = int_value(
+            (engineering.get("level") or {}).get("ordinal")
+        )
+        advanced_audit = build_advanced_audit(
+            level_ordinal,
+            behavior_report,
+            enterprise_ready=enterprise_ready,
+        )
     limitations: list[str] = []
     limitations.extend(readiness.get("limitations") or [])
     if hard_report:
         limitations.extend(hard_report.get("limitations") or [])
     if safety_report:
         limitations.extend(safety_report.get("limitations") or [])
+    if behavior_report:
+        limitations.extend(behavior_report.get("limitations") or [])
     limitations.append("growth labels are deterministic explanations, not personality tests")
     limitations = list(dict.fromkeys(str(item) for item in limitations if str(item).strip()))
 
@@ -1157,17 +1642,35 @@ def build_profile(
         "title": title,
         "subject": subject,
         "verdict": verdict,
+        "verdict_summary": (
+            "可受控试用：结构与静态安全已过企业主线门槛"
+            if verdict == "ready_for_controlled_use"
+            else "存在高风险阻断，先改 Critical"
+            if verdict == "stop_ship"
+            else "不是标准 Skill 包，先整理包结构"
+            if verdict == "invalid_skill_package"
+            else "尚未达到企业基础使用门槛"
+            if verdict == "needs_evidence"
+            else "还在规划，补充可评估输入"
+        ),
         "business_readiness": readiness,
         "skill_engineering": engineering,
         "strengths": strengths,
         "next_quest": choose_next_quest(readiness, engineering),
+        "advanced_audit": advanced_audit,
         "findings": all_findings,
         "counts": counts,
         "sources": {
             "readiness": "supplied" if readiness_report else "not_supplied",
             "hard_gates": "supplied" if hard_report else "not_supplied",
             "ship_safety": "supplied" if safety_report else "not_supplied",
-            "behavior": "supplied" if behavior_report else "not_supplied",
+            "behavior": (
+                "not_supplied"
+                if not behavior_report
+                or str(behavior_report.get("source") or "").casefold()
+                == "not_supplied"
+                else "supplied"
+            ),
         },
         "limitations": limitations,
     }

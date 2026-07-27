@@ -33,14 +33,18 @@ https://github.com/xenos2025/Skill-Self-Check
 
 3. **看普通用户版报告里的三盏灯**：绿灯不亮 → 先改“必须解决的问题”；绿灯过了再看黄灯（契约）和蓝灯（资料/案例/记忆/脚本是否齐）。
    看不懂分数时，把报告贴回同一个 AI，问：「用白话告诉我先改哪三条。」
-4. **有本机 Python 时**，优先跑一键审计，打开两份离线成绩单：个人看成长画像，项目看检测结果（示例图见下面「成绩单长什么样」）。
+4. **说「按意见改」之后，要再跑一轮证明修好了**：用改前保存的 `hard-gates.json` 对照改后结果（`verify_fix.py`）。不能凭记忆说“已修复”。
+5. **有本机 Python 时**，优先跑一键审计，打开两份离线成绩单：个人看成长画像，项目看检测结果（示例图见下面「成绩单长什么样」）。
 
-更细的本机安装见下面「三分钟上手」；只会点聊天、不会开终端的人，**只用上面 1–3 就够了**。
+更细的本机安装见下面「三分钟上手」；只会点聊天、不会开终端的人，**只用上面 1–4 就够了**。
 
 如果公司很多事情还靠口头约定，先用 **agent-work-readiness** 把一个具体工作
 练到“目标、步骤、负责人、交接、标准和权限”说清楚，再写 Skill。写完后用
 **skill-growth-scorecard**（或一键审计）生成个人 / 项目两份离线 HTML 成绩单；
 原来的三盏灯和技术证据仍完整保留。
+
+**两条轨道（别混）：** 日常合格线是企业主线——结构 / 契约 / 静态安全够用即可进入受控试用；
+行为证据、跨平台指纹属于可选的**高级审计（作者轨道）**，缺它们不等于主线失败。
 
 ## 可视化上手（先看图）
 
@@ -52,7 +56,7 @@ https://github.com/xenos2025/Skill-Self-Check
 
 ### 2. 改完再检（闭环）
 
-写好 → 跑检查 → 看报告；**不过就改，改完再跑**。绿灯表示达到静态基础门槛，可以进入受控试用；涉及外部发送或真实数据时仍需单独的行为安全验证。
+写好 → 跑检查 → 看报告；**不过就改，改完再跑**。结构、契约和静态安全共同达到企业主线门槛后，可以进入受控试用；涉及外部发送或真实数据时仍需单独的行为安全验证。
 
 ![改完再检](assets/diagrams/zh/06-fix-loop.svg)
 
@@ -110,10 +114,19 @@ Cursor 里点名 **skill-self-check**，给出待检说明书路径。默认只�
 「按意见改」再改文件。同一次检查还会生成两种文字报告：普通用户版讲
 “能不能用、为什么、下一步”，技术版保留分数、问题编号和证据。
 
+改完对照（把 `baseline.json` 换成一键审计输出里的 `hard-gates.json`）：
+
+```powershell
+py -3 skills/skill-self-check/scripts/verify_fix.py C:\你的Skill目录 `
+  --baseline "$HOME\Documents\skill-audits\本次成绩单\hard-gates.json" --pretty
+```
+
 ## 成绩单长什么样（示例截图）
 
 跑完一键审计后，用浏览器打开输出目录里的 HTML 即可。个人页默认看**成长画像**
 （类型、等级、下一练习）；项目页默认看**检测结果**（分数、风险、整改优先级）。
+默认面向企业做出**可用的业务 Skill 员工**；行为证据 / 跨平台属于可选的
+**高级审计（作者轨道）**，不是日常合格线。
 下面是对本仓库四件套的脱敏示例（不含真实客户数据）：
 
 ### 个人能力成绩单 · 成长画像
@@ -150,7 +163,8 @@ py -3 skills/skill-growth-scorecard/scripts/suite_scorecards.py . `
 更多：[docs/INSTALLATION.md](docs/INSTALLATION.md) · [docs/PLATFORM-COMPATIBILITY.md](docs/PLATFORM-COMPATIBILITY.md) · [docs/AUDIENCE.md](docs/AUDIENCE.md) · [exp/README.md](exp/README.md)
 
 正式产品共四块：业务准备度、Skill 结构自检、安全预检、成长成绩单。它们都只
-读取本地文件；真实客户报告默认不应提交到这个开源仓库。
+读取本地文件；真实客户报告默认不应提交到这个开源仓库。自检还含效率护栏
+（无限重试 / 超长说明书）和改完复核（`verify_fix.py`），避免“改了就算修好”。
 
 ### 平台适配进度（不是认证）
 
@@ -205,6 +219,9 @@ Steps:
 ```
 
 3. **Read the business report's three lights:** if green is off, fix the must-resolve items first. Then check amber (contract) and blue (refs / examples / memory / scripts). A static green light is not behavioral or execution proof.
+4. **After “apply fixes”, prove the delta:** re-check against the pre-edit `hard-gates.json` with `verify_fix.py`. Do not claim “fixed” from memory.
+
+**Two tracks:** the enterprise mainline (structure / contract / static safety) is the daily bar for controlled trial. Behavior evidence and cross-platform fingerprints are optional **advanced audit** for authors — missing them is not a mainline failure.
 
 ## Visual guide
 
@@ -214,7 +231,7 @@ Steps:
 
 ### Fix & retry loop
 
-Write → run gates → report; if it fails, fix and run again. Passing the static floor means the skill is ready for a controlled trial, not that external actions are proven safe.
+Write → run gates → report; if it fails, fix and run again. Passing the enterprise mainline (package/ship floor, contract minimum, and static safety) means the skill is ready for a controlled trial, not that external actions are proven safe.
 
 ![Fix loop](assets/diagrams/06-fix-loop.svg)
 
@@ -255,7 +272,12 @@ The command creates separate **personal** and **project** offline HTML
 scorecards and records that the audit did not change the target. Real outputs
 are refused inside the target or its source repository. In Cursor, invoke
 **skill-self-check** and pass a skill path. Report-only by default; say “apply
-fixes” to edit.
+fixes” to edit. To prove fixes:
+
+```bash
+python skills/skill-self-check/scripts/verify_fix.py /path/to/your-skill \
+  --baseline "$HOME/Documents/skill-audits/current/hard-gates.json" --pretty
+```
 
 ## What the scorecards look like
 

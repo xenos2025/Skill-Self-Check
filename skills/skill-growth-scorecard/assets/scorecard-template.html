@@ -167,6 +167,56 @@
       color: white;
     }
     .toolbar-note { color: var(--quiet); font-size: 12px; }
+    .package-health-banner {
+      display: grid;
+      grid-template-columns: minmax(230px, 0.72fr) minmax(0, 1.28fr);
+      gap: 22px;
+      margin-bottom: 18px;
+      padding: 22px;
+      border-left: 6px solid var(--green);
+    }
+    .package-health-banner.invalid {
+      border-color: var(--red);
+      background: linear-gradient(100deg, var(--red-soft), var(--surface) 58%);
+    }
+    .package-health-banner.pending {
+      border-color: var(--amber);
+      background: linear-gradient(100deg, var(--amber-soft), var(--surface) 58%);
+    }
+    .package-health-copy h2 {
+      margin: 2px 0 7px;
+      font-size: 23px;
+      line-height: 1.2;
+    }
+    .package-health-copy p:not(.eyebrow) {
+      max-width: 620px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .package-health-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      align-content: start;
+    }
+    .package-check {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 44px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 740;
+    }
+    .package-check strong { color: var(--green); }
+    .package-check.fail strong { color: var(--red); }
+    .package-check.warn strong { color: var(--amber); }
+    .package-check.pending strong { color: var(--quiet); }
     .profile-declaration {
       padding: 22px 18px 30px;
       text-align: center;
@@ -240,6 +290,7 @@
       color: var(--violet-deep);
       font-size: 16px;
     }
+    .avatar-caption span { display: block; }
     .trait-panel {
       padding: clamp(20px, 3vw, 34px);
       border-top: 5px solid var(--teal);
@@ -484,6 +535,54 @@
     }
     .section-head h2 { margin: 0; font-size: 21px; letter-spacing: -0.02em; }
     .section-head p { margin: 0; color: var(--quiet); font-size: 13px; }
+    .advanced-audit-disclosure {
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .advanced-audit-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      min-height: 68px;
+      padding: 10px 2px;
+      cursor: pointer;
+      list-style: none;
+    }
+    .advanced-audit-summary::-webkit-details-marker { display: none; }
+    .advanced-audit-summary::marker { content: ""; }
+    .advanced-audit-copy { min-width: 0; }
+    .advanced-audit-heading {
+      display: block;
+      color: var(--ink);
+      font-size: 19px;
+      font-weight: 820;
+      letter-spacing: -0.02em;
+    }
+    .advanced-audit-context {
+      display: block;
+      margin-top: 2px;
+      color: var(--quiet);
+      font-size: 12px;
+    }
+    .advanced-audit-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 64px;
+      min-height: 34px;
+      flex: 0 0 auto;
+      border: 1px solid var(--line-strong);
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 820;
+    }
+    .advanced-audit-toggle::before { content: "展开"; }
+    .advanced-audit-disclosure[open] .advanced-audit-toggle::before { content: "收起"; }
+    .advanced-audit-disclosure[open] .advanced-audit-summary {
+      border-bottom: 1px solid var(--line);
+    }
+    .advanced-audit-disclosure > .panel { margin: 12px 0; }
     .dual-grid, .technical-grid, .score-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -541,6 +640,17 @@
       border: 1px dashed var(--line-strong);
     }
     .score-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .operational-block { margin-top: 14px; }
+    .operational-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 9px;
+    }
+    .operational-head h3 { margin: 0; font-size: 16px; }
+    .operational-head p { margin: 0; color: var(--quiet); font-size: 11px; }
+    .operational-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .score-card { position: relative; min-height: 168px; padding: 20px; overflow: hidden; }
     .score-card::before {
       content: "";
@@ -565,7 +675,7 @@
     .score-card > p:last-child { margin: 0; color: var(--muted); font-size: 12px; }
     .suite-stat-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 10px;
     }
     .suite-stat {
@@ -799,6 +909,8 @@
       .tabs { display: grid; grid-template-columns: repeat(3, 1fr); }
       .tab { padding-inline: 7px; font-size: 12px; }
       .toolbar-note { display: none; }
+      .package-health-banner { grid-template-columns: 1fr; padding: 18px; }
+      .package-health-grid { grid-template-columns: 1fr; }
       .profile-declaration { padding: 16px 4px 22px; }
       .profile-kicker { font-size: 11px; letter-spacing: 0.13em; }
       .profile-declaration h1 { font-size: clamp(38px, 12vw, 58px); }
@@ -825,6 +937,8 @@
       .life-step, .life-step:nth-child(2) { border-right: 0; border-bottom: 1px solid var(--line); }
       .life-step:last-child { border-bottom: 0; }
       .section-head { align-items: start; flex-direction: column; gap: 3px; }
+      .advanced-audit-summary { align-items: flex-start; }
+      .advanced-audit-toggle { min-width: 56px; }
       .finding-tools { align-items: stretch; flex-direction: column; }
       .filters { display: grid; grid-template-columns: repeat(2, 1fr); }
       .finding { grid-template-columns: 1fr; gap: 5px; }
@@ -848,6 +962,7 @@
       #view-growth > .section { break-inside: avoid; }
       .section-head { break-after: avoid; }
       .score-grid { grid-template-columns: repeat(4, 1fr); }
+      .operational-grid { grid-template-columns: repeat(2, 1fr); }
       .suite-stat-grid { grid-template-columns: repeat(4, 1fr); }
       .suite-table-wrap { overflow: visible; }
       .suite-table { min-width: 0; }
@@ -892,6 +1007,15 @@
       <span class="toolbar-note" id="toolbar-note">成长画像评价个人能力；项目交付结论在检测结果中单独展示</span>
     </nav>
 
+    <section class="panel package-health-banner" id="package-health-banner" aria-labelledby="package-health-title">
+      <div class="package-health-copy">
+        <p class="eyebrow">成熟度评分前置门</p>
+        <h2 id="package-health-title">Skill 包健康状态待评估</h2>
+        <p id="package-health-summary">先确认目录、路径和资源是否构成一个可安装的标准 Skill 包。</p>
+      </div>
+      <div class="package-health-grid" id="package-health-grid" aria-label="Skill 包健康检查项"></div>
+    </section>
+
     <section id="view-growth" role="tabpanel" aria-labelledby="tab-growth" data-view="growth">
       <header class="profile-declaration">
         <p class="profile-kicker">YOUR SKILL-BUILDING TYPE IS</p>
@@ -907,8 +1031,8 @@
       <div class="dna-hero">
         <figure class="avatar-scene">
           <svg class="skill-avatar" viewBox="0 0 420 380" role="img" aria-labelledby="avatar-title avatar-desc">
-            <title id="avatar-title">原创 Skill 导航机器人</title>
-            <desc id="avatar-desc">一个使用几何多边形绘制、手持流程图和检查笔的导航机器人。</desc>
+            <title id="avatar-title">原创 Skill 成长角色</title>
+            <desc id="avatar-desc">一个使用几何多边形绘制、手持流程图和检查笔的 Skill 成长角色。</desc>
             <ellipse cx="202" cy="340" rx="145" ry="18" fill="#d9d8dc"></ellipse>
             <path d="M65 214C92 118 181 68 310 91c36 6 62 26 76 60" fill="none" stroke="#c8c5cf" stroke-width="5" stroke-dasharray="10 11"></path>
             <circle cx="67" cy="215" r="9" fill="#3f9f9c"></circle>
@@ -955,8 +1079,8 @@
             </g>
           </svg>
           <figcaption class="avatar-caption">
-            <strong>Skill 导航员</strong>
-            把复杂承诺拆成路径、证据和下一关。
+            <strong id="avatar-role-name">Lv— · 类型待解锁</strong>
+            <span id="avatar-role-level">生成报告后显示当前能力类型与成熟度阶段。</span>
           </figcaption>
         </figure>
 
@@ -1049,6 +1173,7 @@
             <thead>
               <tr>
                 <th scope="col">正式 Skill</th>
+                <th scope="col">包健康</th>
                 <th scope="col">基础结构</th>
                 <th scope="col">边界规则</th>
                 <th scope="col">配套材料</th>
@@ -1067,27 +1192,51 @@
             <p class="eyebrow">原始检测</p>
             <h2 id="scores-title">分析对象的原始检测结果</h2>
           </div>
-          <p>页面不重新计算分数</p>
+          <p id="scores-basis">页面不重新计算分数；运行指标不参与等级评分</p>
         </div>
         <div class="score-grid" id="score-grid"></div>
+        <div class="operational-block">
+          <div class="operational-head">
+            <h3>运行指标</h3>
+            <p>量化成本与时延；不参与类型、等级或交付结论</p>
+          </div>
+          <div class="score-grid operational-grid" id="operational-grid"></div>
+        </div>
       </section>
 
       <section class="section" aria-labelledby="project-quest-title">
         <article class="panel project-remediation">
-          <p class="eyebrow">项目优先整改</p>
+          <p class="eyebrow">企业主线 · 下一步</p>
           <h2 id="project-quest-title"></h2>
           <p id="project-quest-action"></p>
           <div class="acceptance"><strong>验收标准：</strong><span id="project-quest-acceptance"></span></div>
         </article>
       </section>
 
+      <details class="section advanced-audit-disclosure" aria-labelledby="advanced-audit-title" id="advanced-audit-section" hidden>
+        <summary class="advanced-audit-summary">
+          <span class="advanced-audit-copy">
+            <span class="eyebrow">高级审计 · 作者轨道（可选）</span>
+            <span class="advanced-audit-heading" id="advanced-audit-title" role="heading" aria-level="2">行为证据与多平台</span>
+            <span class="advanced-audit-context">不是企业做出业务 Skill 员工的默认门槛</span>
+          </span>
+          <span class="advanced-audit-toggle" aria-hidden="true"></span>
+        </summary>
+        <article class="panel">
+          <p id="advanced-audit-note"></p>
+          <h3 id="advanced-audit-quest-title"></h3>
+          <p id="advanced-audit-quest-action"></p>
+          <div class="acceptance"><strong>验收标准：</strong><span id="advanced-audit-quest-acceptance"></span></div>
+        </article>
+      </details>
+
       <section class="section" aria-labelledby="life-title">
         <div class="section-head">
           <div>
-            <p class="eyebrow">工程闭环</p>
-            <h2 id="life-title">规划 → 实现 → 验证 → 交付</h2>
+            <p class="eyebrow">业务闭环</p>
+            <h2 id="life-title">说清 → 搭好 → 试跑 → 交给人用</h2>
           </div>
-          <p>静态通过不等于行为已经证明</p>
+          <p>企业主线看说明书与验收；作者进阶证据在高级审计区</p>
         </div>
         <div class="lifecycle" id="lifecycle"></div>
       </section>
@@ -1141,6 +1290,8 @@
               <li>业务准备度与 Skill 工程成熟度不合并为总分。</li>
               <li>stop_ship 会限制 Skill 等级。</li>
               <li>没有行为证据不能进入 Lv3。</li>
+              <li>Token 与运行时长是独立运行指标，不参与六项证据覆盖或等级评分。</li>
+              <li>Token 静态值只估算 SKILL.md 输入；运行时长无行为证据时保持未测量。</li>
               <li>HTML 只展示 Python 生成的结果。</li>
             </ul>
           </article>
@@ -1190,18 +1341,94 @@
     }
     const engineering = profile.skill_engineering || {};
     const readiness = profile.business_readiness || {};
+    const packageHealth = engineering.package_health || {
+      status: "not_assessed",
+      assessable: null,
+      checks: {},
+      summary: {}
+    };
+    const packageInvalid =
+      engineering.status === "invalid_package"
+      || packageHealth.status === "invalid_skill_package";
+    const packageValid = packageHealth.status === "valid_skill_package";
+    const packageBanner = $("#package-health-banner");
+    packageBanner.classList.add(packageInvalid ? "invalid" : packageValid ? "valid" : "pending");
+    if (packageInvalid) {
+      packageBanner.setAttribute("role", "alert");
+      $("#package-health-title").textContent = "不是标准 Skill 包 · 暂停成熟度评分";
+      $("#package-health-summary").textContent =
+        "当前目录更像项目工作区或素材/产物集合。下方原始分数只用于定位局部文件问题，不生成 Lv0–Lv5、能力类型或交付通过结论。";
+      $("#scores-basis").textContent =
+        "仅为局部文件诊断；包结构恢复前不参与成熟度、能力或交付评分";
+      $("#toolbar-note").textContent =
+        "包结构前置门未通过；请先查看检测结果和项目整改";
+      document.querySelector(".profile-kicker").textContent = "SKILL PACKAGE STATUS";
+      $("#archetype-code").textContent = "MATURITY PAUSED";
+      $("#ability-level-id").textContent = "暂停";
+      $("#ability-level-label").textContent = "包结构未通过";
+    } else if (packageValid) {
+      $("#package-health-title").textContent = "标准 Skill 包前置门已通过";
+      $("#package-health-summary").textContent =
+        "目录根、名称、路径和显式资源引用满足静态可安装条件；现在才允许解释成熟度与能力证据。";
+    } else {
+      $("#package-health-title").textContent = "Skill 包健康尚未评估";
+      $("#package-health-summary").textContent =
+        "这是兼容旧报告的状态；重新运行 hard_gates.py 后才会评估目录、路径、文件名和静态可安装性。";
+    }
+    const packageCheckLabels = {
+      single_skill_root: "唯一 Skill 根",
+      name_matches_root: "名称与根目录一致",
+      standard_topology: "标准顶层目录",
+      portable_paths: "路径可移植",
+      resource_links: "资源引用有效",
+      file_hygiene: "文件名与残留健康",
+      resource_uniqueness: "资源无歧义",
+      all_shipped_skills_are_valid_packages: "全部正式 Skill 包有效"
+    };
+    const packageCheckStatus = {
+      pass: "通过",
+      fail: "阻断",
+      warn: "需整理",
+      not_assessed: "未评估"
+    };
+    Object.entries(packageHealth.checks || {}).forEach(([key, record]) => {
+      const status = String((record || {}).status || "not_assessed");
+      const item = make("div", `package-check ${status === "not_assessed" ? "pending" : status}`);
+      item.append(make("span", "", packageCheckLabels[key] || key));
+      item.append(make("strong", "", packageCheckStatus[status] || status));
+      $("#package-health-grid").append(item);
+    });
+    if (!$("#package-health-grid").children.length) {
+      $("#package-health-grid").append(
+        make("div", "package-check pending", "等待新版 hard gates 数据")
+      );
+    }
     const archetype = engineering.archetype || {
       label: "类型待解锁",
       summary: "先完成一个可检查的 Skill 草稿。"
     };
     $("#archetype-label").textContent = archetype.label;
-    $("#archetype-code").textContent = String(archetype.id || "type-pending")
-      .replaceAll("-", " ")
-      .toUpperCase();
+    if (!packageInvalid) {
+      $("#archetype-code").textContent = String(archetype.id || "type-pending")
+        .replaceAll("-", " ")
+        .toUpperCase();
+    }
     $("#archetype-summary").textContent = `${archetype.summary || ""} ${archetype.growth || ""}`.trim();
     const abilityLevel = engineering.level || {};
-    $("#ability-level-id").textContent = abilityLevel.id || "—";
-    $("#ability-level-label").textContent = abilityLevel.label || "尚未评估";
+    $("#ability-level-id").textContent = packageInvalid ? "暂停" : abilityLevel.id || "—";
+    $("#ability-level-label").textContent = packageInvalid
+      ? "包结构未通过"
+      : abilityLevel.label || "尚未评估";
+    const avatarLevelId = packageInvalid ? "暂停" : abilityLevel.id || "未评级";
+    const avatarLevelLabel = packageInvalid
+      ? "Skill 包结构未通过，成熟度暂停"
+      : abilityLevel.label || "尚未评估";
+    const avatarTypeLabel = archetype.label || "类型待解锁";
+    $("#avatar-role-name").textContent = `${avatarLevelId} · ${avatarTypeLabel}`;
+    $("#avatar-role-level").textContent = avatarLevelLabel;
+    $("#avatar-title").textContent = `Skill 成长角色：${avatarTypeLabel}`;
+    $("#avatar-desc").textContent =
+      `当前能力类型为${avatarTypeLabel}，等级${avatarLevelId}，阶段为${avatarLevelLabel}。`;
     $("#ability-type-label").textContent = archetype.label || "类型待解锁";
     const personalInterpretation = engineering.personal_interpretation || {};
     $("#ability-summary-eyebrow").textContent = personalInterpretation.eyebrow || "你的能力画像";
@@ -1233,8 +1460,19 @@
     $("#project-quest-title").textContent = projectQuest.title || "补充可评估输入";
     $("#project-quest-action").textContent = projectQuest.action || "";
     $("#project-quest-acceptance").textContent = projectQuest.acceptance || "";
-    if (profile.verdict !== "stop_ship") {
+    if (!["stop_ship", "invalid_skill_package"].includes(profile.verdict)) {
       document.querySelector(".project-remediation").classList.add("review");
+    }
+    const advancedAudit = profile.advanced_audit
+      || (engineering && engineering.advanced_audit)
+      || null;
+    if (advancedAudit && typeof advancedAudit === "object") {
+      $("#advanced-audit-section").hidden = false;
+      $("#advanced-audit-note").textContent = advancedAudit.note || "";
+      const advQuest = advancedAudit.next_quest || {};
+      $("#advanced-audit-quest-title").textContent = advQuest.title || "高级审计（可选）";
+      $("#advanced-audit-quest-action").textContent = advQuest.action || "";
+      $("#advanced-audit-quest-acceptance").textContent = advQuest.acceptance || "";
     }
 
     function renderLevelCard(target, heading, level, kind, emptyText) {
@@ -1245,9 +1483,24 @@
       head.append(lane);
       card.append(head);
       if (!level) {
-        card.append(make("div", "level-value", "尚未开始"));
-        card.append(make("div", "level-label", emptyText));
-        card.append(make("div", "empty", "提供对应评分 JSON 后解锁这条成长线。"));
+        const invalidSkillLane = kind === "skill" && packageInvalid;
+        card.append(make("div", "level-value", invalidSkillLane ? "不可评分" : "尚未开始"));
+        card.append(
+          make(
+            "div",
+            "level-label",
+            invalidSkillLane ? "先恢复标准 Skill 包结构" : emptyText
+          )
+        );
+        card.append(
+          make(
+            "div",
+            "empty",
+            invalidSkillLane
+              ? "package_health 通过后，才会解锁 Lv0–Lv5 成熟度。"
+              : "提供对应评分 JSON 后解锁这条成长线。"
+          )
+        );
         return;
       }
       card.append(make("div", "level-value", level.id));
@@ -1335,7 +1588,11 @@
         : Math.max(0, Math.min(4, Number(axis.state)));
       const coverage = state === null ? 0 : Math.round((state / 4) * 100);
       const coverageText = state === null ? "—" : `${coverage}%`;
-      const status = state === null ? "尚未评估" : coverageStatus[coverage] || "证据状态待确认";
+      const status = state === null
+        ? packageInvalid
+          ? "包结构未通过，暂停评分"
+          : "尚未评估"
+        : coverageStatus[coverage] || "证据状态待确认";
 
       const labels = make("div", "trait-labels");
       labels.append(make("span", "", "当前证据覆盖"));
@@ -1372,13 +1629,26 @@
       ...(Array.isArray(engineering.badges) ? engineering.badges : [])
     ];
     badges.forEach((badge) => badgeList.append(make("span", "badge", badge.label || badge.id)));
-    if (!badges.length) badgeList.append(make("div", "empty", "完成第一个证据门槛后解锁徽章。"));
+    if (!badges.length) {
+      badgeList.append(
+        make(
+          "div",
+          "empty",
+          packageInvalid
+            ? "包结构前置门通过后，能力徽章才会解锁。"
+            : "完成第一个证据门槛后解锁徽章。"
+        )
+      );
+    }
 
     const scoreGrid = $("#score-grid");
+    const operationalGrid = $("#operational-grid");
     const scores = engineering.scores;
+    const operationalMetrics = engineering.operational_metrics || {};
     const verdictLabels = {
       static_pass: "静态预检通过",
       stop_ship: "存在高风险阻断",
+      invalid_skill_package: "Skill 包结构无效",
       execution_unverified: "行为验证未完成",
       not_assessed: "未评估"
     };
@@ -1397,6 +1667,12 @@
         `${suite.generated_at || "未知时间"} · ${suite.timezone || "未知时区"} · `
         + `Git ${git.commit || "unknown"} (${git.working_tree || "unknown"})`;
       const suiteStats = [
+        {
+          label: "标准 Skill 包",
+          value: `${suiteSummary.valid_skill_packages ?? 0} / ${suiteSummary.skills_total ?? 0}`,
+          note: "名称、目录、路径、资源和静态可安装性",
+          tone: suiteSummary.valid_skill_packages === suiteSummary.skills_total ? "green" : "amber"
+        },
         {
           label: "正式 Skill",
           value: suiteSummary.skills_total ?? "—",
@@ -1442,6 +1718,20 @@
         nameCell.append(make("strong", "", skill.name || "未命名 Skill"));
         nameCell.append(make("span", "suite-role", skill.role || ""));
         row.append(nameCell);
+        const packageCell = document.createElement("td");
+        const packageStatus = skill.package_status || "not_assessed";
+        packageCell.append(
+          make(
+            "span",
+            `suite-status${packageStatus === "valid_skill_package" ? "" : " wait"}`,
+            packageStatus === "valid_skill_package"
+              ? "有效"
+              : packageStatus === "invalid_skill_package"
+                ? "无效"
+                : "未评估"
+          )
+        );
+        row.append(packageCell);
         const scoreText = (score) =>
           score && Number(score.max) >= 0 ? `${score.score} / ${score.max}` : "—";
         row.append(make("td", "", scoreText(skill.basic)));
@@ -1467,7 +1757,7 @@
       });
     }
 
-    function scoreCard(label, value, suffix, text, tone) {
+    function scoreCard(label, value, suffix, text, tone, target = scoreGrid) {
       const card = make("article", `panel score-card ${tone || ""}`);
       if (String(value ?? "").length > 6) card.classList.add("long-value");
       card.append(make("p", "score-label", label));
@@ -1475,22 +1765,91 @@
       if (suffix) score.append(make("small", "", suffix));
       card.append(score);
       card.append(make("p", "", text));
-      scoreGrid.append(card);
+      target.append(card);
     }
     if (scores) {
-      scoreCard("基础可用结构", scores.basic_usable.score, ` / ${scores.basic_usable.max}`, "文件、元信息、步骤和完成标准。", scores.basic_usable.score === scores.basic_usable.max ? "green" : "amber");
-      scoreCard("使用边界与检查规则", scores.contract_clarity.score, ` / ${scores.contract_clarity.max}`, "何时使用、何时不用、检查轴与验证。", scores.contract_clarity.score >= 3 ? "green" : "red");
-      scoreCard("配套材料", scores.support_kit.score, ` / ${scores.support_kit.max}`, "参考资料、案例、状态和脚本。", scores.support_kit.score === scores.support_kit.max ? "green" : "amber");
+      const rawNote = packageInvalid ? "局部文件诊断，不代表成熟度。" : "";
+      scoreCard("基础可用结构", scores.basic_usable.score, ` / ${scores.basic_usable.max}`, `文件、元信息、步骤和完成标准。${rawNote}`, packageInvalid ? "red" : scores.basic_usable.score === scores.basic_usable.max ? "green" : "amber");
+      scoreCard("使用边界与检查规则", scores.contract_clarity.score, ` / ${scores.contract_clarity.max}`, `何时使用、何时不用、检查轴与验证。${rawNote}`, packageInvalid ? "red" : scores.contract_clarity.score >= 3 ? "green" : "red");
+      scoreCard("配套材料", scores.support_kit.score, ` / ${scores.support_kit.max}`, `参考资料、案例、状态和脚本。${rawNote}`, packageInvalid ? "red" : scores.support_kit.score === scores.support_kit.max ? "green" : "amber");
       const safety = engineering.safety || {};
       scoreCard(
         "项目交付状态",
-        verdictLabels[safety.verdict] || safety.verdict || "未评估",
+        packageInvalid
+          ? verdictLabels.invalid_skill_package
+          : verdictLabels[safety.verdict] || safety.verdict || "未评估",
         "",
-        `行为状态：${executionLabels[safety.execution_status] || safety.execution_status || "未评估"}`,
-        safety.verdict === "static_pass" ? "green" : "red"
+        packageInvalid
+          ? "先恢复标准包结构；安全预检结果不能覆盖此前置门。"
+          : `行为状态：${executionLabels[safety.execution_status] || safety.execution_status || "未评估"}`,
+        packageInvalid || safety.verdict !== "static_pass" ? "red" : "green"
       );
     } else {
       scoreGrid.append(make("div", "empty", "尚未提供 Skill hard gates 结果。"));
+    }
+    const tokenMetric = operationalMetrics.token_consumption || {};
+    if (tokenMetric.status === "observed") {
+      const total = Number(tokenMetric.total_tokens || 0);
+      const tokenParts = [
+        tokenMetric.input_tokens !== null && tokenMetric.input_tokens !== undefined
+          ? `输入 ${Number(tokenMetric.input_tokens).toLocaleString("zh-CN")}`
+          : "",
+        tokenMetric.output_tokens !== null && tokenMetric.output_tokens !== undefined
+          ? `输出 ${Number(tokenMetric.output_tokens).toLocaleString("zh-CN")}`
+          : "",
+        tokenMetric.runs ? `${tokenMetric.runs} 次运行` : ""
+      ].filter(Boolean);
+      scoreCard(
+        "Token 消耗",
+        total.toLocaleString("zh-CN"),
+        " tokens",
+        `可信运行观测${tokenParts.length ? ` · ${tokenParts.join(" · ")}` : ""}`,
+        "green",
+        operationalGrid
+      );
+    } else if (tokenMetric.status === "estimated") {
+      scoreCard(
+        "Token 消耗",
+        `≈ ${Number(tokenMetric.estimated_input_tokens || 0).toLocaleString("zh-CN")}`,
+        " tokens",
+        "仅为 SKILL.md 静态输入估算，低置信度，不含输出和按需资料。",
+        "amber",
+        operationalGrid
+      );
+    } else {
+      scoreCard(
+        "Token 消耗",
+        "未评估",
+        "",
+        "没有可用的静态估算或可信运行记录。",
+        "amber",
+        operationalGrid
+      );
+    }
+
+    const runtimeMetric = operationalMetrics.runtime_duration || {};
+    if (runtimeMetric.status === "observed") {
+      const duration = Number(runtimeMetric.duration_ms || 0);
+      const durationText = duration >= 1000
+        ? `${(duration / 1000).toFixed(duration >= 10000 ? 1 : 2)} s`
+        : `${duration.toLocaleString("zh-CN")} ms`;
+      scoreCard(
+        "运行时长",
+        durationText,
+        "",
+        `可信运行观测 · ${runtimeMetric.runs || 1} 次 · ${runtimeMetric.statistic || "single_run"}`,
+        "green",
+        operationalGrid
+      );
+    } else {
+      scoreCard(
+        "运行时长",
+        "未测量",
+        "",
+        "静态审计不执行目标 Skill；需要可信行为运行记录。",
+        "amber",
+        operationalGrid
+      );
     }
 
     const life = $("#lifecycle");
@@ -1507,9 +1866,18 @@
             ? "业务目标和步骤已经形成。"
             : "先完成目标澄清和流程成形。"
       ],
-      ["02 · 实现", "Skill 结构与工具", skillOrdinal >= 2 ? "ok" : skillOrdinal >= 0 ? "wait" : "block", skillOrdinal >= 2 ? "静态结构与安全底线已通过。" : "Skill 尚未达到静态应用阶段。"],
-      ["03 · 验证", "行为与复盘证据", skillOrdinal >= 3 ? "ok" : "wait", skillOrdinal >= 3 ? "核心流程已有行为证据。" : "静态检查不能代替真实验证。"],
-      ["04 · 交付", "安全与跨平台", skillOrdinal >= 4 ? "ok" : profile.verdict === "stop_ship" ? "block" : "wait", skillOrdinal >= 4 ? "已具备受控交付证据。" : "需要安全、恢复和平台证据。"]
+      [
+        "02 · 实现",
+        "Skill 结构与工具",
+        packageInvalid ? "block" : skillOrdinal >= 2 ? "ok" : skillOrdinal >= 0 ? "wait" : "block",
+        packageInvalid
+          ? "包根、目录、路径或资源前置门未通过。"
+          : skillOrdinal >= 2
+            ? "静态结构与安全底线已通过。"
+            : "Skill 尚未达到静态应用阶段。"
+      ],
+      ["03 · 试跑", "真实场景勾验收", skillOrdinal >= 2 && !["stop_ship", "invalid_skill_package"].includes(profile.verdict) ? "ok" : "wait", skillOrdinal >= 2 ? "可按说明书做业务试跑并人工勾验收。" : "先达到可识别的说明书结构。"],
+      ["04 · 交给人用", "企业受控试用", profile.verdict === "ready_for_controlled_use" ? "ok" : ["stop_ship", "invalid_skill_package"].includes(profile.verdict) ? "block" : "wait", profile.verdict === "ready_for_controlled_use" ? "结构与静态安全已过企业主线门槛。" : "先清 Critical 并过基础门槛；跨平台属高级审计。"]
     ];
     lifeItems.forEach(([kicker, title, state, text]) => {
       const item = make("article", `life-step ${state}`);
@@ -1572,8 +1940,18 @@
     addMeta("#identity-meta", "规则版本", profile.ruleset_version);
     addMeta("#identity-meta", "数据格式", profile.profile_schema_version);
     addMeta("#identity-meta", "生成时间", profile.generated_at);
-    addMeta("#identity-meta", "结论", profile.verdict);
+    addMeta("#identity-meta", "结论", profile.verdict_summary || profile.verdict);
+    if (profile.advanced_audit && profile.advanced_audit.note) {
+      addMeta("#identity-meta", "高级审计", profile.advanced_audit.note);
+    }
     addMeta("#identity-meta", "问题总数", profile.counts ? profile.counts.total : 0);
+    if (profile.audit_execution && profile.audit_execution.status === "observed") {
+      addMeta(
+        "#identity-meta",
+        "本次审计耗时",
+        `${profile.audit_execution.duration_ms} ${profile.audit_execution.unit || "ms"}`
+      );
+    }
     Object.entries(profile.sources || {}).forEach(([key, value]) => addMeta("#source-meta", key, value));
     (profile.limitations || []).forEach((item) => $("#limitations").append(make("li", "", item)));
     $("#raw-json").textContent = JSON.stringify(profile, null, 2);
@@ -1614,6 +1992,20 @@
       const shouldOpen = details.some((item) => !item.open);
       details.forEach((item) => { item.open = shouldOpen; });
       event.currentTarget.textContent = shouldOpen ? "收起全部证据" : "展开全部证据";
+    });
+    let printDetailState = null;
+    window.addEventListener("beforeprint", () => {
+      if (printDetailState) return;
+      printDetailState = [...document.querySelectorAll("details")].map((item) => ({
+        item,
+        open: item.open,
+      }));
+      printDetailState.forEach(({ item }) => { item.open = true; });
+    });
+    window.addEventListener("afterprint", () => {
+      if (!printDetailState) return;
+      printDetailState.forEach(({ item, open }) => { item.open = open; });
+      printDetailState = null;
     });
     $("#print-report").addEventListener("click", () => window.print());
   </script>

@@ -290,7 +290,8 @@
 
 ### 7.3 成长等级
 
-等级使用硬门槛。严重问题不能被其他高分平均掉。
+等级使用硬门槛。严重问题不能被其他高分平均掉。Lv0 也只适用于已经能确认是
+一个 Skill 包的早期草稿；项目工作区、素材库或混入运行产物的目录不进入等级表。
 
 | 等级 | 用户称号 | 能力描述 | 最低条件 |
 | --- | --- | --- | --- |
@@ -303,12 +304,14 @@
 
 #### 等级保护规则
 
-1. `stop_ship` 时最高只能显示 Lv1 或 Lv2，具体上限由阻断类型决定；
-2. 没有行为证据时不能进入 Lv3；
-3. 没有安全和失败恢复证据时不能进入 Lv4；
-4. 只写“支持多个平台”不能进入 Lv5，必须提供复核证据；
-5. 未知状态显示“待确认”，不能偷偷当成通过；
-6. 所有门槛写入版本化脚本并有回归测试。
+1. `package_health.assessable=false` 时不显示 Lv0–Lv5、类型或徽章，根结论为
+   `invalid_skill_package`；原始分数只作局部文件诊断；
+2. `stop_ship` 时最高只能显示 Lv1 或 Lv2，具体上限由阻断类型决定；
+3. 没有行为证据时不能进入 Lv3；
+4. 没有安全和失败恢复证据时不能进入 Lv4；
+5. 只写“支持多个平台”不能进入 Lv5，必须提供复核证据；
+6. 未知状态显示“待确认”，不能偷偷当成通过；
+7. 所有门槛写入版本化脚本并有回归测试。
 
 ### 7.4 Skill 类型
 
@@ -491,8 +494,8 @@ Lv1 自动化类型的个人练习应包含：
 
 ```json
 {
-  "profile_schema_version": "0.2",
-  "ruleset_version": "0.2",
+  "profile_schema_version": "0.4",
+  "ruleset_version": "0.4",
   "archetype": {
     "id": "automation-craftsperson",
     "label": "自动化工匠",
@@ -513,6 +516,20 @@ Lv1 自动化类型的个人练习应包含：
     "verification_learning": {"state": 0, "evidence_ids": []},
     "safety_control": {"state": 0, "evidence_ids": []},
     "portability_adaptation": {"state": null, "status": "needs_confirmation", "evidence_ids": []}
+  },
+  "operational_metrics": {
+    "token_consumption": {
+      "status": "estimated",
+      "estimated_input_tokens": 1200,
+      "unit": "tokens",
+      "confidence": "low"
+    },
+    "runtime_duration": {
+      "status": "not_measured",
+      "duration_ms": null,
+      "unit": "ms"
+    },
+    "scoring_effect": "informational_only"
   },
   "personal_interpretation": {
     "eyebrow": "你的能力画像",
@@ -551,6 +568,10 @@ Lv1 自动化类型的个人练习应包含：
 外部动作和可分享的范围证据；写回不适用时，还需要可信 Harness 证明目标前后
 未变化。跨平台等级只统计使用同一契约 SHA-256 和同一脱敏夹具 SHA-256 的
 不同平台记录。
+
+Token 消耗与运行时长是独立运行指标，不是第七、第八项能力轴，也不参与类型、
+等级、交付结论或 ship floor。静态 Token 值只估算 `SKILL.md` 输入；目标运行
+时长必须来自可信行为记录，没有记录时保持 `not_measured`。
 
 所有 `evidence_ids` 必须能回到原始审计结果。  
 HTML 不重新计算等级和类型，只负责展示。

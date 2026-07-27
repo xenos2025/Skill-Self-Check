@@ -21,11 +21,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Regression tests
-        run: |
-          python tests/test_hard_gates.py
-          python tests/test_ship_safety.py
-          python tests/test_readiness_gates.py
-          python tests/test_profile_engine.py
+        run: python -m unittest discover tests -v
 
       - name: Every shipped skill meets the ship floor
         run: |

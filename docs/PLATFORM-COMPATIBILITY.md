@@ -50,27 +50,31 @@ All four shipped `SKILL.md` files use the common `name` and `description`
 frontmatter contract. Platform-specific discovery metadata belongs in an
 adapter or `agents/` file instead of changing deterministic scoring.
 
-## Current platform matrix (maintainer evidence)
+## Current platform matrix (maintainer / advanced audit)
 
-This table records where the pack has been exercised. It is not a certification
-and does not replace comparable two-platform proof below.
+This table is for **pack maintainers and the advanced-audit author track**.
+It is **not** an enterprise Skill pass/fail bar: business authors do not need
+to understand every Agent platform to build a usable Skill employee.
+
+Maintainer smoke (files + Python + skill discovery) is separate from comparable
+two-platform SHA-256 proof below.
 
 | Platform | Status | Notes |
 | --- | --- | --- |
-| Cursor | In active use | Primary authoring and Level B/C workflow (files + Python + skill discovery) |
-| Codex | Available for testing | Chosen second platform for the next comparable behavior pair |
+| Cursor | Maintainer-tested | Primary authoring and Level B/C workflow |
+| Codex | Maintainer-tested | Second platform candidate for comparable evidence pairs |
+| WorkBuddy | Maintainer-tested (smoke) | China-market; comparable fingerprint pair still optional advanced audit |
 | Claude Code | Not tested yet | Candidate for a later adapter / discovery check |
-| WorkBuddy | Not tested yet | China-market candidate; install/invoke adapter TBD |
 | Coze | Not tested yet | China-market candidate; install/invoke adapter TBD |
 
-**First comparable pair:** Cursor + Codex, using the same contract file and the
-same sanitized fixture. Claude Code, WorkBuddy, and Coze are follow-up adapter
-targets; they should not delay the Cursor/Codex evidence pair.
+**Advanced-audit comparable pair (optional):** Cursor + Codex (or another
+verified pair) using the **same** contract file and sanitized fixture.
+Enterprise scorecards stay on ship floor + static safety without this pair.
 
-## Comparable two-platform proof
+## Comparable two-platform proof (advanced audit only)
 
-Cross-platform maturity requires more than two platform labels. Every eligible
-record must have:
+Cross-platform **author** maturity requires more than two platform labels.
+Every eligible record must have:
 
 - a distinct platform `name`;
 - `status: verified`;

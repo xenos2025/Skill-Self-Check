@@ -2,15 +2,47 @@
 
 ## Contents
 
-1. [Source reports](#source-reports)
-2. [Two growth lines](#two-growth-lines)
-3. [Skill levels](#skill-levels)
-4. [Skill type](#skill-type)
-5. [Behavior evidence](#behavior-evidence)
-6. [Analyzed subject](#analyzed-subject)
-7. [Personal interpretation](#personal-interpretation)
-8. [Personal learning quest](#personal-learning-quest)
-9. [Privacy](#privacy)
+1. [Dual track](#dual-track)
+2. [Source reports](#source-reports)
+3. [Package health preflight](#package-health-preflight)
+4. [Two growth lines](#two-growth-lines)
+5. [Skill levels](#skill-levels)
+6. [Skill type](#skill-type)
+7. [Operational metrics](#operational-metrics)
+8. [Behavior evidence](#behavior-evidence)
+9. [Analyzed subject](#analyzed-subject)
+10. [Personal interpretation](#personal-interpretation)
+11. [Personal learning quest](#personal-learning-quest)
+12. [Privacy](#privacy)
+
+## Dual track
+
+The scorecard serves **enterprise Skill employees** first: people who need a
+usable business Skill with clear triggers, steps, acceptance, and stop rules.
+They do **not** need to understand every Agent platform or maintain this
+repository's certification engineering.
+
+| Track | Audience | Default surface | Typical bar |
+| --- | --- | --- | --- |
+| **Enterprise mainline** | Business authors / operators | `verdict`, root `next_quest`, learning quest | Package health, ship floor, static safety, plain next practice |
+| **Advanced audit** | Skill authors / maintainers | `advanced_audit` block | Behavior JSON, failure recovery, portable contract, two-platform fingerprints |
+
+Rules:
+
+- When package health is assessable, ship floor and the contract minimum are
+  met, static safety passes, and Critical count is zero, root `verdict` is
+  `ready_for_controlled_use` even if author behavior evidence is missing.
+- Missing behavior / multi-platform proof is recorded on `advanced_audit.note`
+  (for example “作者进阶证据未附”), not as the enterprise headline failure.
+- Root `next_quest` stays on enterprise practice after the enterprise-ready
+  gate (real scenario trial, acceptance evidence, materials). Behavior JSON
+  and cross-platform steps live only under `advanced_audit.next_quest`.
+- Lv3–Lv5 unlock math is unchanged for advanced audit; Lv4–Lv5 labels are
+  marked as the author track.
+
+`skill_engineering.scores.enterprise_ready` is the canonical boolean for that
+mainline gate. The root verdict, Lv2 unlock, and advanced-audit note must consume
+this value instead of recomputing a weaker ship-floor-only substitute.
 
 ## Source reports
 
@@ -25,6 +57,26 @@
 
 At least one input is required. Missing inputs remain explicit and are never
 treated as passing.
+
+## Package health preflight
+
+New hard-gate reports contain `package_health`. Maturity is assessable only when
+`status` is `valid_skill_package` and `assessable` is `true`. The checks cover:
+
+- one unambiguous Skill root;
+- frontmatter name/root basename agreement;
+- standard top-level layout and separation of runtime outputs;
+- portable paths;
+- valid explicit bundled-resource links;
+- filename/residue hygiene and duplicate large resources;
+- static installability.
+
+When the package is invalid, `skill_engineering.status` is `invalid_package`,
+`level` is `null`, every dimension is `state: null` with
+`status: not_assessable`, and badges are empty. The root verdict is
+`invalid_skill_package`. Raw basic/contract/support scores remain available only
+as `partial_file_diagnostics_only`; they must not be described as maturity or
+capability.
 
 ## Analyzed subject
 
@@ -113,14 +165,14 @@ business sends or writes.
 
 ## Skill levels
 
-| Level | Required evidence |
-| --- | --- |
-| Lv0 | A Skill exists but basic structure is below the minimum |
-| Lv1 | Basic structure is recognizable |
-| Lv2 | Static floor, contract minimum, zero criticals, and static safety pass |
-| Lv3 | Lv2 plus core-flow and PDCA behavior evidence |
-| Lv4 | Lv3 plus failure recovery and evidence for every applicable safety control; a genuinely inapplicable external-action or write-back control needs explicit scope evidence |
-| Lv5 | Lv4 plus a portable contract and two verified platform records that share the same contract and fixture fingerprints |
+| Level | Required evidence | Track |
+| --- | --- | --- |
+| Lv0 | A Skill exists but basic structure is below the minimum | Enterprise |
+| Lv1 | Basic structure is recognizable | Enterprise |
+| Lv2 | Static floor, contract minimum, zero criticals, and static safety pass | Enterprise (default “good enough to trial”) |
+| Lv3 | Lv2 plus core-flow and PDCA behavior evidence | Advanced audit |
+| Lv4 | Lv3 plus failure recovery and evidence for every applicable safety control; a genuinely inapplicable external-action or write-back control needs explicit scope evidence | Advanced audit |
+| Lv5 | Lv4 plus a portable contract and two verified platform records that share the same contract and fixture fingerprints | Advanced audit |
 
 `stop_ship` caps the level at Lv1.
 
@@ -184,13 +236,37 @@ static safety must pass with zero criticals and the safety report must contain
 no detected external action. This does **not** guarantee that all future uses
 are permanently risk-free.
 
+## Operational metrics
+
+`skill_engineering.operational_metrics` adds two informational dimensions
+without changing the six evidence axes, type, level, verdict, or ship floor:
+
+- `token_consumption`: `hard_gates.py` estimates the static `SKILL.md` input as
+  `ceil(UTF-8 byte length / 4)`. This model-neutral estimate is low confidence
+  and excludes output, tools, conversation history, and support files loaded
+  on demand. A valid behavior observation replaces it.
+- `runtime_duration`: static audit reports always use `not_measured` because
+  they do not execute the target Skill. Only trusted behavior evidence may set
+  it to `observed`.
+
+A token observation needs non-negative integer `total_tokens` (or both
+`input_tokens` and `output_tokens`), consistent component totals, a positive
+integer `runs`, and a shareable evidence reference. A runtime observation needs
+non-negative `duration_ms`, a positive integer `runs`, and a shareable evidence
+reference. Invalid or local-absolute evidence never becomes an observed value.
+
+`run_full_audit.py` also records `audit_execution.duration_ms`. That is the
+audit tool's own elapsed assessment time, not the target Skill's runtime.
+
 ## Behavior evidence
 
-Behavior evidence is optional and must come from a trusted test process:
+Behavior evidence is **advanced audit only**. Enterprise mainline does not
+require it for `ready_for_controlled_use`. When supplied, it must come from a
+trusted test process:
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "core_flow_tested": false,
   "pdca_evidence": false,
   "safe_external_actions": false,
@@ -216,7 +292,24 @@ Behavior evidence is optional and must come from a trusted test process:
       "contract_id": "sha256:64-lowercase-hex-characters",
       "fixture_id": "sha256:64-lowercase-hex-characters"
     }
-  ]
+  ],
+  "operational_metrics": {
+    "token_consumption": {
+      "status": "observed",
+      "input_tokens": 800,
+      "output_tokens": 200,
+      "total_tokens": 1000,
+      "runs": 1,
+      "evidence": "evidence/run.json#usage"
+    },
+    "runtime_duration": {
+      "status": "observed",
+      "duration_ms": 1250,
+      "runs": 1,
+      "statistic": "single_run",
+      "evidence": "evidence/run.json#timing"
+    }
+  }
 }
 ```
 

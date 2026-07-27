@@ -43,9 +43,29 @@ python tests/test_profile_engine.py
 python tests/test_full_audit_runner.py
 python tests/test_platform_record.py
 python tests/test_suite_scorecards.py
+python tests/test_verify_fix.py
 ```
 
-6. Optional: generate private offline scorecards for this repo (output **must**
+6. When a change edits a shipped `SKILL.md`, show the delta instead of claiming
+   the findings are gone. Capture the baseline **before** editing:
+
+```bash
+python skills/skill-self-check/scripts/hard_gates.py \
+  skills/<edited-skill> > "$HOME/skill-audits/baseline.json"
+
+# ... make the edits ...
+
+python skills/skill-self-check/scripts/verify_fix.py \
+  skills/<edited-skill> \
+  --baseline "$HOME/skill-audits/baseline.json" --pretty
+```
+
+Exit code 1 means a hard regression (new Critical, severity escalation, lost
+ship floor, or a score drop). Paste the `verdict`, resolved / introduced counts,
+and `remaining_critical` into the PR. Add `--strict` to also fail on newly
+surfaced non-critical findings.
+
+7. Optional: generate private offline scorecards for this repo (output **must**
    stay outside the repository):
 
 ```bash
@@ -89,6 +109,7 @@ Shipped skill names are the source of truth in `plugin.json` → `skills`.
   - Business readiness B0–B6 → `agent-work-readiness/scripts/readiness_gates.py`
   - Growth level / type / HTML → `skill-growth-scorecard/scripts/profile_engine.py`
     (and `suite_scorecards.py` for whole-repo runs)
+  - Before/after fix deltas → `skill-self-check/scripts/verify_fix.py`
   - Never invent numeric scores or soften a stricter script verdict in prose.
 - Built-in audit scripts are **read-only** toward the target Skill: they must not
   execute target code or send external messages. Real scorecards and client
