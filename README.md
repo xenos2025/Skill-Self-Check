@@ -43,20 +43,20 @@ https://github.com/xenos2025/Skill-Self-Check
 **skill-growth-scorecard**（或一键审计）生成个人 / 项目两份离线 HTML 成绩单；
 原来的三盏灯和技术证据仍完整保留。
 
-**两条轨道（别混）：** 日常合格线是企业主线——结构 / 契约 / 静态安全够用即可进入受控试用；
-行为证据、跨平台指纹属于可选的**高级审计（作者轨道）**，缺它们不等于主线失败。
+**日常检查和高级审计分开看：** 结构、契约和静态安全达到要求后，就可以进入受控试用。
+行为证据和跨平台验证属于可选的高级审计；没有这些材料，不影响日常检查结果。
 
 ## 可视化上手（先看图）
 
 重画图：`python branding/generate_diagrams.py`
 
-### 1. 怎么用（整条链路）
+### 1. 完整使用步骤
 
 ![怎么用](assets/diagrams/zh/01-how-to-use.svg)
 
-### 2. 改完再检（闭环）
+### 2. 改完再检
 
-写好 → 跑检查 → 看报告；**不过就改，改完再跑**。结构、契约和静态安全共同达到企业主线门槛后，可以进入受控试用；涉及外部发送或真实数据时仍需单独的行为安全验证。
+写好 → 跑检查 → 看报告；**不过就改，改完再跑**。结构、契约和静态安全达到日常要求后，可以进入受控试用；涉及外部发送或真实数据时，仍需单独验证实际行为是否安全。
 
 ![改完再检](assets/diagrams/zh/06-fix-loop.svg)
 
@@ -64,23 +64,23 @@ https://github.com/xenos2025/Skill-Self-Check
 
 ![三盏灯](assets/diagrams/zh/05-three-lights.svg)
 
-| 灯 | 白话 |
+| 灯 | 怎么看 |
 | --- | --- |
 | 绿灯 `basic_usable` | 结构过关，达到静态基础门槛 |
 | 黄灯 `contract_clarity` | 查什么、何时用 / 不用、验收说清楚了吗 |
-| 蓝灯 `support_kit` | 资料 / 案例 / 落地记忆 / 脚本是否按需配齐 |
+| 蓝灯 `support_kit` | 资料 / 案例 / 运行记录 / 脚本是否按需配齐 |
 | 三盏都亮 | 可以进入受控试用；不等于真实行为已验证 |
 | 绿灯亮、黄或蓝暗 | 静态可用，但容易各做各的或不好交接 |
 | 绿灯不亮 | 先改，别急着推广 |
 | 蓝灯某项 N/A | 声明不适用即可，不扣分 |
 
-### 4. PDCA：做事要闭环
+### 4. PDCA：计划、执行、检查、改进
 
 ![PDCA](assets/diagrams/zh/02-pdca.svg)
 
 计划 → 执行 → 检查 → 改进。缺「检查」或「改进」，就容易变成瞎忙。
 
-### 5. SMART：目标要说人话
+### 5. SMART：把目标写具体
 
 ![SMART](assets/diagrams/zh/03-smart.svg)
 
@@ -125,8 +125,8 @@ py -3 skills/skill-self-check/scripts/verify_fix.py C:\你的Skill目录 `
 
 跑完一键审计后，用浏览器打开输出目录里的 HTML 即可。个人页默认看**成长画像**
 （类型、等级、下一练习）；项目页默认看**检测结果**（分数、风险、整改优先级）。
-默认面向企业做出**可用的业务 Skill 员工**；行为证据 / 跨平台属于可选的
-**高级审计（作者轨道）**，不是日常合格线。
+默认帮助企业判断业务 Skill 能否进入受控试用。行为证据和跨平台验证属于
+可选的高级审计，不是日常必备项。
 下面是对本仓库四件套的脱敏示例（不含真实客户数据）：
 
 ### 个人能力成绩单 · 成长画像
@@ -149,9 +149,9 @@ py -3 skills/skill-growth-scorecard/scripts/suite_scorecards.py . `
   --out-dir "$HOME\Documents\skill-audits\suite-demo" --pretty
 ```
 
-## 仓库里有什么（白话）
+## 仓库目录
 
-| 文件夹 | 白话 |
+| 文件夹 | 内容 |
 | --- | --- |
 | `skills/` | 正式产品（安装器会拷贝） |
 | `exp/` | 试验区：客户访谈 → 流程 → 再写说明书（默认不安装） |
@@ -162,11 +162,11 @@ py -3 skills/skill-growth-scorecard/scripts/suite_scorecards.py . `
 
 更多：[docs/INSTALLATION.md](docs/INSTALLATION.md) · [docs/PLATFORM-COMPATIBILITY.md](docs/PLATFORM-COMPATIBILITY.md) · [docs/AUDIENCE.md](docs/AUDIENCE.md) · [exp/README.md](exp/README.md)
 
-正式产品共四块：业务准备度、Skill 结构自检、安全预检、成长成绩单。它们都只
-读取本地文件；真实客户报告默认不应提交到这个开源仓库。自检还含效率护栏
-（无限重试 / 超长说明书）和改完复核（`verify_fix.py`），避免“改了就算修好”。
+`skills/` 下有四个正式 Skill：业务准备度、Skill 结构自检、安全预检和成长成绩单。
+它们都只读取本地文件；真实客户报告不应提交到这个开源仓库。自检还会检查
+重试是否有上限、说明书是否过长，并用 `verify_fix.py` 对照修改前后的结果。
 
-### 平台适配进度（不是认证）
+### 平台测试进度
 
 | 平台 | 状态 | 说明 |
 | --- | --- | --- |
@@ -176,20 +176,21 @@ py -3 skills/skill-growth-scorecard/scripts/suite_scorecards.py . `
 | WorkBuddy | 未测 | 中国市场候选，安装/调用方式待探 |
 | Coze | 未测 | 中国市场候选，安装/调用方式待探 |
 
-跨平台“已验证”需要 Cursor + Codex（或任意两个不同平台）使用**同一契约文件**和
-**同一脱敏夹具**，并各自留下 `verified` 记录。详见
+只有当 Cursor + Codex（或任意两个不同平台）使用**同一契约文件**和
+**同一脱敏夹具**完成测试，并各自留下 `verified` 记录，才能标记为跨平台“已验证”。详见
 [docs/PLATFORM-COMPATIBILITY.md](docs/PLATFORM-COMPATIBILITY.md)。
 
-## 致谢与参考（写清楚我们站在谁的肩膀上）
+## 参考资料与致谢
 
-本仓库是**融合与工程化**，不是从零发明整套方法论。详细法律致谢见 [NOTICE](NOTICE)。
+本项目参考了以下公开资料，并据此整理了检查规则、脚本和报告模板。
+许可与署名信息见 [NOTICE](NOTICE)。
 
-| 参考项目 | 链接 | 我们用了什么 | 我们自己的部分 |
+| 参考资料 | 链接 | 参考内容 | 本项目中的实现 |
 | --- | --- | --- | --- |
-| Matt Pocock · writing-great-skills | [mattpocock/skills](https://github.com/mattpocock/skills/tree/main/skills/productivity/writing-great-skills) | 可预测性、完成标准、修剪与失败模式等词汇 → 白话检查项 | 自检流程与报告模板 |
-| Addy Osmani · agent-skills | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) | Skill 解剖、Verification、反合理化、质量门槛 | 脚本打分 + 新手报告 |
-| Cursor · create-skill | Cursor 内置 skill 规范 | frontmatter、第三人称 WHAT+WHEN、行数与披露规则 | 与上两者的融合清单 |
-| 管理常识 | PDCA · SMART · 5W2H | 作为可检查的 Pass / 访谈法 | 映射到 Skill 字段的具体表 |
+| Matt Pocock · writing-great-skills | [mattpocock/skills](https://github.com/mattpocock/skills/tree/main/skills/productivity/writing-great-skills) | 可预测性、完成条件、内容精简和失败处理 | 自检步骤和报告模板 |
+| Addy Osmani · agent-skills | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) | Skill 结构、验证方式、常见遗漏和质量要求 | 自动检查脚本和普通用户报告 |
+| Cursor · create-skill | Cursor 内置 Skill 规范 | frontmatter、description 写法、篇幅和内容组织 | 基础结构检查 |
+| 常用管理方法 | PDCA · SMART · 5W2H | 计划、目标和访谈方法 | 对应到 Skill 的检查项和访谈表 |
 
 ## 贡献 / 安全 / 许可
 
@@ -221,7 +222,9 @@ Steps:
 3. **Read the business report's three lights:** if green is off, fix the must-resolve items first. Then check amber (contract) and blue (refs / examples / memory / scripts). A static green light is not behavioral or execution proof.
 4. **After “apply fixes”, prove the delta:** re-check against the pre-edit `hard-gates.json` with `verify_fix.py`. Do not claim “fixed” from memory.
 
-**Two tracks:** the enterprise mainline (structure / contract / static safety) is the daily bar for controlled trial. Behavior evidence and cross-platform fingerprints are optional **advanced audit** for authors — missing them is not a mainline failure.
+**Daily checks and advanced audits are separate:** structure, contract, and static
+safety determine readiness for a controlled trial. Behavior evidence and
+cross-platform verification are optional advanced checks.
 
 ## Visual guide
 
@@ -343,14 +346,15 @@ sanitized fixture identifiers. See
 
 ## Credits / references
 
-This pack **fuses and engineers** prior work; it does not claim to invent the whole methodology. Legal acknowledgements: [NOTICE](NOTICE).
+This project draws on the public sources below and adapts them into local checks,
+scripts, and report templates. License and attribution details: [NOTICE](NOTICE).
 
-| Project | What we reused | What is ours |
+| Source | What we referenced | How it appears here |
 | --- | --- | --- |
-| [mattpocock/skills — writing-great-skills](https://github.com/mattpocock/skills/tree/main/skills/productivity/writing-great-skills) | Predictability, completion criteria, pruning / failure modes → plain checklist | Self-check flow + report |
-| [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) | Skill anatomy, Verification, rationalizations, quality bar | Scripted scores + beginner report |
-| Cursor `create-skill` | Frontmatter, third-person WHAT+WHEN, length / disclosure | Fused checklist |
-| PDCA · SMART · 5W2H | Classic management heuristics as checkable passes / interview method | Mapping onto Skill fields |
+| [mattpocock/skills — writing-great-skills](https://github.com/mattpocock/skills/tree/main/skills/productivity/writing-great-skills) | Predictability, completion criteria, pruning, and failure handling | Self-check steps and report templates |
+| [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) | Skill structure, verification, common omissions, and quality requirements | Automated checks and beginner-facing reports |
+| Cursor `create-skill` | Frontmatter, description wording, length, and content organization | Basic structure checks |
+| PDCA · SMART · 5W2H | Planning, goal-setting, and interview methods | Skill checks and interview tables |
 
 ## Contributing / security / license
 

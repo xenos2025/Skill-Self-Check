@@ -9,7 +9,7 @@
 > 本报告面向开发、测试和技能维护者。面向业务读者的结论使用
 > `REPORT-BUSINESS-TEMPLATE.md`，两份报告必须共享相同分数、问题编号和结论。
 
-## Skill 包健康前置门
+## Skill 包结构检查
 
 **状态：** `valid_skill_package / invalid_skill_package`
 
@@ -32,8 +32,8 @@
 | 维度 | 得分 | 含义 |
 |------|------|------|
 | 基础可用 `basic_usable` | `<n>/5` | ≥4 且无 Critical → 达到静态基础门槛，不代表行为已验证 |
-| 契约清晰 `contract_clarity` | `<n>/5` | When/When-NOT/检查轴/Verification/反合理化 |
-| 配套齐备 `support_kit` | `<n>/<max>` 或 `n/a` | 资料/案例/落地记忆/脚本；N/A 不扣分；不挡 ship floor |
+| 契约清晰 `contract_clarity` | `<n>/5` | 使用时机 / 不适用情况 / 检查项 / 验收方式 / 常见借口 |
+| 配套齐备 `support_kit` | `<n>/<max>` 或 `n/a` | 资料 / 案例 / 运行记录 / 脚本；N/A 不扣分；不挡 ship floor |
 | Ship floor | `yes/no` | 来自 `scores.ship_floor_met`（只看绿灯+Critical） |
 
 `<One sentence: 是否达到 ship floor；蓝灯是否 kit_complete；若否先改 Critical 再补配套。>`
@@ -44,12 +44,12 @@
 |------|------|------|------------|
 | Token 消耗 | `estimated/observed/not_assessed` | `≈n tokens` 或 `input/output/total` | 静态估算方法或行为证据引用 |
 | Token 预算 | `within/exceeded/not_assessed` | 上限 `<max_recommended_input_tokens>` | 超出时对应 `EFF.3` |
-| 运行时长 | `observed/not_measured` | `<duration_ms> ms` 或 `未测量` | 作者进阶行为证据里的目标运行时长；不得用审计器自身耗时代替 |
-| 循环护栏 | `pass/warn/not_applicable` | 指令数 / 有护栏数 | 未设停止条件的行号；对应 `EFF.1` / `EFF.2` |
-| 成绩单轨道 | `enterprise` / `advanced_audit` | 主结论 / 旁注 | Ship floor 已过 → 企业主线可受控试用；行为 JSON / 跨平台只在高级审计 |
+| 运行时长 | `observed/not_measured` | `<duration_ms> ms` 或 `未测量` | 实际运行证据里的目标运行时长；不得用审计器自身耗时代替 |
+| 重试限制 | `pass/warn/not_applicable` | 重试指令数 / 已设停止条件数 | 未设停止条件的行号；对应 `EFF.1` / `EFF.2` |
+| 检查类型 | `enterprise` / `advanced_audit` | 日常检查 / 高级审计 | Ship floor 已过 → 可受控试用；行为 JSON / 跨平台只在高级审计 |
 
 `<明确说明这些值不改变 basic_usable、contract_clarity、support_kit 或 ship floor；EFF.* 以 Should fix 形式列入问题清单。>`
-`<不要把「未附 --behavior」写成「本次认证没跑」——一键审计本身就是企业主线认证流程。>`
+`<不要把「未附 --behavior」写成「没有运行检查」：一键审计已经完成日常检查，只是没有附加实际运行证据。>`
 
 配套模块明细（抄自 JSON `scores.support_kit.modules`）：
 
@@ -57,7 +57,7 @@
 |------|------|------|
 | 资料 references | `pass/fail/na` | … |
 | 案例 examples | `pass/fail/na` | … |
-| 落地记忆 memory | `pass/fail/na` | … |
+| 运行记录 memory | `pass/fail/na` | … |
 | 脚本 scripts | `pass/fail/na` | … |
 
 | Severity | Count (script + model) |

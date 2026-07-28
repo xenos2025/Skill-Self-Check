@@ -120,6 +120,9 @@ Shipped skill names are the source of truth in `plugin.json` → `skills`.
   twin when that report’s numbers move).
 - Update README scorecard screenshots under `assets/scorecards/` only from a
   sanitized local suite/fixture run (no client paths or PII).
+- Public docs and reports should use concrete, verifiable language. Avoid
+  slogan-like metaphors and undefined management jargon; define necessary terms
+  the first time they appear.
 - Update `CHANGELOG.md` under `[Unreleased]` for user-visible behavior or docs.
 - Never commit secrets, client PII, store tokens, filled export CSVs, or private
   audit HTML/JSON from real engagements.
