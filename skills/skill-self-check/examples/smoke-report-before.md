@@ -17,7 +17,7 @@
 | 维度 | 得分 | 含义 |
 |------|------|------|
 | 基础可用 `basic_usable` | `2/5` | 只拿到「有 frontmatter」「正文有编号步骤」两分 |
-| 契约清晰 `contract_clarity` | `0/5` | When / When-NOT / 检查轴 / Verification / 反合理化 全缺 |
+| 契约清晰 `contract_clarity` | `0/5` | 使用时机 / 不适用情况 / 检查项 / 验收方式 / 常见借口全缺 |
 | 配套齐备 `support_kit` | `0/2` | 工作流缺资料包与案例包（记忆/脚本 N/A） |
 | Ship floor | `no` | 4 个 Critical，且 `basic_usable < 4` |
 
@@ -27,7 +27,7 @@
 |------|------|------|
 | 资料 references | fail | 无 `references/` |
 | 案例 examples | fail | 无 `examples/` / 案例节 |
-| 落地记忆 memory | na | 无跨次状态信号 |
+| 运行记录 memory | na | 无跨次状态信号 |
 | 脚本 scripts | na | 无自动化声称 |
 
 | Severity | Count (script + model) |

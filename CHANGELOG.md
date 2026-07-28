@@ -113,6 +113,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Simplified the public README and report wording. Slogan-like phrases and
+  undefined management jargon were replaced with direct descriptions. Report
+  templates now hide authoring instructions in Markdown comments instead of
+  rendering option lists as report content, and the contribution guide records
+  this writing rule.
 - README: beginner path now includes fix verification (`verify_fix.py`) and
   spells out enterprise mainline vs optional advanced audit; not a full rewrite.
 - Scorecards and self-check docs use a **dual track**: enterprise mainline
