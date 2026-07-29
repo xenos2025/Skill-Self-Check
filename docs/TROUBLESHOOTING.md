@@ -42,13 +42,16 @@ The file decoded as GBK/Big5/CP1252 rather than UTF-8. Scoring still runs (the
 script falls back instead of crashing), but re-save the file as UTF-8: other
 agent tooling assumes it.
 
-## `ship_floor_met: false` but the skill “feels fine”
+## `gate_verdict: fail` but the skill “feels fine”
 
-Ship floor is intentionally strict. Fix script Criticals first; qualitative
-polish comes after.
+The deterministic gate is intentionally explicit. Read `gate_reasons`, restore
+valid package health and named required checks, then fix script Criticals.
+Qualitative polish comes after.
 
-`ship_floor_met: true` is a static structure/contract result. It does not prove
-that target code runs correctly or that external actions are safe.
+`gate_verdict: pass` is a static structure/contract result. It does not prove
+that target code runs correctly or that external actions are safe. Numeric
+scores are informational. `scores.ship_floor_met` is a deprecated compatibility
+alias for older consumers.
 
 ## `--exec` returns `execution_unverified`
 
@@ -57,12 +60,16 @@ A copied directory plus `DRY_RUN=1` is not a security sandbox. Complete
 behavior tests only in a trusted isolation runner; otherwise keep the result
 marked 未完成安全验证.
 
-## Which report should I read?
+## Which output should I read?
 
-- `REPORT-BUSINESS-TEMPLATE.md`: plain-language conclusion, impact, and next action.
-- `REPORT-TEMPLATE.md`: scores, finding IDs, evidence, and reproduction details.
+- Default: read the fast response headed by `gate_verdict`, all Criticals, and
+  up to three Should-fix items. The wording contract lives in
+  `references/plain-language-response.md`.
+- Explicit deep/full route: `REPORT-TEMPLATE.md` remains the technical
+  compatibility template.
+- Explicit scorecard route: open the optional personal/project HTML.
 
-Both reports must describe the same findings and conclusion.
+Every optional view must preserve the same source findings and gate conclusion.
 
 ## Installer says destination exists
 

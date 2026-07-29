@@ -98,7 +98,7 @@ def target_fingerprint(target: Path) -> dict[str, Any]:
 
 def run_json_script(script: Path, target: Path) -> dict[str, Any]:
     if not READ_ONLY_DRY_RUN:
-        raise ValueError("一键审计入口必须保持只读预演模式")
+        raise ValueError("显式完整审计入口必须保持只读预演模式")
     result = subprocess.run(
         [sys.executable, str(script), str(target)],
         cwd=script.parent,
@@ -234,6 +234,16 @@ def audit(
         },
         "checks": {
             "package_health": package_status,
+            "core_gate": str(
+                hard.get("gate_verdict")
+                or (
+                    "pass"
+                    if bool(
+                        (hard.get("scores") or {}).get("ship_floor_met")
+                    )
+                    else "fail"
+                )
+            ),
             "hard_gates": "completed",
             "ship_safety": "completed",
             "business_readiness": (
@@ -334,7 +344,7 @@ def audit(
 def main() -> int:
     force_utf8_streams()
     parser = argparse.ArgumentParser(
-        description="一键运行静态审计，并生成个人能力与项目两份离线成绩单"
+        description="显式运行兼容完整审计，并生成个人能力与项目两份离线成绩单"
     )
     parser.add_argument("target_skill", type=Path)
     parser.add_argument("--out-dir", type=Path, required=True)

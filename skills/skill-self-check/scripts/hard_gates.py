@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Deterministic hard-gate checks and scores for an Agent Skill directory.
+"""Deterministic hard-gate checks and informational scores for an Agent Skill.
 
 Usage:
   python hard_gates.py <skill-dir>
 
 Stdout: JSON report
 Stderr: human one-line summary
-Exit: 0 if basic_usable >= 4 and no critical hard-gate fails; else 1
+Exit: 0 when the explicit deterministic gate passes; else 1
 """
 
 from __future__ import annotations
@@ -98,6 +98,14 @@ UNBOUNDED_LOOP_RE = re.compile(
     r"反复(打磨|优化|重试)|无限(次|循环)|一直(改|试|重试|优化))"
 )
 TOKEN_BUDGET_INPUT_TOKENS = 8000
+SCHEMA_VERSION = "1.4"
+GATE_POLICY_ID = "explicit-required-checks-v1"
+REQUIRED_GATE_POINTS = (
+    "file_and_frontmatter",
+    "name_valid_and_matched",
+    "description_voice_and_triggers",
+    "body_actionable",
+)
 NUMBERED_STEP_RE = re.compile(r"(?m)^\s*\d+\.\s+\S")
 CHECKBOX_RE = re.compile(r"(?m)^\s*[-*]\s*\[[ xX]\]\s+")
 HEADING_RE = re.compile(r"(?m)^(#{1,6})\s+(.+?)\s*$")
@@ -710,7 +718,7 @@ def assess_support_kit(
 ) -> tuple[dict, list[dict]]:
     """Score references / examples / memory / scripts. N/A does not dock.
 
-    Ship floor is unaffected — failures are should_fix only.
+    The core gate is unaffected — failures are should_fix only.
     """
     findings: list[dict] = []
     modules: dict[str, dict] = {}
@@ -867,7 +875,7 @@ def assess_efficiency(
     Deterministic proxies only: a static scan cannot prove a run terminates,
     but it catches loop/retry instructions that ship without a stop condition
     and instruction files whose baseline token load is already oversized.
-    Findings are should_fix — they warn, they do not block the ship floor.
+    Findings are should_fix — they warn and do not block gate_verdict.
     """
     findings: list[dict] = []
     lines = body.splitlines()
@@ -1365,6 +1373,92 @@ def check_skill(skill_dir: Path) -> dict:
     )
 
 
+def evaluate_gate(
+    points: dict,
+    findings: list[dict],
+    package_health: dict,
+) -> tuple[str, list[dict], dict]:
+    """Evaluate the blocking gate from named checks, never from a score."""
+    required_checks = {
+        check: {
+            "status": "pass" if bool(points.get(check)) else "fail",
+            "evidence": f"scores.basic_usable.points.{check}",
+        }
+        for check in REQUIRED_GATE_POINTS
+    }
+    reasons: list[dict] = []
+    package_status = str(
+        package_health.get("status") or "not_assessed"
+    )
+    package_assessable = package_health.get("assessable")
+    package_invalid = (
+        package_status == "invalid_skill_package"
+        or package_assessable is False
+    )
+    if package_invalid:
+        reasons.append(
+            {
+                "code": "invalid_skill_package",
+                "message": (
+                    "Package health must be valid and assessable before the "
+                    "deterministic gate can pass"
+                ),
+            }
+        )
+    elif package_status != "valid_skill_package" or package_assessable is not True:
+        reasons.append(
+            {
+                "code": "package_not_assessed",
+                "message": (
+                    "Package health was not confirmed as a valid assessable "
+                    "Skill package"
+                ),
+            }
+        )
+
+    for check, result in required_checks.items():
+        if result["status"] == "fail":
+            reasons.append(
+                {
+                    "code": "required_check_failed",
+                    "check": check,
+                    "message": f"Required gate check failed: {check}",
+                }
+            )
+
+    critical_ids = sorted(
+        {
+            str(finding.get("id") or "unknown")
+            for finding in findings
+            if finding.get("severity") == "critical"
+        }
+    )
+    if critical_ids:
+        reasons.append(
+            {
+                "code": "critical_findings",
+                "finding_ids": critical_ids,
+                "message": "Deterministic Critical findings must be resolved",
+            }
+        )
+
+    verdict = (
+        "invalid_skill_package"
+        if package_invalid
+        else "pass"
+        if not reasons
+        else "fail"
+    )
+    policy = {
+        "id": GATE_POLICY_ID,
+        "required_checks": required_checks,
+        "critical_findings_block": True,
+        "package_health_required": True,
+        "scoring_effect": "none",
+    }
+    return verdict, reasons, policy
+
+
 def finalize(
     skill_dir: Path,
     fm: dict | None,
@@ -1412,7 +1506,12 @@ def finalize(
     critical = [f for f in findings if f["severity"] == "critical"]
     should = [f for f in findings if f["severity"] == "should_fix"]
     nice = [f for f in findings if f["severity"] == "nice"]
-    ship_floor = basic >= 4 and len(critical) == 0
+    gate_verdict, gate_reasons, gate_policy = evaluate_gate(
+        points,
+        findings,
+        package_health,
+    )
+    legacy_ship_floor = gate_verdict == "pass"
     estimated_tokens = (
         (len(source_text.encode("utf-8")) + 3) // 4
         if source_text is not None
@@ -1437,7 +1536,7 @@ def finalize(
             },
         }
     return {
-        "schema_version": "1.3",
+        "schema_version": SCHEMA_VERSION,
         "audit_level": "static_contract_check",
         "skill_dir": str(skill_dir),
         "skill_md": str(skill_dir / "SKILL.md"),
@@ -1445,7 +1544,11 @@ def finalize(
         "frontmatter": fm or {},
         "disable_model_invocation": disable_model,
         "line_count": line_count,
+        "gate_verdict": gate_verdict,
+        "gate_reasons": gate_reasons,
+        "gate_policy": gate_policy,
         "scores": {
+            "scoring_effect": "informational_only",
             "basic_usable": {"score": basic, "max": 5, "points": points},
             "contract_clarity": {
                 "score": contract_score,
@@ -1454,7 +1557,15 @@ def finalize(
                 "detected_axes": axes or [],
             },
             "support_kit": support_kit,
-            "ship_floor_met": ship_floor,
+            "ship_floor_met": legacy_ship_floor,
+        },
+        "deprecated_fields": {
+            "scores.ship_floor_met": {
+                "deprecated": True,
+                "replacement": "gate_verdict",
+                "compatibility": "true only when gate_verdict=pass",
+                "planned_removal": "next major schema version",
+            }
         },
         "counts": {
             "critical": len(critical),
@@ -1485,10 +1596,23 @@ def finalize(
         "findings": [f for f in findings if f["severity"] != "info"],
         "notes": [f for f in findings if f["severity"] == "info"],
         "limitations": [
-            "scores cover static structure and contract signals only",
+            "scores are informational and do not affect gate_verdict or exit status",
             "behavioral correctness and safe execution require separate evidence",
         ],
-        "llm_passes_remaining": ["predictability_qualitative", "anatomy_qualitative", "prune_qualitative"],
+        "optional_model_review": {
+            "status": "not_run",
+            "blocking": False,
+            "passes": [
+                "predictability_qualitative",
+                "anatomy_qualitative",
+                "prune_qualitative",
+            ],
+        },
+        "llm_passes_remaining": [
+            "predictability_qualitative",
+            "anatomy_qualitative",
+            "prune_qualitative",
+        ],
     }
 
 
@@ -1513,11 +1637,26 @@ def main() -> int:
         print(
             json.dumps(
                 {
-                    "schema_version": "1.3",
+                    "schema_version": SCHEMA_VERSION,
                     "audit_level": "static_contract_check",
                     "target_platform": "generic",
                     "error": f"path not found: {args.skill_dir}",
+                    "gate_verdict": "fail",
+                    "gate_reasons": [
+                        {
+                            "code": "target_path_not_found",
+                            "message": "Target path was not available for static checks",
+                        }
+                    ],
+                    "gate_policy": {
+                        "id": GATE_POLICY_ID,
+                        "required_checks": {},
+                        "critical_findings_block": True,
+                        "package_health_required": True,
+                        "scoring_effect": "none",
+                    },
                     "scores": {
+                        "scoring_effect": "informational_only",
                         "basic_usable": {"score": 0, "max": 5},
                         "contract_clarity": {"score": 0, "max": 5},
                         "support_kit": {
@@ -1527,6 +1666,14 @@ def main() -> int:
                             "kit_complete": False,
                         },
                         "ship_floor_met": False,
+                    },
+                    "deprecated_fields": {
+                        "scores.ship_floor_met": {
+                            "deprecated": True,
+                            "replacement": "gate_verdict",
+                            "compatibility": "true only when gate_verdict=pass",
+                            "planned_removal": "next major schema version",
+                        }
                     },
                     "limitations": ["target path was not available for static checks"],
                 }
@@ -1539,24 +1686,13 @@ def main() -> int:
     report = check_skill(args.skill_dir)
     dump = json.dumps(report, ensure_ascii=False, indent=2 if args.pretty else None)
     print(dump)
-    scores = report["scores"]
-    kit = scores.get("support_kit") or {}
-    kit_max = kit.get("max", 0)
-    kit_score = kit.get("score", 0)
-    kit_txt = (
-        f"support_kit {kit_score}/{kit_max}"
-        if kit_max
-        else "support_kit n/a"
-    )
     print(
-        f"hard_gates: basic_usable {scores['basic_usable']['score']}/5 · "
-        f"contract_clarity {scores['contract_clarity']['score']}/5 · "
-        f"{kit_txt} · "
-        f"ship_floor={'yes' if scores['ship_floor_met'] else 'no'} · "
-        f"critical={report['counts']['critical']}",
+        f"hard_gates: gate={report['gate_verdict']} · "
+        f"critical={report['counts']['critical']} · "
+        f"should_fix={report['counts']['should_fix']}",
         file=sys.stderr,
     )
-    return 0 if scores["ship_floor_met"] else 1
+    return 0 if report["gate_verdict"] == "pass" else 1
 
 
 if __name__ == "__main__":

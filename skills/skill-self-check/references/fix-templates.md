@@ -170,7 +170,7 @@ git clean -nXd <skill>
 | `improved` | 有改善，没有硬回退 | 看 `introduced` 里新冒出来的项，决定这轮改不改 |
 | `unchanged` | 分数和 finding 都没动 | 改的地方没被检查覆盖，或者根本没落盘 |
 | `mixed` | 有改善也有新问题 | 先处理 `new_critical`，再看其余 |
-| `regressed` | 出现新的 critical 或分数下降 | 回滚这次改动，重新来 |
+| `regressed` | 出现新的 Critical 或 `gate_verdict` 回退 | 回滚这次改动，重新来；分数变化只在信息区解释 |
 
 `not_comparable` 不是错误：该维度的满分变了（比如补上步骤之后配套材料才开始适用），
 前后分数不能直接比，看 finding 列表即可。

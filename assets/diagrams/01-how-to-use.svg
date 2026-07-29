@@ -33,31 +33,30 @@
 <circle cx="424.8" cy="200" r="8" fill="#0050B3"/>
 <rect x="304.8" y="190.0" width="240" height="120" rx="2" fill="#F0F4FA" stroke="#0B3D91" stroke-width="1.6"/>
 <text x="424.8" y="216.0" text-anchor="middle" class="label-tiny" font-size="11" letter-spacing="0.08em">STEP 2</text>
-<text x="424.8" y="242.0" text-anchor="middle" class="label" font-size="18">Run self-check</text>
-<text x="424.8" y="268.0" text-anchor="middle" class="label-tiny" font-size="13">Script scores first</text>
-<text x="424.8" y="286.0" text-anchor="middle" class="label-tiny" font-size="13">Then fix suggestions</text>
+<text x="424.8" y="242.0" text-anchor="middle" class="label" font-size="18">Run fast gate</text>
+<text x="424.8" y="268.0" text-anchor="middle" class="label-tiny" font-size="13">Read gate verdict</text>
+<text x="424.8" y="286.0" text-anchor="middle" class="label-tiny" font-size="13">No scorecard wait</text>
 <line x1="424.8" y1="208" x2="424.8" y2="190" stroke="#D0D7E2" stroke-width="1.4"/>
 <circle cx="698.9" cy="200" r="8" fill="#0B3D91"/>
 <rect x="578.9" y="90.0" width="240" height="120" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
 <text x="698.9" y="116.0" text-anchor="middle" class="label-tiny" font-size="11" letter-spacing="0.08em">STEP 3</text>
-<text x="698.9" y="142.0" text-anchor="middle" class="label" font-size="18">Read three lights</text>
-<text x="698.9" y="168.0" text-anchor="middle" class="label-tiny" font-size="13">Usable?</text>
-<text x="698.9" y="186.0" text-anchor="middle" class="label-tiny" font-size="13">Clear?</text>
-<text x="698.9" y="204.0" text-anchor="middle" class="label-tiny" font-size="13">Kit complete?</text>
+<text x="698.9" y="142.0" text-anchor="middle" class="label" font-size="18">Read blockers</text>
+<text x="698.9" y="168.0" text-anchor="middle" class="label-tiny" font-size="13">Every Critical</text>
+<text x="698.9" y="186.0" text-anchor="middle" class="label-tiny" font-size="13">Up to three fixes</text>
 <line x1="698.9" y1="192" x2="698.9" y2="210" stroke="#D0D7E2" stroke-width="1.4"/>
 <circle cx="973.0" cy="200" r="8" fill="#0B3D91"/>
 <rect x="853.0" y="190.0" width="240" height="120" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
 <text x="973.0" y="216.0" text-anchor="middle" class="label-tiny" font-size="11" letter-spacing="0.08em">STEP 4</text>
-<text x="973.0" y="242.0" text-anchor="middle" class="label" font-size="18">Fix, then use</text>
-<text x="973.0" y="268.0" text-anchor="middle" class="label-tiny" font-size="13">Pass the floor first</text>
-<text x="973.0" y="286.0" text-anchor="middle" class="label-tiny" font-size="13">Learn while using</text>
+<text x="973.0" y="242.0" text-anchor="middle" class="label" font-size="18">Authorize fixes</text>
+<text x="973.0" y="268.0" text-anchor="middle" class="label-tiny" font-size="13">Keep baseline</text>
+<text x="973.0" y="286.0" text-anchor="middle" class="label-tiny" font-size="13">Verify the delta</text>
 <line x1="973.0" y1="208" x2="973.0" y2="190" stroke="#D0D7E2" stroke-width="1.4"/>
 <circle cx="1247.0" cy="200" r="8" fill="#0B3D91"/>
 <rect x="1127.0" y="90.0" width="240" height="120" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
 <text x="1247.0" y="116.0" text-anchor="middle" class="label-tiny" font-size="11" letter-spacing="0.08em">OPTIONAL</text>
-<text x="1247.0" y="142.0" text-anchor="middle" class="label" font-size="18">Interview first</text>
-<text x="1247.0" y="168.0" text-anchor="middle" class="label-tiny" font-size="13">Ask until clear</text>
-<text x="1247.0" y="186.0" text-anchor="middle" class="label-tiny" font-size="13">Then decide which playbooks</text>
+<text x="1247.0" y="142.0" text-anchor="middle" class="label" font-size="18">Build scorecard</text>
+<text x="1247.0" y="168.0" text-anchor="middle" class="label-tiny" font-size="13">Route only on request</text>
+<text x="1247.0" y="186.0" text-anchor="middle" class="label-tiny" font-size="13">Reuse audit JSON</text>
 <line x1="1247.0" y1="192" x2="1247.0" y2="210" stroke="#D0D7E2" stroke-width="1.4"/>
     <text x="1460" y="344" text-anchor="end" class="label-tiny mono">01 · how to use</text>
   </g>

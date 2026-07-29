@@ -6,15 +6,23 @@ Plain-language items for auditing a target skill. Optional Matt-style terms appe
 
 | Kind | Owner | Notes |
 |------|-------|-------|
-| Hard gates, scores, regex hints | `scripts/hard_gates.py` | Model must not override |
-| Qualitative predictability / anatomy / PDCA+SMART | Model | After script JSON is in hand |
+| `gate_verdict`, findings, scores, regex hints | `scripts/hard_gates.py` | Model must not override |
+| Qualitative predictability / anatomy / PDCA+SMART | Model | Explicit deep audit only; never blocks |
 
-**Scores (script)**
+**Deterministic gate (script)**
+
+- `gate_verdict` — `pass`, `fail`, or `invalid_skill_package`
+- Pass requires valid assessable package health, every named required check,
+  and zero script Criticals.
+- Numeric scores never affect the gate or process exit code.
+
+**Informational scores (script)**
 
 - `basic_usable` /5 — file+frontmatter, name match, description voice/triggers, actionable body, verification or Done-when
 - `contract_clarity` /5 — When to Use, When NOT, named check axes, verification checkboxes, rationalizations/red flags
-- `support_kit` n/applicable — references (资料), examples (案例), memory (落地记忆), scripts (脚本); explicit `N/A` / `不适用` does not dock; **does not** affect ship floor
-- `ship_floor_met` — `basic_usable >= 4` and zero script Critical
+- `support_kit` n/applicable — references (资料), examples (案例), memory (落地记忆), scripts (脚本); explicit `N/A` / `不适用` does not dock
+- `scores.ship_floor_met` — deprecated compatibility alias; use
+  `gate_verdict` in new consumers
 
 **Package health preflight (script, before scores)**
 
@@ -41,16 +49,18 @@ Plain-language items for auditing a target skill. Optional Matt-style terms appe
   `not_measured`
 - `loop_guard` — line-window scan for loop/retry directives, stop signals,
   and unbounded phrasing; `pass` / `warn` / `not_applicable`
-- No metric changes the source scores or ship floor, but loop-guard and
+- No metric changes the source scores or `gate_verdict`, but loop-guard and
   token-budget breaches emit `EFF.*` should_fix findings (see Pass 4).
 
 **Severity**
 
 | Level | When |
 |-------|------|
-| Critical | Hard gate fail, or review skill missing named check axes |
-| Should fix | Predictability or verification gap that will cause inconsistent runs |
+| Critical | Deterministic hard-gate failure, including review skill missing named check axes |
+| Should fix | Deterministic non-blocking gap that can cause inconsistent runs |
 | Nice | Polish, token trim, optional anatomy sections for reference-only skills |
+
+Optional model review uses `priority: high|medium|low`, not script severity.
 
 ---
 
@@ -213,14 +223,17 @@ is [references/gap-questions.md](references/gap-questions.md).
 
 ---
 
-## Default audit vs advanced audit
+## Default and explicit routes
 
-| Track | What it covers | Who it is for |
+| Route | What it covers | Blocking? |
 | --- | --- | --- |
-| **Default audit** | Pass 0–5, Pass 7, PKG/EFF, dual reports, scorecards without `--behavior` | Enterprise authors building a usable business Skill employee |
-| **Advanced audit** (optional) | `--behavior` JSON, Harness-style evidence, multi-platform fingerprints, Lv3–Lv5 author unlocks | Skill authors / maintainers — not the enterprise default bar |
+| **Fast audit** (default) | Deterministic PKG / hard gate / EFF checks; all Criticals; top three Should fix | Yes, script only |
+| **Apply + verify** | Authorized edits plus Pass 7 | Yes, script only |
+| **Deep review** (explicit) | Predictability / anatomy / PDCA+SMART | No, advisory |
+| **Scorecard** (explicit) | Existing JSON → optional profile / HTML | No new gate |
+| **Advanced evidence** (explicit) | Behavior JSON, failure recovery, platform fingerprints | Separate author track |
 
-Default audit success = package valid + ship floor + clear next business practice.
+Default audit success = package valid + named required checks + zero script Critical.
 Missing behavior JSON does **not** mean “tonight’s certification failed.”
 
 ## Pass 7 — Fix verification (script-owned)
@@ -235,14 +248,15 @@ python scripts/verify_fix.py <target> --baseline <pre-fix hard-gates.json>
 | # | Check (plain) | Fail if | Sev |
 |---|----------------|---------|-----|
 | 7.1 | Post-fix re-check ran against a pre-fix baseline | "已修复" claimed with no `verify_fix.py` output | Critical |
-| 7.2 | Report carries the before/after table (3 scores, ship floor, package health, resolved / introduced counts) | Only the after-state is shown | Should fix |
+| 7.2 | Report carries the before/after table (`gate_verdict`, package health, resolved / introduced counts; scores optional) | Only the after-state is shown | Should fix |
 | 7.3 | No `new_critical` in the delta | The rewrite introduced a Critical that was not there before | Critical |
 | 7.4 | Every `introduced` finding is fixed or listed as remaining work | New findings silently dropped from the report | Should fix |
 | 7.5 | Score movement described honestly | `not_comparable` dimensions reported as gains or losses | Should fix |
 
 Verdicts: `improved` (progress, no hard regression) · `unchanged` (nothing the
-script measures moved) · `mixed` (progress plus new problems) · `regressed`
-(new Critical, lost ship floor, or a score drop). Exit code is 1 on a hard
+gate/findings measure moved) · `mixed` (progress plus new problems) · `regressed`
+(new Critical or `gate_verdict` regression). Score movement remains
+informational. Exit code is 1 on a hard
 regression, or on any new finding when `--strict` is passed.
 
 Findings that vanish because a check stopped applying are not progress: a Skill
@@ -285,7 +299,7 @@ See growth scorecard `references/profile-contract.md` (Dual track) and
 | Leading word | Short pretrained concept that anchors behavior |
 | Verification | Exit checklist with evidence |
 | Rationalizations | Excuses agents use to skip steps, plus rebuttals |
-| Hard regression | New Critical, lost ship floor, or a score drop after a fix |
+| Hard regression | New Critical or `gate_verdict` regression after a fix |
 | not_comparable | A dimension whose maximum changed, so before/after scores mean different things |
 | PDCA | Plan → Do → Check → Act closed loop inside the skill |
 | SMART | Specific / Measurable / Achievable / Relevant / run-bound exit for outcomes |

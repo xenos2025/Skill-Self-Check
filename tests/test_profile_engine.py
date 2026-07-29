@@ -158,6 +158,8 @@ class ProfileEngineTests(unittest.TestCase):
     def test_clean_static_inputs_unlock_static_level_only(self) -> None:
         hard = json.loads(HARD.read_text(encoding="utf-8"))
         safety = json.loads(SAFETY.read_text(encoding="utf-8"))
+        hard["gate_verdict"] = "pass"
+        hard["gate_reasons"] = []
         hard["scores"]["contract_clarity"]["score"] = 5
         hard["scores"]["support_kit"]["score"] = 4
         hard["scores"]["support_kit"]["kit_complete"] = True
@@ -188,6 +190,85 @@ class ProfileEngineTests(unittest.TestCase):
         self.assertIn("作者进阶证据未附", advanced["note"])
         self.assertIn("高级审计", advanced["next_quest"]["title"])
         self.assertEqual(profile["next_quest"]["lane"], "enterprise_skill")
+        self.assertEqual(
+            profile["skill_engineering"]["gate"],
+            {
+                "verdict": "pass",
+                "source": "gate_verdict",
+                "reasons": [],
+            },
+        )
+
+    def test_explicit_gate_verdict_overrides_legacy_numeric_thresholds(self) -> None:
+        hard = json.loads(HARD.read_text(encoding="utf-8"))
+        safety = json.loads(SAFETY.read_text(encoding="utf-8"))
+        hard["gate_verdict"] = "pass"
+        hard["gate_reasons"] = []
+        hard["scores"]["ship_floor_met"] = False
+        hard["scores"]["basic_usable"]["score"] = 0
+        hard["scores"]["contract_clarity"]["score"] = 0
+        hard["findings"] = []
+        hard["counts"]["critical"] = 0
+        safety["verdict"] = "static_pass"
+        safety["counts"]["critical"] = 0
+        safety["findings"] = []
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            hard_path = root / "hard.json"
+            safety_path = root / "safety.json"
+            hard_path.write_text(json.dumps(hard), encoding="utf-8")
+            safety_path.write_text(json.dumps(safety), encoding="utf-8")
+            code, profile = run_script(
+                "--hard-gates",
+                hard_path,
+                "--ship-safety",
+                safety_path,
+            )
+        self.assertEqual(code, 0, profile)
+        engineering = profile["skill_engineering"]
+        self.assertTrue(engineering["scores"]["enterprise_ready"])
+        self.assertEqual(engineering["scores"]["scoring_effect"], "informational_only")
+        self.assertEqual(engineering["gate"]["source"], "gate_verdict")
+        self.assertEqual(profile["verdict"], "ready_for_controlled_use")
+
+    def test_explicit_gate_failure_wins_over_legacy_ship_floor(self) -> None:
+        hard = json.loads(HARD.read_text(encoding="utf-8"))
+        safety = json.loads(SAFETY.read_text(encoding="utf-8"))
+        hard["gate_verdict"] = "fail"
+        hard["gate_reasons"] = [
+            {
+                "code": "required_check_failed",
+                "check": "body_actionable",
+                "message": "Required gate check failed: body_actionable",
+            }
+        ]
+        hard["scores"]["ship_floor_met"] = True
+        hard["findings"] = []
+        hard["counts"]["critical"] = 0
+        safety["verdict"] = "static_pass"
+        safety["counts"]["critical"] = 0
+        safety["findings"] = []
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            hard_path = root / "hard.json"
+            safety_path = root / "safety.json"
+            hard_path.write_text(json.dumps(hard), encoding="utf-8")
+            safety_path.write_text(json.dumps(safety), encoding="utf-8")
+            code, profile = run_script(
+                "--hard-gates",
+                hard_path,
+                "--ship-safety",
+                safety_path,
+            )
+        self.assertEqual(code, 0, profile)
+        self.assertFalse(
+            profile["skill_engineering"]["scores"]["enterprise_ready"]
+        )
+        self.assertEqual(
+            profile["skill_engineering"]["gate"]["verdict"],
+            "fail",
+        )
+        self.assertEqual(profile["verdict"], "needs_evidence")
 
     def test_enterprise_verdict_requires_contract_and_static_safety(self) -> None:
         hard = json.loads(HARD.read_text(encoding="utf-8"))
@@ -800,7 +881,7 @@ class ProfileEngineTests(unittest.TestCase):
         self.assertIn('window.addEventListener("beforeprint"', html)
         self.assertIn('window.addEventListener("afterprint"', html)
         self.assertIn('id="project-quest-title"', html)
-        self.assertIn("项目交付状态", html)
+        self.assertIn("数字分数仅用于成熟度展示", html)
         self.assertNotIn("暂停交付", html)
         self.assertIn('id="ability-level-id"', html)
         self.assertIn('id="subject-name"', html)
@@ -809,7 +890,9 @@ class ProfileEngineTests(unittest.TestCase):
         self.assertNotIn("__PROFILE_JSON__", html)
         self.assertNotRegex(html, re.compile(r"<script[^>]+src=", re.I))
         self.assertNotRegex(html, re.compile(r"<link[^>]+href=[\"']https?://", re.I))
-        self.assertIn('"profile_schema_version": "0.5"', html)
+        self.assertIn('"profile_schema_version": "0.6"', html)
+        self.assertIn("核心确定性门禁", html)
+        self.assertIn('"source": "scores.ship_floor_met"', html)
         self.assertIn("Token 消耗", html)
         self.assertIn("运行时长", html)
 

@@ -23,7 +23,7 @@ Apply SMART to the skill's **outcome contract** (description + Done when + Verif
 | **M**easurable | Done when + Verification evidence an agent can observe | "Improve quality" with no metric or artifact |
 | **A**chievable | When NOT + scope fits one skill; escape hatches for blockers | One skill promises an entire company transformation |
 | **R**elevant | Triggers and steps match the user's job-to-be-done | Body drifts into unrelated encyclopedia |
-| **T**ime-bound | **Run-bound exit**: each invocation has a finish line (Verification / ship floor / handoff). Prefer session exit criteria over fake calendar dates unless the domain needs them | Endless "keep refining" with no stop |
+| **T**ime-bound | **Run-bound exit**: each invocation has a finish line (Verification / deterministic gate / handoff). Prefer session exit criteria over fake calendar dates unless the domain needs them | Endless "keep refining" with no stop |
 
 ## How to score in the report (model)
 

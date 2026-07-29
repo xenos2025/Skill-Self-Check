@@ -1192,7 +1192,7 @@
             <p class="eyebrow">原始检测</p>
             <h2 id="scores-title">分析对象的原始检测结果</h2>
           </div>
-          <p id="scores-basis">页面不重新计算分数；运行指标不参与等级评分</p>
+          <p id="scores-basis">核心门禁来自上游审计；数字分数仅用于成熟度展示</p>
         </div>
         <div class="score-grid" id="score-grid"></div>
         <div class="operational-block">
@@ -1644,6 +1644,7 @@
     const scoreGrid = $("#score-grid");
     const operationalGrid = $("#operational-grid");
     const scores = engineering.scores;
+    const coreGate = engineering.gate || {};
     const operationalMetrics = engineering.operational_metrics || {};
     const verdictLabels = {
       static_pass: "静态预检通过",
@@ -1651,6 +1652,11 @@
       invalid_skill_package: "Skill 包结构无效",
       execution_unverified: "行为验证未完成",
       not_assessed: "未评估"
+    };
+    const gateLabels = {
+      pass: "核心门禁通过",
+      fail: "核心门禁未通过",
+      invalid_skill_package: "Skill 包结构无效"
     };
     const executionLabels = {
       not_safely_verified: "未做可信隔离行为验证",
@@ -1769,20 +1775,18 @@
     }
     if (scores) {
       const rawNote = packageInvalid ? "局部文件诊断，不代表成熟度。" : "";
-      scoreCard("基础可用结构", scores.basic_usable.score, ` / ${scores.basic_usable.max}`, `文件、元信息、步骤和完成标准。${rawNote}`, packageInvalid ? "red" : scores.basic_usable.score === scores.basic_usable.max ? "green" : "amber");
-      scoreCard("使用边界与检查规则", scores.contract_clarity.score, ` / ${scores.contract_clarity.max}`, `何时使用、何时不用、检查轴与验证。${rawNote}`, packageInvalid ? "red" : scores.contract_clarity.score >= 3 ? "green" : "red");
-      scoreCard("配套材料", scores.support_kit.score, ` / ${scores.support_kit.max}`, `参考资料、案例、状态和脚本。${rawNote}`, packageInvalid ? "red" : scores.support_kit.score === scores.support_kit.max ? "green" : "amber");
+      scoreCard("基础可用结构", scores.basic_usable.score, ` / ${scores.basic_usable.max}`, `信息性分数：文件、元信息、步骤和完成标准。${rawNote}`, packageInvalid ? "red" : scores.basic_usable.score === scores.basic_usable.max ? "green" : "amber");
+      scoreCard("使用边界与检查规则", scores.contract_clarity.score, ` / ${scores.contract_clarity.max}`, `信息性分数：何时使用、何时不用、检查轴与验证。${rawNote}`, packageInvalid ? "red" : scores.contract_clarity.score >= 3 ? "green" : "amber");
+      scoreCard("配套材料", scores.support_kit.score, ` / ${scores.support_kit.max}`, `信息性分数：参考资料、案例、状态和脚本。${rawNote}`, packageInvalid ? "red" : scores.support_kit.score === scores.support_kit.max ? "green" : "amber");
       const safety = engineering.safety || {};
       scoreCard(
-        "项目交付状态",
-        packageInvalid
-          ? verdictLabels.invalid_skill_package
-          : verdictLabels[safety.verdict] || safety.verdict || "未评估",
+        "核心确定性门禁",
+        gateLabels[coreGate.verdict] || coreGate.verdict || "未评估",
         "",
         packageInvalid
-          ? "先恢复标准包结构；安全预检结果不能覆盖此前置门。"
-          : `行为状态：${executionLabels[safety.execution_status] || safety.execution_status || "未评估"}`,
-        packageInvalid || safety.verdict !== "static_pass" ? "red" : "green"
+          ? "先恢复标准包结构；数字分数和安全预检不能覆盖此前置门。"
+          : `来源：${coreGate.source || "未记录"} · 可选安全预检：${verdictLabels[safety.verdict] || safety.verdict || "未评估"}`,
+        coreGate.verdict === "pass" ? "green" : "red"
       );
     } else {
       scoreGrid.append(make("div", "empty", "尚未提供 Skill hard gates 结果。"));

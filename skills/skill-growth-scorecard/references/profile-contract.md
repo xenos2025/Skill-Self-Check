@@ -24,13 +24,13 @@ repository's certification engineering.
 
 | Track | Audience | Default surface | Typical bar |
 | --- | --- | --- | --- |
-| **Enterprise mainline** | Business authors / operators | `verdict`, root `next_quest`, learning quest | Package health, ship floor, static safety, plain next practice |
+| **Enterprise mainline** | Business authors / operators | `verdict`, root `next_quest`, learning quest | Package health, explicit core gate, static safety, plain next practice |
 | **Advanced audit** | Skill authors / maintainers | `advanced_audit` block | Behavior JSON, failure recovery, portable contract, two-platform fingerprints |
 
 Rules:
 
-- When package health is assessable, ship floor and the contract minimum are
-  met, static safety passes, and Critical count is zero, root `verdict` is
+- When package health is assessable, the explicit core gate passes, static
+  safety passes, and Critical count is zero, root `verdict` is
   `ready_for_controlled_use` even if author behavior evidence is missing.
 - Missing behavior / multi-platform proof is recorded on `advanced_audit.note`
   (for example “作者进阶证据未附”), not as the enterprise headline failure.
@@ -40,9 +40,12 @@ Rules:
 - Lv3–Lv5 unlock math is unchanged for advanced audit; Lv4–Lv5 labels are
   marked as the author track.
 
-`skill_engineering.scores.enterprise_ready` is the canonical boolean for that
-mainline gate. The root verdict, Lv2 unlock, and advanced-audit note must consume
-this value instead of recomputing a weaker ship-floor-only substitute.
+`skill_engineering.gate` preserves the upstream deterministic result and its
+source. New reports use `hard_gates.gate_verdict`; legacy reports fall back to
+`scores.ship_floor_met` and the previous contract threshold.
+`skill_engineering.scores.enterprise_ready` is the composed scorecard boolean
+for core-gate + optional static-safety readiness. Numeric scores cannot override
+the upstream gate.
 
 ## Source reports
 
@@ -169,7 +172,7 @@ business sends or writes.
 | --- | --- | --- |
 | Lv0 | A Skill exists but basic structure is below the minimum | Enterprise |
 | Lv1 | Basic structure is recognizable | Enterprise |
-| Lv2 | Static floor, contract minimum, zero criticals, and static safety pass | Enterprise (default “good enough to trial”) |
+| Lv2 | Explicit core gate, zero criticals, and static safety pass | Enterprise (default “good enough to trial”) |
 | Lv3 | Lv2 plus core-flow and PDCA behavior evidence | Advanced audit |
 | Lv4 | Lv3 plus failure recovery and evidence for every applicable safety control; a genuinely inapplicable external-action or write-back control needs explicit scope evidence | Advanced audit |
 | Lv5 | Lv4 plus a portable contract and two verified platform records that share the same contract and fixture fingerprints | Advanced audit |
@@ -239,7 +242,7 @@ are permanently risk-free.
 ## Operational metrics
 
 `skill_engineering.operational_metrics` adds two informational dimensions
-without changing the six evidence axes, type, level, verdict, or ship floor:
+without changing the six evidence axes, type, level, verdict, or core gate:
 
 - `token_consumption`: `hard_gates.py` estimates the static `SKILL.md` input as
   `ceil(UTF-8 byte length / 4)`. This model-neutral estimate is low confidence

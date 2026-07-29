@@ -24,7 +24,7 @@ Product / ops people helping **foreign trade, factory, and ecommerce** teams:
 - Map messy, oral work into an agent workflow
 - Separate goals, steps, ownership, handoffs, measurable standards, and permissions
 - Propose which skills to build or buy
-- Keep proposals productized (acceptance, evidence, ship floor) — not slideware
+- Keep proposals productized (acceptance, evidence, deterministic gate) — not slideware
 
 The generic readiness gate is now stable in `skills/agent-work-readiness`.
 Industry-specific interview and planning drafts remain in `exp/` until promoted.

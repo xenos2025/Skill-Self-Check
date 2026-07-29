@@ -116,10 +116,10 @@ def how_to_use(zh: bool) -> str:
         banner = "一句话：像验货一样，验「AI 工作说明书」能不能用"
         steps = [
             ("第 1 步", "写好说明书", ["把做事步骤写清楚", "（也叫 Skill）"], False),
-            ("第 2 步", "一键自检", ["电脑先打分", "再给修改意见"], True),
-            ("第 3 步", "看三盏灯", ["能不能上手用", "说清了吗", "配套齐了吗"], False),
-            ("第 4 步", "改完再用", ["先过门槛再真用", "边用边观察"], False),
-            ("可选", "先访谈客户", ["把事情问清楚", "再决定写哪些说明书"], False),
+            ("第 2 步", "快速门禁", ["先看 gate verdict", "不等成绩单"], True),
+            ("第 3 步", "看硬问题", ["全部 Critical", "最多三项改进"], False),
+            ("第 4 步", "授权后修复", ["改前留基线", "改完再验证"], False),
+            ("可选", "生成成绩单", ["明确要求才路由", "复用审计 JSON"], False),
         ]
         title = "skill-self-check.app -> docs -> how-to-use.svg"
         corner = "01 · 怎么用"
@@ -127,10 +127,10 @@ def how_to_use(zh: bool) -> str:
         banner = "In plain words: inspect an AI playbook before you trust it"
         steps = [
             ("STEP 1", "Write the playbook", ["Clear steps for the AI", "(called a Skill)"], False),
-            ("STEP 2", "Run self-check", ["Script scores first", "Then fix suggestions"], True),
-            ("STEP 3", "Read three lights", ["Usable?", "Clear?", "Kit complete?"], False),
-            ("STEP 4", "Fix, then use", ["Pass the floor first", "Learn while using"], False),
-            ("OPTIONAL", "Interview first", ["Ask until clear", "Then decide which playbooks"], False),
+            ("STEP 2", "Run fast gate", ["Read gate verdict", "No scorecard wait"], True),
+            ("STEP 3", "Read blockers", ["Every Critical", "Up to three fixes"], False),
+            ("STEP 4", "Authorize fixes", ["Keep baseline", "Verify the delta"], False),
+            ("OPTIONAL", "Build scorecard", ["Route only on request", "Reuse audit JSON"], False),
         ]
         title = "skill-self-check.app -> docs -> how-to-use.svg"
         corner = "01 · how to use"
@@ -345,14 +345,14 @@ def fix_loop(zh: bool) -> str:
             ("1", "写好 Skill", "按自己的流程先写", False),
             ("2", "交给 AI / 安装", "把仓库地址发给写 Skill 的 AI", False),
             ("3", "跑硬门槛", "python hard_gates.py …", True),
-            ("4", "出报告", "分数 + 修改意见", False),
+            ("4", "出报告", "门禁 + 聚焦整改", False),
         ]
-        decision = ("过门槛了吗？", "看 ship floor / Critical")
+        decision = ("过门槛了吗？", "看 gate verdict / Critical")
         fix = ("按意见改", "先改 Critical，再说「按意见改」")
         ship = ("可进入受控试用", "静态通过，不等于安全执行")
         bottom = [
-            ("结构过关", "basic_usable ≥ 4", "绿灯"),
-            ("说清楚查什么", "contract_clarity", "黄灯"),
+            ("包结构有效", "package health", "必备"),
+            ("必备检查通过", "required checks", "必备"),
             ("有出口证据", "Verification / Done when", "验收"),
         ]
         legend = [("主流程", ACCENT), ("通过", ok), ("改完再检", bad)]
@@ -364,14 +364,14 @@ def fix_loop(zh: bool) -> str:
             ("1", "Write Skill", "Your usual drafting flow", False),
             ("2", "Hand to AI / install", "Paste the GitHub URL to your AI", False),
             ("3", "Run hard gates", "python hard_gates.py …", True),
-            ("4", "Read report", "Scores + ranked fixes", False),
+            ("4", "Read report", "Gate + ranked fixes", False),
         ]
-        decision = ("Ship floor met?", "Critical count → zero?")
+        decision = ("Gate passed?", "gate_verdict + zero Criticals")
         fix = ("Apply fixes", "Fix Criticals, then say “apply fixes”")
         ship = ("Controlled trial", "Static pass is not behavior proof")
         bottom = [
-            ("Structure OK", "basic_usable ≥ 4", "green light"),
-            ("Scope clear", "contract_clarity", "amber light"),
+            ("Package valid", "package health", "required"),
+            ("Required checks", "all pass", "required"),
             ("Exit evidence", "Verification / Done when", "proof"),
         ]
         legend = [("Main flow", ACCENT), ("Success", ok), ("Fix & retry", bad)]
@@ -519,32 +519,32 @@ def fix_loop(zh: bool) -> str:
 
 def three_lights(zh: bool) -> str:
     if zh:
-        banner = "自检看三盏灯 — 给老板的读法"
+        banner = "先看核心门禁，再看三项信息分"
         cards = [
-            (190, "BASIC", "绿灯：能不能上手", ["结构过关", "达到静态门槛"], True),
-            (550, "CONTRACT", "黄灯：说清楚了吗", ["何时用 / 不用", "检查轴 + 验收"], False),
-            (910, "KIT", "蓝灯：配套齐了吗", ["资料 / 案例", "落地记忆 / 脚本"], False),
+            (190, "BASIC", "结构成熟度", ["信息性分数", "不决定门禁"], True),
+            (550, "CONTRACT", "契约清晰度", ["何时用 / 不用", "检查轴 + 验收"], False),
+            (910, "KIT", "配套齐备度", ["资料 / 案例", "落地记忆 / 脚本"], False),
         ]
         mid = (
-            "绿灯不亮 → 先改，别推广\n"
-            "绿灯亮、黄/蓝暗 → 能用，但容易各做各的或不好交接\n"
-            "三盏都亮 → 可以进入受控试用\n"
-            "蓝灯 N/A 不算缺（声明不适用即可）"
+            "gate_verdict 才是权威通过状态\n"
+            "分数只帮助理解成熟度和下一步\n"
+            "高分不能覆盖失败门禁\n"
+            "配套项 N/A 不扣分（声明不适用即可）"
         )
         title = "skill-self-check.app -> docs -> three-lights.svg"
         corner = "05 · 三盏灯"
     else:
-        banner = "Three lights for bosses — how to read a self-check"
+        banner = "Read the core gate first, then three informational scores"
         cards = [
-            (190, "BASIC", "Green: usable now?", ["Structure OK", "Static floor met"], True),
-            (550, "CONTRACT", "Amber: scope clear?", ["When / when not", "Axes + proof"], False),
-            (910, "KIT", "Blue: kit complete?", ["Refs / examples", "Memory / scripts"], False),
+            (190, "BASIC", "Structure maturity", ["Informational score", "Does not gate"], True),
+            (550, "CONTRACT", "Contract clarity", ["When / when not", "Axes + proof"], False),
+            (910, "KIT", "Support readiness", ["Refs / examples", "Memory / scripts"], False),
         ]
         mid = (
-            "Green off → fix before rollout\n"
-            "Green on, amber/blue dim → usable but drift/handoff risk\n"
-            "All three on → ready for controlled trial\n"
-            "Blue N/A does not dock (declare when not applicable)"
+            "gate_verdict is the authoritative pass state\n"
+            "Scores explain maturity and next practice only\n"
+            "A high score cannot override a failed gate\n"
+            "Support N/A does not dock when declared"
         )
         title = "skill-self-check.app -> docs -> three-lights.svg"
         corner = "05 · three lights"

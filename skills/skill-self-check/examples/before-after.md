@@ -118,7 +118,12 @@ python skills/skill-self-check/scripts/hard_gates.py \
   skills/skill-self-check/examples/fixtures/bad-commit-helper --pretty
 ```
 
-Expect `basic_usable 2/5`, `contract_clarity 0/5`, `ship_floor_met: false`, 4 Critical (1.3 / 1.4 / 1.6 / 1.7) and 12 Should fix, including no-op, negation, missing verification, references, and examples. Worked report: [smoke-report-before.md](smoke-report-before.md).
+Expect `gate_verdict: invalid_skill_package`, legacy
+`scores.ship_floor_met: false`, informational `basic_usable 2/5`,
+`contract_clarity 0/5`, 5 Critical
+(PKG.2 / 1.3 / 1.4 / 1.6 / 1.7), and 12 Should fix,
+including no-op, negation, missing verification, references, and examples.
+Worked report: [smoke-report-before.md](smoke-report-before.md).
 
 2. Full skill review: run `skill-self-check` in chat against the same fixture (or After example).
 3. After fixture / After block: script Critical should be 0 for a cleaned skill; model may still suggest Nice polish.

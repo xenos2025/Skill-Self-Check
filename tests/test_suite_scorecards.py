@@ -95,7 +95,7 @@ class SuiteScorecardTests(unittest.TestCase):
             self.assertEqual(personal["suite"]["summary"]["skills_total"], 4)
             self.assertEqual(
                 personal["suite"]["suite_schema_version"],
-                "0.4",
+                "0.5",
             )
             self.assertEqual(
                 personal["suite"]["summary"]["valid_skill_packages"],

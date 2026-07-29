@@ -20,10 +20,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from profile_engine import build_profile, force_utf8_streams, render_html
+from profile_engine import (
+    build_profile,
+    force_utf8_streams,
+    render_html,
+    resolve_hard_gate,
+)
 
 
-SUITE_SCHEMA_VERSION = "0.4"
+SUITE_SCHEMA_VERSION = "0.5"
 ROLE_LABELS = {
     "agent-work-readiness": "把口头工作整理成可评分的 Agent 工作包",
     "skill-self-check": "检查 Skill 结构、边界和配套材料",
@@ -215,6 +220,39 @@ def aggregate_hard_reports(
         for report in reports
     ]
     support_score, support_max, support_complete = aggregate_support(reports)
+    gate_records = [
+        {
+            "skill": record["name"],
+            **resolve_hard_gate(
+                record["hard"],
+                record["hard"].get("scores")
+                if isinstance(record["hard"].get("scores"), dict)
+                else {},
+            ),
+        }
+        for record in records
+    ]
+    aggregate_gate_verdict = (
+        "invalid_skill_package"
+        if any(
+            record["verdict"] == "invalid_skill_package"
+            for record in gate_records
+        )
+        else "pass"
+        if gate_records
+        and all(record["verdict"] == "pass" for record in gate_records)
+        else "fail"
+    )
+    aggregate_gate_reasons = [
+        {
+            "code": "suite_skill_gate_failed",
+            "skill": record["skill"],
+            "verdict": record["verdict"],
+            "source": record["source"],
+        }
+        for record in gate_records
+        if record["verdict"] != "pass"
+    ]
     token_records = [
         ((report.get("operational_metrics") or {}).get("token_consumption") or {})
         for report in reports
@@ -302,7 +340,7 @@ def aggregate_hard_reports(
     basic_max = min(int(score.get("max") or 5) for score in basic_scores)
     contract_max = min(int(score.get("max") or 5) for score in contract_scores)
     return {
-        "schema_version": "1.2",
+        "schema_version": "1.3",
         "audit_level": "suite_static_contract_check",
         "skill_dir": root.name,
         "skill_md": "skills/*/SKILL.md",
@@ -311,7 +349,15 @@ def aggregate_hard_reports(
             "name": "skill-self-check-suite",
             "description": "The four shipped work-readiness, audit, safety, and growth Skills.",
         },
+        "gate_verdict": aggregate_gate_verdict,
+        "gate_reasons": aggregate_gate_reasons,
+        "gate_policy": {
+            "id": "all-shipped-skill-gates-v1",
+            "component_gates": gate_records,
+            "scoring_effect": "none",
+        },
         "scores": {
+            "scoring_effect": "informational_only",
             "basic_usable": {
                 "score": min(int(score.get("score") or 0) for score in basic_scores),
                 "max": basic_max,
@@ -349,10 +395,13 @@ def aggregate_hard_reports(
                 "kit_complete": support_complete,
                 "modules": {},
             },
-            "ship_floor_met": all(
-                bool((report.get("scores") or {}).get("ship_floor_met"))
-                for report in reports
-            ),
+            "ship_floor_met": aggregate_gate_verdict == "pass",
+        },
+        "deprecated_fields": {
+            "scores.ship_floor_met": {
+                "deprecated": True,
+                "replacement": "gate_verdict",
+            }
         },
         "counts": {
             "critical": sum(
@@ -711,6 +760,7 @@ def audit_suite(root: Path, *, run_tests: bool = True) -> dict[str, Any]:
     skill_rows = []
     for record in records:
         scores = record["hard"].get("scores") or {}
+        gate = resolve_hard_gate(record["hard"], scores)
         skill_rows.append(
             {
                 "name": record["name"],
@@ -722,7 +772,9 @@ def audit_suite(root: Path, *, run_tests: bool = True) -> dict[str, Any]:
                 "package_status": (
                     (record["hard"].get("package_health") or {}).get("status")
                 ),
-                "ship_floor_met": bool(scores.get("ship_floor_met")),
+                "gate_verdict": gate["verdict"],
+                "gate_source": gate["source"],
+                "ship_floor_met": gate["verdict"] == "pass",
                 "hard_counts": record["hard"].get("counts") or {},
                 "safety_verdict": record["safety"].get("verdict"),
                 "safety_counts": record["safety"].get("counts") or {},
@@ -738,7 +790,7 @@ def audit_suite(root: Path, *, run_tests: bool = True) -> dict[str, Any]:
     summary = {
         "skills_total": len(records),
         "static_floor_pass": sum(
-            1 for row in skill_rows if row["ship_floor_met"]
+            1 for row in skill_rows if row["gate_verdict"] == "pass"
         ),
         "valid_skill_packages": sum(
             1
@@ -779,7 +831,7 @@ def audit_suite(root: Path, *, run_tests: bool = True) -> dict[str, Any]:
         "conclusion": {
             "project_stage": "可进入受控试用",
             "core_problem": (
-                "静态验货、只读安全预检、业务准备度、离线成绩单和一键审计入口"
+                "静态验货、只读安全预检、业务准备度、离线成绩单和显式完整审计入口"
                 "的核心链路已经成立，审计前后源码指纹一致。"
             ),
             "remaining_boundary": (

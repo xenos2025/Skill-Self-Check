@@ -19,7 +19,7 @@ Open-source users should trust `skills/`. Speculative PM work for 外贸 / 工�
 
 1. Interview & workflow map (draft)
 2. Skill gap proposal (draft)
-3. Pilot with self-check ship floor
+3. Pilot after the explicit self-check gate passes
 4. Promote into `skills/` + CHANGELOG
 
 This mirrors mature packs that separate **product logic** from **fillable /
@@ -44,13 +44,14 @@ ask one question at a time until What/Why/Who/When/Where/How/How much are clear.
 
 ## Bet 5 — One result, multiple audience views
 
-Every audit produces one authoritative fact set. The audit keeps two matched
-documents:
+Every audit produces one authoritative fact set. The core Skill exposes two
+presentation depths:
 
-- a plain-language business report for owners and operators
-- a technical report with scores, finding IDs, evidence, and reproduction
+- a compact plain-language response contract for the default route
+- an explicit technical report with scores, finding IDs, evidence, and
+  reproduction
 
-The growth scorecard adds three screen lenses over the same facts: growth,
+The optional growth scorecard adds three screen lenses over the same facts: growth,
 detection, and technical evidence. The wording may differ; counts, IDs, and
 pass/fail conclusions may not. The growth lens is a personal capability view:
 it describes the creator's demonstrated Skill-building style and stage based on
