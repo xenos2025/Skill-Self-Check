@@ -87,9 +87,30 @@ for SKILL in "${SKILLS[@]}"; do
   echo "Installed $SKILL -> $TARGET"
 done
 
+has_skill() {
+  local wanted="$1"
+  local installed
+  for installed in "${SKILLS[@]}"; do
+    [[ "$installed" == "$wanted" ]] && return 0
+  done
+  return 1
+}
+
 echo "Requires Python 3.10+ (stdlib only). Try:"
-echo "  python \"\$HOME/.cursor/skills/skill-self-check/scripts/run_full_audit.py\" path/to/your-skill --out-dir path/outside/the/repo --pretty"
-echo "  python \"\$HOME/.cursor/skills/skill-self-check/scripts/hard_gates.py\" path/to/your-skill --pretty"
-echo "  python \"\$HOME/.cursor/skills/skill-ship-safety/scripts/ship_safety.py\" path/to/your-skill --pretty"
-echo "  python \"\$HOME/.cursor/skills/agent-work-readiness/scripts/readiness_gates.py\" path/to/work-package --pretty"
-echo "  python \"\$HOME/.cursor/skills/skill-growth-scorecard/scripts/profile_engine.py\" --readiness readiness.json --out-html scorecard.html"
+if has_skill skill-self-check; then
+  echo "  python \"\$HOME/.cursor/skills/skill-self-check/scripts/hard_gates.py\" path/to/your-skill --out-json \"\$HOME/Documents/skill-audits/hard-gates.json\" --pretty"
+fi
+if has_skill skill-growth-scorecard; then
+  echo "  python \"\$HOME/.cursor/skills/skill-growth-scorecard/scripts/profile_engine.py\" --hard-gates \"\$HOME/Documents/skill-audits/hard-gates.json\" --out-html \"\$HOME/Documents/skill-audits/scorecard.html\""
+fi
+if has_skill skill-self-check &&
+  has_skill skill-ship-safety &&
+  has_skill skill-growth-scorecard; then
+  echo "  compatibility full route: python \"\$HOME/.cursor/skills/skill-self-check/scripts/run_full_audit.py\" path/to/your-skill --out-dir path/outside/the/repo --pretty"
+fi
+if has_skill skill-ship-safety; then
+  echo "  python \"\$HOME/.cursor/skills/skill-ship-safety/scripts/ship_safety.py\" path/to/your-skill --pretty"
+fi
+if has_skill agent-work-readiness; then
+  echo "  python \"\$HOME/.cursor/skills/agent-work-readiness/scripts/readiness_gates.py\" path/to/work-package --pretty"
+fi

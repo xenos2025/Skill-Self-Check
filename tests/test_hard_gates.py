@@ -144,6 +144,51 @@ class ProductSkillTests(unittest.TestCase):
             [],
         )
 
+    def test_out_json_writes_same_utf8_report_as_stdout(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "reports" / "hard-gates.json"
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    str(PRODUCT_SKILL),
+                    "--out-json",
+                    str(output),
+                    "--pretty",
+                ],
+                capture_output=True,
+                check=False,
+            )
+            stdout_report = json.loads(proc.stdout.decode("utf-8"))
+            stored_bytes = output.read_bytes()
+            stored_report = json.loads(stored_bytes.decode("utf-8"))
+        self.assertEqual(proc.returncode, 0, proc.stderr.decode("utf-8"))
+        self.assertFalse(stored_bytes.startswith(b"\xef\xbb\xbf"))
+        self.assertEqual(stored_report, stdout_report)
+
+    def test_out_json_is_refused_inside_audited_skill(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = write_skill(Path(tmp), "zh-skill", ZH_SKILL)
+            output = skill / "hard-gates.json"
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    str(skill),
+                    "--out-json",
+                    str(output),
+                ],
+                capture_output=True,
+                check=False,
+            )
+            output_exists = output.exists()
+        self.assertEqual(proc.returncode, 2)
+        self.assertFalse(output_exists)
+        self.assertIn(
+            "--out-json must stay outside the audited Skill",
+            proc.stderr.decode("utf-8"),
+        )
+
     def test_plain_language_and_technical_views_are_wired(self) -> None:
         skill_text = (PRODUCT_SKILL / "SKILL.md").read_text(encoding="utf-8")
         for name in (

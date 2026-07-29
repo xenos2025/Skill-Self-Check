@@ -1625,6 +1625,43 @@ def force_utf8_streams() -> None:
             pass
 
 
+def emit_report(
+    report: dict,
+    *,
+    pretty: bool,
+    out_json: Path | None,
+    skill_dir: Path,
+) -> bool:
+    """Print the report and optionally persist the same UTF-8 JSON."""
+    dump = json.dumps(
+        report,
+        ensure_ascii=False,
+        indent=2 if pretty else None,
+    )
+    if out_json is not None:
+        output = out_json.expanduser().resolve()
+        target = skill_dir.expanduser().resolve()
+        if output == target or output.is_relative_to(target):
+            print(dump)
+            print(
+                "hard_gates: --out-json must stay outside the audited Skill",
+                file=sys.stderr,
+            )
+            return False
+        try:
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(dump + "\n", encoding="utf-8")
+        except OSError as exc:
+            print(dump)
+            print(
+                f"hard_gates: could not write --out-json: {exc}",
+                file=sys.stderr,
+            )
+            return False
+    print(dump)
+    return True
+
+
 def main() -> int:
     force_utf8_streams()
     parser = argparse.ArgumentParser(description="Hard-gate skill checker")
@@ -1632,60 +1669,72 @@ def main() -> int:
     parser.add_argument(
         "--pretty", action="store_true", help="Pretty-print JSON"
     )
+    parser.add_argument(
+        "--out-json",
+        type=Path,
+        help="Also write the same report as UTF-8 JSON outside the audited Skill",
+    )
     args = parser.parse_args()
     if not args.skill_dir.exists():
-        print(
-            json.dumps(
+        report = {
+            "schema_version": SCHEMA_VERSION,
+            "audit_level": "static_contract_check",
+            "target_platform": "generic",
+            "error": f"path not found: {args.skill_dir}",
+            "gate_verdict": "fail",
+            "gate_reasons": [
                 {
-                    "schema_version": SCHEMA_VERSION,
-                    "audit_level": "static_contract_check",
-                    "target_platform": "generic",
-                    "error": f"path not found: {args.skill_dir}",
-                    "gate_verdict": "fail",
-                    "gate_reasons": [
-                        {
-                            "code": "target_path_not_found",
-                            "message": "Target path was not available for static checks",
-                        }
-                    ],
-                    "gate_policy": {
-                        "id": GATE_POLICY_ID,
-                        "required_checks": {},
-                        "critical_findings_block": True,
-                        "package_health_required": True,
-                        "scoring_effect": "none",
-                    },
-                    "scores": {
-                        "scoring_effect": "informational_only",
-                        "basic_usable": {"score": 0, "max": 5},
-                        "contract_clarity": {"score": 0, "max": 5},
-                        "support_kit": {
-                            "score": 0,
-                            "max": 0,
-                            "modules": {},
-                            "kit_complete": False,
-                        },
-                        "ship_floor_met": False,
-                    },
-                    "deprecated_fields": {
-                        "scores.ship_floor_met": {
-                            "deprecated": True,
-                            "replacement": "gate_verdict",
-                            "compatibility": "true only when gate_verdict=pass",
-                            "planned_removal": "next major schema version",
-                        }
-                    },
-                    "limitations": ["target path was not available for static checks"],
+                    "code": "target_path_not_found",
+                    "message": "Target path was not available for static checks",
                 }
-            ),
-            flush=True,
-        )
+            ],
+            "gate_policy": {
+                "id": GATE_POLICY_ID,
+                "required_checks": {},
+                "critical_findings_block": True,
+                "package_health_required": True,
+                "scoring_effect": "none",
+            },
+            "scores": {
+                "scoring_effect": "informational_only",
+                "basic_usable": {"score": 0, "max": 5},
+                "contract_clarity": {"score": 0, "max": 5},
+                "support_kit": {
+                    "score": 0,
+                    "max": 0,
+                    "modules": {},
+                    "kit_complete": False,
+                },
+                "ship_floor_met": False,
+            },
+            "deprecated_fields": {
+                "scores.ship_floor_met": {
+                    "deprecated": True,
+                    "replacement": "gate_verdict",
+                    "compatibility": "true only when gate_verdict=pass",
+                    "planned_removal": "next major schema version",
+                }
+            },
+            "limitations": ["target path was not available for static checks"],
+        }
+        if not emit_report(
+            report,
+            pretty=args.pretty,
+            out_json=args.out_json,
+            skill_dir=args.skill_dir,
+        ):
+            return 2
         print("hard_gates: path not found", file=sys.stderr)
         return 1
 
     report = check_skill(args.skill_dir)
-    dump = json.dumps(report, ensure_ascii=False, indent=2 if args.pretty else None)
-    print(dump)
+    if not emit_report(
+        report,
+        pretty=args.pretty,
+        out_json=args.out_json,
+        skill_dir=args.skill_dir,
+    ):
+        return 2
     print(
         f"hard_gates: gate={report['gate_verdict']} · "
         f"critical={report['counts']['critical']} · "

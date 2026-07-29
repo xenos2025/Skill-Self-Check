@@ -85,8 +85,22 @@ foreach ($Skill in $Skills) {
 }
 
 Write-Host "Requires Python 3.10+ (stdlib only). Try:"
-Write-Host "  python `"$HOME\.cursor\skills\skill-self-check\scripts\run_full_audit.py`" path\to\your-skill --out-dir path\outside\the\repo --pretty"
-Write-Host "  python `"$HOME\.cursor\skills\skill-self-check\scripts\hard_gates.py`" path\to\your-skill --pretty"
-Write-Host "  python `"$HOME\.cursor\skills\skill-ship-safety\scripts\ship_safety.py`" path\to\your-skill --pretty"
-Write-Host "  python `"$HOME\.cursor\skills\agent-work-readiness\scripts\readiness_gates.py`" path\to\work-package --pretty"
-Write-Host "  python `"$HOME\.cursor\skills\skill-growth-scorecard\scripts\profile_engine.py`" --readiness readiness.json --out-html scorecard.html"
+if ($Skills -contains "skill-self-check") {
+    Write-Host "  python `"$HOME\.cursor\skills\skill-self-check\scripts\hard_gates.py`" path\to\your-skill --out-json `"$HOME\Documents\skill-audits\hard-gates.json`" --pretty"
+}
+if ($Skills -contains "skill-growth-scorecard") {
+    Write-Host "  python `"$HOME\.cursor\skills\skill-growth-scorecard\scripts\profile_engine.py`" --hard-gates `"$HOME\Documents\skill-audits\hard-gates.json`" --out-html `"$HOME\Documents\skill-audits\scorecard.html`""
+}
+if (
+    $Skills -contains "skill-self-check" -and
+    $Skills -contains "skill-ship-safety" -and
+    $Skills -contains "skill-growth-scorecard"
+) {
+    Write-Host "  compatibility full route: python `"$HOME\.cursor\skills\skill-self-check\scripts\run_full_audit.py`" path\to\your-skill --out-dir path\outside\the\repo --pretty"
+}
+if ($Skills -contains "skill-ship-safety") {
+    Write-Host "  python `"$HOME\.cursor\skills\skill-ship-safety\scripts\ship_safety.py`" path\to\your-skill --pretty"
+}
+if ($Skills -contains "agent-work-readiness") {
+    Write-Host "  python `"$HOME\.cursor\skills\agent-work-readiness\scripts\readiness_gates.py`" path\to\work-package --pretty"
+}

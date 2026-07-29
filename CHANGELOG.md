@@ -13,6 +13,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   numeric score thresholds as the blocking source of truth. Scores carry
   `scoring_effect=informational_only`; `scores.ship_floor_met` remains a
   deprecated one-generation compatibility alias.
+- `hard_gates.py --out-json` writes the same report as explicit UTF-8 JSON,
+  creates its parent directory, and refuses to write inside the audited Skill.
+  This makes JSON reuse reliable across PowerShell versions without shell
+  redirection encoding differences.
 - One-way optional routing: `skill-self-check` now completes a standalone fast
   audit first, routes deep model review only on an explicit request, and routes
   existing audit JSON to `skill-growth-scorecard` only for explicit scorecard /

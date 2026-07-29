@@ -88,9 +88,12 @@ If there is any chance the user will say 「按意见改」, keep this run as th
 **baseline** for Pass 7 — save the stdout JSON to a file outside the target:
 
 ```bash
-python scripts/hard_gates.py /absolute/path/to/target-skill > /private/path/baseline.json
+python scripts/hard_gates.py /absolute/path/to/target-skill \
+  --out-json /private/path/baseline.json --pretty
 ```
 
+- `--out-json` writes the same report as UTF-8 JSON and refuses a destination
+  inside the audited Skill. Keep real reports outside the source repository too.
 - Read **stdout JSON** as the source of truth for `gate_verdict`,
   `gate_reasons`, scores, and script findings.
 - Stderr is a gate/count summary for humans.

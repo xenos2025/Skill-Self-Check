@@ -8,24 +8,25 @@
 
 ## Path A — Personal skill (recommended)
 
-Available in all projects:
+Install the standalone core in all projects:
 
 ```powershell
 # Windows
-./install.ps1
+./install.ps1 -Skills skill-self-check
 # or
-./install.ps1 -Force
+./install.ps1 -Skills skill-self-check -Force
 ```
 
 ```bash
 # macOS / Linux
 chmod +x install.sh
-./install.sh
+./install.sh --skills skill-self-check
 # or
-./install.sh --force
+./install.sh --skills skill-self-check --force
 ```
 
-Default destinations:
+Omit `-Skills` / `--skills` only when you want the complete optional suite.
+The default all-suite destinations are:
 
 - `~/.cursor/skills/skill-self-check`
 - `~/.cursor/skills/skill-ship-safety`
@@ -37,14 +38,15 @@ Default destinations:
 Shared with anyone using the repo:
 
 ```powershell
-./install.ps1 -Project .
+./install.ps1 -Project . -Skills skill-self-check
 ```
 
 ```bash
-./install.sh --project .
+./install.sh --project . --skills skill-self-check
 ```
 
-Destinations:
+The core destination is `<project>/.cursor/skills/skill-self-check`. Omit the
+skill selector to install all four destinations:
 
 - `<project>/.cursor/skills/skill-self-check`
 - `<project>/.cursor/skills/skill-ship-safety`
@@ -55,6 +57,11 @@ Destinations:
 
 ```bash
 cp -R skills/skill-self-check ~/.cursor/skills/skill-self-check
+```
+
+Optional enhancements:
+
+```bash
 cp -R skills/skill-ship-safety ~/.cursor/skills/skill-ship-safety
 cp -R skills/agent-work-readiness ~/.cursor/skills/agent-work-readiness
 cp -R skills/skill-growth-scorecard ~/.cursor/skills/skill-growth-scorecard
@@ -75,25 +82,37 @@ Run the standalone fast deterministic gate:
 
 ```bash
 python ~/.cursor/skills/skill-self-check/scripts/hard_gates.py \
-  path/to/any-skill --pretty
+  path/to/any-skill \
+  --out-json "$HOME/Documents/skill-audits/first-run/hard-gates.json" \
+  --pretty
 ```
 
 Read `gate_verdict`, `gate_reasons`, every Critical, and the highest-priority
 Should-fix items. Numeric scores are informational only.
 
-Only when scorecards were explicitly requested and the optional Skills are
-installed, run the full route:
+Only when a scorecard was explicitly requested and the optional scorecard
+Skill is installed, reuse the saved JSON:
 
 ```bash
-python ~/.cursor/skills/skill-self-check/scripts/run_full_audit.py \
-  path/to/any-skill \
-  --out-dir "$HOME/Documents/skill-audits/first-run" \
+python ~/.cursor/skills/skill-growth-scorecard/scripts/profile_engine.py \
+  --hard-gates "$HOME/Documents/skill-audits/first-run/hard-gates.json" \
+  --out-json "$HOME/Documents/skill-audits/first-run/growth-profile.json" \
+  --out-html "$HOME/Documents/skill-audits/first-run/growth-scorecard.html" \
   --pretty
 ```
 
 The output directory must be outside the audited Skill and its source
-repository. The result includes `audit-manifest.json`,
-`personal-scorecard.html`, and `project-scorecard.html`.
+repository. The core audit remains complete if the scorecard Skill is absent.
+
+The compatibility full runner remains available when an explicit request
+requires optional checks plus matched personal/project HTML:
+
+```bash
+python ~/.cursor/skills/skill-self-check/scripts/run_full_audit.py \
+  path/to/any-skill \
+  --out-dir "$HOME/Documents/skill-audits/full-report" \
+  --pretty
+```
 
 Or against the bundled fixture from this repo:
 
