@@ -71,7 +71,18 @@ platform-specific.
 
 ## Verify
 
-Run the full read-only audit and create both scorecards:
+Run the standalone fast deterministic gate:
+
+```bash
+python ~/.cursor/skills/skill-self-check/scripts/hard_gates.py \
+  path/to/any-skill --pretty
+```
+
+Read `gate_verdict`, `gate_reasons`, every Critical, and the highest-priority
+Should-fix items. Numeric scores are informational only.
+
+Only when scorecards were explicitly requested and the optional Skills are
+installed, run the full route:
 
 ```bash
 python ~/.cursor/skills/skill-self-check/scripts/run_full_audit.py \
@@ -83,13 +94,6 @@ python ~/.cursor/skills/skill-self-check/scripts/run_full_audit.py \
 The output directory must be outside the audited Skill and its source
 repository. The result includes `audit-manifest.json`,
 `personal-scorecard.html`, and `project-scorecard.html`.
-
-To run only the structure gate:
-
-```bash
-python ~/.cursor/skills/skill-self-check/scripts/hard_gates.py \
-  path/to/any-skill --pretty
-```
 
 Or against the bundled fixture from this repo:
 

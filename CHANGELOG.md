@@ -8,19 +8,38 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Explicit deterministic gate contract in `hard_gates.py` schema 1.4:
+  `gate_verdict`, structured `gate_reasons`, and named required checks replace
+  numeric score thresholds as the blocking source of truth. Scores carry
+  `scoring_effect=informational_only`; `scores.ship_floor_met` remains a
+  deprecated one-generation compatibility alias.
+- One-way optional routing: `skill-self-check` now completes a standalone fast
+  audit first, routes deep model review only on an explicit request, and routes
+  existing audit JSON to `skill-growth-scorecard` only for explicit scorecard /
+  profile / HTML requests. The other three shipped Skills are optional
+  enhancements and are never required for the core audit.
+- The former root-level business report template is now the focused
+  `references/plain-language-response.md` contract. It translates the core
+  gate and ranked findings without pulling scorecard, safety, readiness, token,
+  or runtime fields into the default route.
+- Scorecard compatibility parsing prefers `gate_verdict` and identifies legacy
+  fallback to `scores.ship_floor_met`. Profile schema/ruleset 0.6 and suite
+  schema 0.5 preserve the upstream gate alongside informational scores.
 - Closed-loop fix verification: `skill-self-check/scripts/verify_fix.py` compares
   a Skill against the `hard_gates.py` JSON captured before the edits and reports
-  score movement, resolved / introduced / persisting findings, ship-floor and
+  score movement, resolved / introduced / persisting findings, gate and
   package-health transitions, and estimated token savings. Findings that only
   disappear because a check stopped applying no longer read as progress, and
   dimensions whose maximum changed are marked `not_comparable` instead of being
   reported as a gain or a drop. Exit code 1 on a hard regression (new Critical,
-  severity escalation, lost ship floor, or a score drop); `--strict` also fails
+  severity escalation, or `gate_verdict` regression); score movement is
+  informational. `--strict` also fails
   on newly surfaced non-critical findings. UTF-16 baselines produced by
   PowerShell redirection are accepted.
 - `skill-self-check` Pass 7 (fix verification) wired into `SKILL.md`,
-  `CHECKLIST.md` (checks 7.1–7.5), and a before/after table in both report
-  templates, so "已修复" has to come from a re-run rather than from memory.
+  `CHECKLIST.md` (checks 7.1–7.5), the technical report, and the plain-language
+  response contract, so "已修复" has to come from a re-run rather than from
+  memory.
 - `skill-self-check/references/fix-templates.md`: paste-ready rewrites for every
   mechanical finding (`EFF.1`–`EFF.3`, `PKG.1`–`PKG.7`), including which fixes
   the model writes itself and which need the user to move or delete files.
@@ -39,7 +58,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Code, WorkBuddy, and Coze listed as not tested yet (not a certification).
 - Red Flags sections on `agent-work-readiness` and `skill-growth-scorecard` so
   skip-prone discipline steps have explicit observable failure signals.
-- `skill-self-check/scripts/run_full_audit.py`: one read-only command produces
+- `skill-self-check/scripts/run_full_audit.py`: an explicit read-only full route produces
   matched personal/project offline scorecards, source JSON, and a before/after
   target fingerprint manifest; real reports are refused inside the target or
   its source repository.
@@ -113,13 +132,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Default self-check output is now focused: gate verdict and reasons, every
+  deterministic Critical, at most three Should-fix items, and paste-ready
+  changes. Dual reports, PDCA×SMART, growth profiles, and HTML are no longer
+  default completion requirements.
 - README: beginner path now includes fix verification (`verify_fix.py`) and
   spells out enterprise mainline vs optional advanced audit; not a full rewrite.
-- Scorecards and self-check docs use a **dual track**: enterprise mainline
-  (usable business Skill employee — package health, ship floor, static safety,
+- Scorecards and self-check docs use a **dual track** after the explicit core
+  route: enterprise mainline
+  (usable business Skill employee — package health, core gate, static safety,
   plain next practice) vs optional **advanced audit** (behavior JSON, failure
   recovery, portable contract, two-platform fingerprints). Growth profile
-  schema/ruleset **0.5**: after ship floor, root `verdict` is
+  schema/ruleset **0.6**: after the core gate, root `verdict` is
   `ready_for_controlled_use` without behavior evidence; author steps move to
   `advanced_audit.next_quest`. Lv4–Lv5 labels marked as author track. HTML
   shows a separate advanced-audit panel. Learning quests drop Harness /
@@ -167,7 +191,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   runner supplies behavioral evidence.
 - Installers reject drive/filesystem roots, the user home, the repository
   root, and destinations whose final directory name does not match the skill.
-- Static ship-floor wording now means "ready for controlled trial", not proof
+- Static core-gate wording means "ready for controlled trial", not proof
   of behavioral safety or permission to send.
 - Pass 3 now splits gaps: wording/structure are rewritten by the model, while
   triggers, exclusions, acceptance evidence and escalation are asked (one
@@ -175,7 +199,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Report template’s closing sections are Chinese, matching the rest of the report
 - Boss-facing scores are now **three lights**: green `basic_usable`, amber
   `contract_clarity`, blue `support_kit` (资料/案例/落地记忆/脚本; N/A allowed;
-  does not block ship floor). Diagram `05-three-lights.svg` replaces two-lights.
+  all informational and unable to override `gate_verdict`). Diagram
+  `05-three-lights.svg` explains the gate-first reading order.
 
 ### Fixed
 

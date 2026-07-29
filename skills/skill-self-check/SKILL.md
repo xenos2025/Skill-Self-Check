@@ -1,29 +1,39 @@
 ---
 name: skill-self-check
 description: >-
-  Reviews a newly written or edited Agent Skill and returns ranked fix suggestions.
-  Use when a user asks to audit, review, self-check, score, or explain what must
-  change in a drafted Skill before it is shared or used.
+  Runs a fast deterministic audit of a newly written or edited Agent Skill and
+  returns ranked hard-gate fixes. Use when a user asks to audit, review,
+  self-check, repair blockers, or explain what must change before a Skill is
+  shared or used. Route explicit scorecard or growth-profile requests to the
+  optional skill-growth-scorecard after this audit completes.
 ---
 
 # Skill Self-Check
 
-Static review of a target skill. Output a ranked fix report. Edit the target only when the user asks to apply fixes.
+Fast static review of a target skill. Output deterministic gate status and
+ranked fixes. Edit the target only when the user asks to apply fixes.
 
 **Sources fused (plain-language checks):** Matt Pocock predictability levers, Addy Osmani skill anatomy / verification, Cursor `create-skill` hard rules, plus **PDCA** and **SMART** outcome contracts. Full items live in [CHECKLIST.md](CHECKLIST.md); mapping in [references/pdca-smart.md](references/pdca-smart.md).
 
-**Authority split:** Hard gates + scores = **script** ([scripts/hard_gates.py](scripts/hard_gates.py)); fix verification = **script** ([scripts/verify_fix.py](scripts/verify_fix.py)). Qualitative judgment (including PDCA/SMART) = model. Script Critical pass/fail, numeric scores, and before/after deltas stay authoritative.
+**Authority split:** Deterministic gate status and script findings =
+**script** ([scripts/hard_gates.py](scripts/hard_gates.py)); fix verification =
+**script** ([scripts/verify_fix.py](scripts/verify_fix.py)). Numeric scores are
+script-produced but informational only. Qualitative review (including
+PDCA/SMART) is optional, model-owned, and cannot change `gate_verdict`, script
+severity, or the process exit code.
 
 ## When to use
 
 - User finished drafting a skill and wants a review
 - User says "自检这个 skill" / "review my skill" / "skill self-check"
+- User asks what blocks a Skill and wants paste-ready hard-gate fixes
 - Before installing or sharing a personal/project skill
 
 ## When NOT to use
 
 - Creating a skill from scratch (use create-skill)
 - Asking for behavioral eval / multi-agent smoke tests (not in this skill yet)
+- Generating a scorecard without first producing deterministic audit JSON
 
 ## Check axes
 
@@ -34,9 +44,12 @@ This audit always reports on:
   filename/residue hygiene, duplicate resources, and static installability
   (script; blocks maturity assessment)
 - **Hard structure** — frontmatter, name, description shape (script)
-- **Basic usable score** — 0–5 ship floor (script)
-- **Contract clarity score** — 0–5 including named check axes / when-not / verification (script)
-- **Support kit score** — references / examples / memory / scripts; N/A allowed (script; does not block ship floor)
+- **Explicit gate** — valid package, named required checks, and no script
+  Criticals; independent of numeric scores (script; blocking)
+- **Basic usable score** — 0–5 informational diagnostic (script)
+- **Contract clarity score** — 0–5 informational diagnostic (script)
+- **Support kit score** — references / examples / memory / scripts; N/A
+  allowed; informational only (script)
 - **Predictability** — completion criteria, no-op, negation, sprawl (model + script hints)
 - **Anatomy** — workflow quality, rationalizations (model + script hints)
 - **PDCA loop** — Plan / Do / Check / Act all explicit (model; see references)
@@ -60,45 +73,10 @@ This audit always reports on:
 
 ## Process
 
-### 新手入口 — 一次生成两份成绩单（推荐）
+### Default — fast hard-gate audit
 
-四个正式 Skill 已一起安装时，优先运行：
-
-```bash
-python scripts/run_full_audit.py /absolute/path/to/target-skill \
-  --out-dir /private/path/target-skill-audit \
-  --pretty
-```
-
-Windows 可以使用 `py -3`。真实输出目录必须在被检查 Skill 和其源码仓库
-之外；脚本会拒绝把报告放进可能同步到 GitHub 的目录。它只读取目标，不执行
-目标 Skill，也不联网，并生成：
-
-- `personal-scorecard.html`：个人能力、等级、优势和下一项练习；
-- `project-scorecard.html`：项目分数、风险、证据和整改优先级；
-- 两份成绩单共用的 JSON 来源，以及证明审计前后目标未变化的
-  `audit-manifest.json`。
-
-一键入口先读取 `hard-gates.json.package_health`。如果状态为
-`invalid_skill_package`，仍生成完整问题清单和原始局部诊断，但必须停止
-Lv0–Lv5、能力类型、徽章和“可交付”结论；两份 HTML 都要明确显示
-“不是标准 Skill 包 · 暂停成熟度评分”。
-
-可选加上 `--work-package 工作包.json`。
-
-**高级审计（可选，作者轨道）：** 另加 `--behavior 可信行为证据.json` 才会解锁
-成长成绩单 Lv3+ / 跨平台指纹。企业默认认证**不要求**这份文件：Ship floor
-已过且无 Critical 时，成绩单主结论仍是「可受控试用」；缺行为证据只记在
-`advanced_audit` 旁注里。
-
-目标未变化只证明**本次审计只读**，不能替代目标 Skill 在真实业务里的试跑验收。
-
-**完成标准：** 两份 HTML 指向同一个 Skill，项目成绩单保留原始分数，
-`audit-manifest.json` 中 `target.unchanged=true`。
-
-### Pass 0 — Run hard-gate script (required)
-
-From this skill's directory (or via absolute path to the script):
+Run the bundled checker directly. This Skill is independently installable and
+must not require the other shipped Skills:
 
 ```bash
 python scripts/hard_gates.py /absolute/path/to/target-skill --pretty
@@ -113,43 +91,63 @@ If there is any chance the user will say 「按意见改」, keep this run as th
 python scripts/hard_gates.py /absolute/path/to/target-skill > /private/path/baseline.json
 ```
 
-如果已经使用上面的新手入口，直接读取其 `hard-gates.json`，不要为了相同证据
-重复运行。
-
-- Read **stdout JSON** as the source of truth for scores and script findings.
-- Stderr one-liner is for humans; parse scores from stdout JSON only.
-- Exit code 1 means ship floor not met — still continue the review.
+- Read **stdout JSON** as the source of truth for `gate_verdict`,
+  `gate_reasons`, scores, and script findings.
+- Stderr is a gate/count summary for humans.
+- Exit code 1 means the deterministic gate did not pass — still report fixes.
 - Read `package_health` before interpreting any score. Only
   `status=valid_skill_package` and `assessable=true` unlock maturity scoring.
   An invalid package keeps raw scores as partial file diagnostics only.
-- `scores.support_kit` is the blue light: materials / examples / memory / scripts. `kit_complete=false` is Should fix, not Critical.
+- Read `gate_verdict` before the deprecated compatibility alias
+  `scores.ship_floor_met`. Numeric scores have
+  `scoring_effect=informational_only`; the explicit gate alone controls exit.
+- `scores.support_kit` describes materials / examples / memory / scripts.
+  `kit_complete=false` is Should fix, not Critical.
 - `operational_metrics.token_consumption` and
   `operational_metrics.runtime_duration` are informational dimensions. They do
-  not change `ship_floor_met` or the three source scores.
+  not change `gate_verdict` or the three source scores.
 
-**Completion criterion:** JSON parsed; `package_health`,
-`scores.basic_usable`, `scores.contract_clarity`, `scores.support_kit`, and
-`findings` are available. Leave numeric scores exactly as the script emitted
-them, and translate them into maturity only when package health is valid.
+**Completion criterion:** JSON parsed; `package_health`, `gate_verdict`,
+`gate_reasons`, and `findings` are available.
 
-### Pass 1 — Hard gates (script-owned)
+### Rank and explain deterministic findings
 
 Map script `findings` with `severity: critical|should_fix|nice` into the report.  
 You may **explain** and suggest rewrites; you may **not** mark a script Critical as passed.
+Use [references/plain-language-response.md](references/plain-language-response.md)
+to translate the source result without creating a second audit or scorecard.
 
 `PKG.*` and `EFF.*` are mechanical: the fix does not depend on the user's
 business, so write the rewrite yourself using
 [references/fix-templates.md](references/fix-templates.md) instead of asking.
 
-**Completion criterion:** Every script Critical appears under Critical with 建议改法.
+Default output:
 
-### Pass 2 — Predictability (model)
+1. Gate verdict and plain-language reasons.
+2. Every script Critical, each with 问题 → 为什么 → 可直接采用的建议改法.
+3. At most three highest-priority Should fix findings.
+4. One next action: say 「按意见改」 to authorize edits, or explicitly ask for
+   deep audit / scorecard.
+
+**Fast-mode completion criterion:** Every script Critical is covered, no more
+than three Should fix items are shown, and each displayed finding has an
+actionable fix. Stop here unless the user explicitly requests another route.
+
+### Optional route — deep qualitative audit
+
+Run the following passes only when the user explicitly asks for a deep audit,
+Predictability, Anatomy, PDCA, or SMART review. Label every model-owned item
+with `source: model_review` and `priority: high|medium|low`. Model review is
+advisory: it cannot add script Criticals, change `gate_verdict`, alter counts,
+or change the exit code.
+
+#### Predictability
 
 Use [CHECKLIST.md](CHECKLIST.md) Pass 2. Incorporate script hints (no-op / negation density) but judge completion-criterion quality and leading words yourself.
 
 **Completion criterion:** Each finding names the failure mode in plain language.
 
-### Pass 3 — Anatomy (model)
+#### Anatomy
 
 Use checklist Pass 3. If script already flagged missing Verification / When NOT / check axes, skip empty restatement — add paste-ready rewrites instead.
 
@@ -160,7 +158,7 @@ Split the gaps before writing rewrites:
 
 **Completion criterion:** Contract gaps have concrete section text the user can paste, and every decision-owned gap is either answered by the user or marked `unknown — 待用户确认`.
 
-### Pass 4 — Prune (model)
+#### Prune
 
 Use checklist Pass 4. Trust script `line_count`, time-sensitive / path hints,
 and the efficiency guards (`EFF.1` unguarded loop, `EFF.2` unbounded
@@ -172,51 +170,47 @@ forms for each ID.
 **Completion criterion:** Concrete cut-or-move suggestions listed; every
 `EFF.*` finding has a paste-ready bound or split.
 
-### Pass 5 — PDCA + SMART (+ 5W2H if interview skill)
+#### PDCA + SMART (+ 5W2H if interview skill)
 
 Read [references/pdca-smart.md](references/pdca-smart.md). Use checklist Pass 5.
 
 1. Map the target skill onto **Plan → Do → Check → Act** (quote evidence for each).
 2. Judge the outcome contract against **SMART** (S/M/A/R/T as defined there; T = run-bound exit, not fake calendar dates).
-3. Fill the PDCA×SMART matrix in the report. Promote gaps to Critical / Should fix / Nice with paste-ready fixes.
+3. Fill the PDCA×SMART matrix in the report. Assign advisory priority with
+   paste-ready fixes while preserving the deterministic gate.
 4. If the skill interviews clients / gathers requirements: also apply checklist **5.10–5.12 (5W2H)** — one clear question at a time; no slogan answers.
 
 **Completion criterion:** Matrix filled; every `missing` cell has a finding or an explicit waiver note; interview skills have 5W2H coverage noted.
 
 This self-check skill itself follows the loop: Plan (When + axes) → Do (passes 0–5) → Check (Verification) → Act (offer 「按意见改」, rationalizations).
 
-## Write both reports
+### Optional route — scorecard
 
-Create both views from the same script result and qualitative findings:
+Only when the user explicitly asks for a score, scorecard, growth profile,
+personal/project profile, printable HTML, or full report:
 
-- [REPORT-BUSINESS-TEMPLATE.md](REPORT-BUSINESS-TEMPLATE.md) — plain-language
-  version for owners, operators, and other non-technical readers.
-- [REPORT-TEMPLATE.md](REPORT-TEMPLATE.md) — technical version with finding
-  IDs, script fields, evidence, and reproduction details.
+1. Finish the fast audit once and preserve its JSON.
+2. If `skill-growth-scorecard` is installed, route that existing JSON to it.
+   Do not rerun the same target checks.
+3. Treat `skill-ship-safety`, `agent-work-readiness`, and behavior evidence as
+   optional enhancements. This core audit remains valid when they are absent.
+4. If `skill-growth-scorecard` is not installed, finish the core audit, save
+   the reusable JSON outside the target/repository when an output was requested,
+   and state that the optional scorecard route is unavailable. Do not
+   auto-install anything; keep the missing scorecard state explicit.
 
-Rules:
+The compatibility full runner remains available only as an explicit route:
 
-- Keep scores, finding counts, finding IDs, and pass/fail conclusion identical
-  across both reports
-- Put **script scores** in the technical 分数表 verbatim from JSON
-- Translate technical terms in the business report: Critical → 必须先解决,
-  Should fix → 建议尽快改进, ship floor → 基础使用门槛
-- Keep raw JSON and bare exit codes out of the business report; say what they mean instead
-- Fill **PDCA×SMART** matrix (Pass 5) — model-owned, not inventing script scores
-- Rank findings: Critical → Should fix → Nice
-- Each finding: **问题** → **为什么** → **建议改法** (paste-ready when helpful)
-- Label source: `script` vs `model` on each finding
-- Default: report only. Offer: "说「按意见改」我可以代改 Critical / Should fix"
-- If decision-owned gaps remain, also offer: "说「帮我补」我一次问你一个问题，把这些补齐" — follow [references/gap-questions.md](references/gap-questions.md): one question at a time, max three per round, recommended answer first
-- Answers become **待确认文本 in the report**. Write them into the target `SKILL.md` only under the same gate as 「按意见改」
-- If `ship_floor_met` is false: tell the user to fix Critical before relying on real-world observation to polish
-- If ship floor is true but PDCA **Check** or **Act** is missing: say so — usable ≠ closed-loop
+```bash
+python scripts/run_full_audit.py /absolute/path/to/target-skill \
+  --out-dir /private/path/target-skill-audit \
+  --pretty
+```
 
-**Completion criterion (skill done):** Both reports share one conclusion and
-finding set; the business report gives one plain-language next action; the
-technical report includes script scores, PDCA×SMART, all script Criticals with
-rewrites, Pass 2–5 coverage, and an offer to apply fixes or interview for
-decision-owned gaps.
+Real scorecard output must stay outside the audited Skill and source
+repository. [REPORT-TEMPLATE.md](REPORT-TEMPLATE.md) remains a compatibility
+reference for explicit deep/full technical reports; it is not a default
+completion requirement.
 
 ## Pass 7 — 改完复检（only after fixes are applied）
 
@@ -241,15 +235,17 @@ Read the result:
 | `verdict: improved` | 有改善，没有硬回退 | 交付，并列出 `introduced` 里新冒出来的项 |
 | `verdict: unchanged` | 分数与 finding 都没动 | 改动没落盘，或没被任何检查覆盖——查清楚再说修好了 |
 | `verdict: mixed` | 有改有坏 | 先处理 `new_critical`，本 Pass 最多再走一轮；第二轮仍是 `mixed` 就停下，把剩余项列成待办交给用户 |
-| `verdict: regressed` | 新增 Critical 或分数下降 | 回滚这次改动 |
+| `verdict: regressed` | 新增 Critical 或 `gate_verdict` 回退 | 回滚这次改动 |
+| `gates.gate_verdict` | 新旧确定性门禁 | 这是复检阻断状态的权威来源 |
 | `findings.introduced` | 复检才出现的项 | 逐条说明；`newly_surfaced_non_critical` 常是新适用的检查，不是你改坏了 |
+| `scores.*.direction` | 信息性分数变化 | 可解释趋势，但不能改变复检结论 |
 | `scores.*.direction: not_comparable` | 该维度满分变了 | 说明适用范围变化，不要谎报涨跌 |
 
 `introduced` 里的非 Critical 项不阻断交付，但必须出现在报告里。CI 想把它们也
 当失败，加 `--strict`。
 
-Then put a before/after table in both reports: 三项分数、ship floor、
-`package_health`、已解决数、新增数、剩余 Critical。
+Then put a before/after table in the response: `gate_verdict`,
+`package_health`、已解决数、新增数、剩余 Critical；三项分数放在可选信息区。
 
 **Completion criterion:** `verify_fix.py` ran against the pre-fix baseline, the
 report shows the before/after table, and any `introduced` finding is either
@@ -259,29 +255,32 @@ fixed or explicitly listed as remaining work. 改完就宣布完成、没有复�
 ## Verification
 
 - [ ] `hard_gates.py` was executed on the target directory
-- [ ] 新手入口生成的真实报告位于目标和源码仓库之外
-- [ ] `audit-manifest.json` 证明审计前后目标未变化
-- [ ] Both reports share the same scores, counts, finding IDs, and conclusion
-- [ ] Technical report scores match JSON exactly
+- [ ] `gate_verdict` and `gate_reasons` were read before deprecated score fields
+- [ ] Every script Critical has a paste-ready fix
+- [ ] No more than three Should fix items appear in the default response
 - [ ] Token consumption states `estimated`, `observed`, or `not_assessed` with scope
 - [ ] Runtime duration is `observed` only with trusted behavior evidence; otherwise `not_measured`
-- [ ] Business report contains no unexplained technical terms
 - [ ] No script Critical was overridden
-- [ ] User was advised whether ship floor is met
-- [ ] PDCA×SMART matrix filled (Plan/Do/Check/Act × S/M/A/R/T notes)
-- [ ] Every PDCA `missing` cell mapped to a finding or dated waiver
-- [ ] Decision-owned gaps were asked, not invented (or left as `unknown — 待用户确认`)
+- [ ] User was advised whether the deterministic gate passed
 - [ ] 应用了修改时：`verify_fix.py` 跑过改前基线，报告含前后对照表
 - [ ] 应用了修改时：复检新增的 finding 已逐条交代（修掉或列为剩余项）
+
+Only for explicitly requested routes:
+
+- [ ] Deep audit: model findings are advisory and labeled `source: model_review`
+- [ ] Deep audit: PDCA×SMART matrix gaps map to advisory priorities
+- [ ] Scorecard: existing audit JSON was consumed as-is; target check invocation count did not increase
+- [ ] Scorecard/full output is outside the target and source repository
+- [ ] Scorecard: source scores, counts, finding IDs, and gate conclusion remain unchanged
 
 ## Common Rationalizations
 
 | Excuse | Reality |
 |--------|---------|
-| "I can judge frontmatter myself" | Numbers and regex gates are script-owned. Run the script. |
-| "Script failed, I'll skip scores" | Still report the error; leave score cells as "script failed". |
-| "Ship floor failed but skill looks fine" | Floor is the rule for 'basic usable'. List Criticals first. |
-| "PDCA/SMART is enterprise fluff" | Here they are evidence mappings (When→Plan, Done when→Measurable, Verification→Check). Empty cells are defects. |
+| "I can judge frontmatter myself" | Deterministic gates are script-owned. Run the script. |
+| "Script failed, I'll estimate the gate" | Report the error and mark `gate_verdict` unavailable. |
+| "The score is high, so the gate passed" | Scores are informational. Read `gate_verdict` and Criticals. |
+| "PDCA/SMART must run every time" | It is an explicit deep-audit route, not default completion work. |
 | "Time-bound needs a calendar date" | For skills, T means run-bound exit (Verification / handoff), unless the domain is truly dated ops. |
 | "User didn't say when NOT to use it — I'll write a sensible default" | Exclusions, triggers and acceptance evidence are the user's business decisions. Ask one question; a plausible invention scores well and still runs wrong. |
 | "Asking is slower, I'll fill everything in" | Ask only decision-owned Critical / Should fix gaps, max three per round. The rest you still rewrite yourself. |
@@ -291,12 +290,13 @@ fixed or explicitly listed as remaining work. 改完就宣布完成、没有复�
 
 ## Red Flags
 
-- Writing a score without running the script
+- Writing a gate verdict without running the script
 - Re-scoring basic_usable after the script
 - Skipping check-axes guidance when script severity is critical
-- Report without PDCA×SMART matrix
+- Running PDCA×SMART or scorecard generation without an explicit request
+- Letting model review change `gate_verdict`, Critical counts, or exit status
 - Calling a skill "done" with no Check (Verification) or Act (fix path)
-- Writing exclusions, triggers or acceptance evidence the user never stated
+- Inventing exclusions, triggers, or acceptance evidence
 - Interrogating the user with a long question list instead of three at a time
 - Claiming findings are fixed without a `verify_fix.py` before/after table
 - Hiding findings that only appeared after the rewrite

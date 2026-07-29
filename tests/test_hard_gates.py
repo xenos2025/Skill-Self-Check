@@ -8,6 +8,7 @@ Run:
 from __future__ import annotations
 
 import json
+import runpy
 import subprocess
 import sys
 import tempfile
@@ -81,12 +82,33 @@ class ProductSkillTests(unittest.TestCase):
     def test_product_skill_meets_ship_floor(self) -> None:
         code, report = run_script(PRODUCT_SKILL)
         self.assertEqual(code, 0, report["findings"])
-        self.assertEqual(report["schema_version"], "1.3")
+        self.assertEqual(report["schema_version"], "1.4")
         self.assertEqual(report["audit_level"], "static_contract_check")
         self.assertEqual(report["target_platform"], "generic")
         self.assertTrue(report["limitations"])
+        self.assertEqual(report["gate_verdict"], "pass")
+        self.assertEqual(report["gate_reasons"], [])
+        self.assertEqual(
+            report["gate_policy"]["id"],
+            "explicit-required-checks-v1",
+        )
+        self.assertTrue(
+            all(
+                item["status"] == "pass"
+                for item in report["gate_policy"]["required_checks"].values()
+            )
+        )
         self.assertEqual(report["scores"]["basic_usable"]["score"], 5)
         self.assertEqual(report["scores"]["contract_clarity"]["score"], 5)
+        self.assertEqual(
+            report["scores"]["scoring_effect"],
+            "informational_only",
+        )
+        self.assertTrue(report["scores"]["ship_floor_met"])
+        self.assertEqual(
+            report["deprecated_fields"]["scores.ship_floor_met"]["replacement"],
+            "gate_verdict",
+        )
         self.assertEqual(report["counts"]["critical"], 0)
         package = report["package_health"]
         self.assertEqual(package["status"], "valid_skill_package")
@@ -122,17 +144,52 @@ class ProductSkillTests(unittest.TestCase):
             [],
         )
 
-    def test_dual_report_templates_are_wired(self) -> None:
+    def test_plain_language_and_technical_views_are_wired(self) -> None:
         skill_text = (PRODUCT_SKILL / "SKILL.md").read_text(encoding="utf-8")
-        for name in ("REPORT-BUSINESS-TEMPLATE.md", "REPORT-TEMPLATE.md"):
+        for name in (
+            "references/plain-language-response.md",
+            "REPORT-TEMPLATE.md",
+        ):
             self.assertTrue((PRODUCT_SKILL / name).is_file())
             self.assertIn(name, skill_text)
+        self.assertFalse(
+            (PRODUCT_SKILL / "REPORT-BUSINESS-TEMPLATE.md").exists()
+        )
 
     def test_bad_fixture_fails_ship_floor(self) -> None:
         code, report = run_script(BAD_FIXTURE)
         self.assertEqual(code, 1)
+        self.assertEqual(report["gate_verdict"], "invalid_skill_package")
+        self.assertTrue(report["gate_reasons"])
         self.assertFalse(report["scores"]["ship_floor_met"])
         self.assertGreater(report["counts"]["critical"], 0)
+
+    def test_gate_policy_is_explicit_and_does_not_read_numeric_score(self) -> None:
+        module = runpy.run_path(str(SCRIPT))
+        evaluate_gate = module["evaluate_gate"]
+        points = {
+            "file_and_frontmatter": True,
+            "name_valid_and_matched": True,
+            "description_voice_and_triggers": True,
+            "body_actionable": True,
+            "verification_or_done_when": False,
+        }
+        verdict, reasons, policy = evaluate_gate(
+            points,
+            [],
+            {
+                "status": "valid_skill_package",
+                "assessable": True,
+            },
+        )
+        self.assertEqual(sum(1 for passed in points.values() if passed), 4)
+        self.assertEqual(verdict, "pass")
+        self.assertEqual(reasons, [])
+        self.assertNotIn(
+            "verification_or_done_when",
+            policy["required_checks"],
+        )
+        self.assertEqual(policy["scoring_effect"], "none")
 
     def test_missing_skill_md_still_emits_json(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

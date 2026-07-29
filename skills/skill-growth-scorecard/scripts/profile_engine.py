@@ -17,8 +17,8 @@ from pathlib import Path
 from typing import Any
 
 
-PROFILE_SCHEMA_VERSION = "0.5"
-RULESET_VERSION = "0.5"
+PROFILE_SCHEMA_VERSION = "0.6"
+RULESET_VERSION = "0.6"
 LEVELS = [
     ("Lv0", "灵感草稿"),
     ("Lv1", "初学者 · 起步创作者"),
@@ -873,6 +873,66 @@ def behavior_platform_count(behavior: dict[str, Any] | None) -> int:
     return int(verified_platform_summary(behavior)["verified_platform_count"])
 
 
+def resolve_hard_gate(
+    hard: dict[str, Any],
+    scores: dict[str, Any],
+) -> dict[str, Any]:
+    """Prefer the explicit gate contract and fall back to legacy reports."""
+    explicit = str(hard.get("gate_verdict") or "").strip().casefold()
+    if explicit in {"pass", "fail", "invalid_skill_package"}:
+        reasons = (
+            hard.get("gate_reasons")
+            if isinstance(hard.get("gate_reasons"), list)
+            else []
+        )
+        return {
+            "verdict": explicit,
+            "source": "gate_verdict",
+            "reasons": reasons,
+        }
+
+    package_health = (
+        hard.get("package_health")
+        if isinstance(hard.get("package_health"), dict)
+        else {}
+    )
+    package_status = str(
+        package_health.get("status") or "not_assessed"
+    ).casefold()
+    if package_status == "invalid_skill_package" or (
+        package_status != "not_assessed"
+        and package_health.get("assessable") is False
+    ):
+        return {
+            "verdict": "invalid_skill_package",
+            "source": "package_health",
+            "reasons": [
+                {
+                    "code": "legacy_invalid_skill_package",
+                    "message": (
+                        "Legacy hard-gates report has invalid package health "
+                        "and no explicit gate_verdict"
+                    ),
+                }
+            ],
+        }
+
+    legacy_pass = bool(scores.get("ship_floor_met"))
+    return {
+        "verdict": "pass" if legacy_pass else "fail",
+        "source": "scores.ship_floor_met",
+        "reasons": [] if legacy_pass else [
+            {
+                "code": "legacy_ship_floor_failed",
+                "message": (
+                    "Legacy hard-gates report has no gate_verdict and "
+                    "scores.ship_floor_met is false"
+                ),
+            }
+        ],
+    }
+
+
 def engineering_profile(
     hard: dict[str, Any] | None,
     safety: dict[str, Any] | None,
@@ -917,6 +977,7 @@ def engineering_profile(
             },
             "findings": [],
             "scores": None,
+            "gate": None,
             "safety": None,
             "operational_metrics": operational_metrics(hard, behavior),
             "package_health": {
@@ -943,6 +1004,7 @@ def engineering_profile(
         hard_scores = (
             hard.get("scores") if isinstance(hard.get("scores"), dict) else {}
         )
+        gate = resolve_hard_gate(hard, hard_scores)
         basic = (
             hard_scores.get("basic_usable")
             if isinstance(hard_scores.get("basic_usable"), dict)
@@ -1048,6 +1110,7 @@ def engineering_profile(
             },
             "findings": raw_findings,
             "scores": {
+                "scoring_effect": "informational_only",
                 "basic_usable": {
                     "score": int_value(basic.get("score")),
                     "max": int_value(basic.get("max"), 5),
@@ -1064,6 +1127,7 @@ def engineering_profile(
                 "enterprise_ready": False,
                 "interpretation": "partial_file_diagnostics_only",
             },
+            "gate": gate,
             "portability": verified_platform_summary(behavior),
             "operational_metrics": operational_metrics(hard, behavior),
             "package_health": {
@@ -1114,6 +1178,8 @@ def engineering_profile(
     support_score = int_value(support.get("score"))
     support_max = int_value(support.get("max"))
     ship_floor = bool(scores.get("ship_floor_met"))
+    gate = resolve_hard_gate(hard, scores)
+    gate_pass = gate["verdict"] == "pass"
 
     safety_verdict = str(safety.get("verdict") if safety else "not_assessed")
     safety_counts = safety.get("counts") if safety and isinstance(safety.get("counts"), dict) else {}
@@ -1185,10 +1251,14 @@ def engineering_profile(
     platform_count = int(platform_summary["verified_platform_count"])
 
     level_ordinal = 0 if basic_score < 3 else 1
+    legacy_score_contract = (
+        basic_score >= 4 and contract_score >= 3
+        if gate["source"] == "scores.ship_floor_met"
+        else True
+    )
     enterprise_ready = (
-        basic_score >= 4
-        and contract_score >= 3
-        and ship_floor
+        gate_pass
+        and legacy_score_contract
         and hard_critical == 0
         and safety_verdict == "static_pass"
         and safety_critical == 0
@@ -1402,6 +1472,7 @@ def engineering_profile(
         "advanced_audit": advanced_audit,
         "findings": critical_findings,
         "scores": {
+            "scoring_effect": "informational_only",
             "basic_usable": {"score": basic_score, "max": basic_max},
             "contract_clarity": {
                 "score": contract_score,
@@ -1411,6 +1482,7 @@ def engineering_profile(
             "ship_floor_met": ship_floor,
             "enterprise_ready": enterprise_ready,
         },
+        "gate": gate,
         "portability": platform_summary,
         "operational_metrics": operational_metrics(hard, behavior),
         "package_health": (

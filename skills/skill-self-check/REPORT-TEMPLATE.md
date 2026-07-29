@@ -3,11 +3,13 @@
 **Target:** `<path/to/skill>/SKILL.md`  
 **Date:** `<YYYY-MM-DD>`  
 **Script:** `python scripts/hard_gates.py <skill-dir>`  
-**Passes covered:** 0 Script · 1 Hard gates · 2 Predictability · 3 Anatomy · 4 Prune · 5 PDCA+SMART · 7 Fix verification（改过才有）
+**Route:** `explicit deep/full report`
+**Passes covered:** 0 Script · 1 Hard gates · optional 2–5 model review · 7 Fix verification（改过才有）
 **Schema:** `<schema_version>` · **Audit level:** `<audit_level>`
 
-> 本报告面向开发、测试和技能维护者。面向业务读者的结论使用
-> `REPORT-BUSINESS-TEMPLATE.md`，两份报告必须共享相同分数、问题编号和结论。
+> 本报告面向开发、测试和技能维护者。需要白话摘要时，按
+> `references/plain-language-response.md` 翻译同一份门禁结果；不得重算或
+> 改写问题数量、编号和结论。
 
 ## Skill 包健康前置门
 
@@ -27,16 +29,29 @@
 
 `<如果 invalid：明确写“以下分数只用于局部文件诊断；不生成成熟度等级、能力类型或交付通过结论”。>`
 
-## 分数（脚本，禁止手改）
+## 确定性门禁（脚本，禁止手改）
+
+**`gate_verdict`:** `pass / fail / invalid_skill_package`
+
+| 必备检查 | 状态 | 证据 |
+| --- | --- | --- |
+| `file_and_frontmatter` | `pass/fail` | `gate_policy.required_checks` |
+| `name_valid_and_matched` | `pass/fail` | `gate_policy.required_checks` |
+| `description_voice_and_triggers` | `pass/fail` | `gate_policy.required_checks` |
+| `body_actionable` | `pass/fail` | `gate_policy.required_checks` |
+
+`gate_reasons`: `<逐条抄录>`。只有此门禁、包健康和脚本 Critical 决定阻断状态。
+
+## 信息性分数（脚本，禁止手改）
 
 | 维度 | 得分 | 含义 |
 |------|------|------|
-| 基础可用 `basic_usable` | `<n>/5` | ≥4 且无 Critical → 达到静态基础门槛，不代表行为已验证 |
+| 基础可用 `basic_usable` | `<n>/5` | 结构成熟度提示，不决定门禁 |
 | 契约清晰 `contract_clarity` | `<n>/5` | When/When-NOT/检查轴/Verification/反合理化 |
-| 配套齐备 `support_kit` | `<n>/<max>` 或 `n/a` | 资料/案例/落地记忆/脚本；N/A 不扣分；不挡 ship floor |
-| Ship floor | `yes/no` | 来自 `scores.ship_floor_met`（只看绿灯+Critical） |
+| 配套齐备 `support_kit` | `<n>/<max>` 或 `n/a` | 资料/案例/落地记忆/脚本；N/A 不扣分 |
+| Legacy ship floor | `yes/no` | 已弃用的 `scores.ship_floor_met`；新报告看 `gate_verdict` |
 
-`<One sentence: 是否达到 ship floor；蓝灯是否 kit_complete；若否先改 Critical 再补配套。>`
+`<One sentence: gate 是否通过；若否先处理 gate_reasons / Critical；分数只解释成熟度。>`
 
 ## 运行指标（不参与评分）
 
@@ -46,10 +61,10 @@
 | Token 预算 | `within/exceeded/not_assessed` | 上限 `<max_recommended_input_tokens>` | 超出时对应 `EFF.3` |
 | 运行时长 | `observed/not_measured` | `<duration_ms> ms` 或 `未测量` | 作者进阶行为证据里的目标运行时长；不得用审计器自身耗时代替 |
 | 循环护栏 | `pass/warn/not_applicable` | 指令数 / 有护栏数 | 未设停止条件的行号；对应 `EFF.1` / `EFF.2` |
-| 成绩单轨道 | `enterprise` / `advanced_audit` | 主结论 / 旁注 | Ship floor 已过 → 企业主线可受控试用；行为 JSON / 跨平台只在高级审计 |
+| 成绩单轨道 | `enterprise` / `advanced_audit` | 主结论 / 旁注 | 核心 gate 与可选安全证据保持分栏；行为 JSON / 跨平台只在高级审计 |
 
-`<明确说明这些值不改变 basic_usable、contract_clarity、support_kit 或 ship floor；EFF.* 以 Should fix 形式列入问题清单。>`
-`<不要把「未附 --behavior」写成「本次认证没跑」——一键审计本身就是企业主线认证流程。>`
+`<明确说明这些值和数字分数都不改变 gate_verdict；EFF.* 以 Should fix 形式列入问题清单。>`
+`<不要把「未附 --behavior」写成核心 gate 失败；behavior 只属于显式高级审计。>`
 
 配套模块明细（抄自 JSON `scores.support_kit.modules`）：
 
@@ -176,8 +191,8 @@ T = **run-bound exit** (Verification / handoff), not a fake calendar date unless
 
 ## 下一步
 
-- Ship floor **未过**：先改 Critical，别急着靠实战观察去打磨。
-- Ship floor **过了**但 PDCA 的 Check / Act **缺失**：补上验收和出错处理，才算闭环。
-- Ship floor **过了**且 PDCA 正常：进入受控试用或行为验证；不要把静态通过当成安全执行证明。
+- 核心门禁 **未过**：先处理 `gate_reasons` 和 Critical，别急着靠实战观察去打磨。
+- 核心门禁 **过了**但 PDCA 的 Check / Act **缺失**：补上验收和出错处理，才算闭环。
+- 核心门禁 **过了**且 PDCA 正常：进入受控试用或行为验证；不要把静态通过当成安全执行证明。
 - 说 **「按意见改」** —— 我来改 Critical / Should fix。
 - 说 **「帮我补」** —— 我一次问你一个问题，把上面「还需你确认」的空缺补齐；你点头之后才写进文件。

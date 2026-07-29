@@ -1,7 +1,7 @@
 {
   "name": "skill-self-check",
   "version": "0.1.0",
-  "description": "Agent work-readiness and Skill quality pack: turn oral workflows into checkable work packages, run deterministic structure and safety gates, and generate an offline growth scorecard. Target code is never executed by the built-in scripts.",
+  "description": "Standalone fast Skill hard-gate audit with focused fixes, plus optional work-readiness, static safety, and offline scorecard routes. Target code is never executed by the built-in scripts.",
   "homepage": "https://github.com/xenos2025/Skill-Self-Check",
   "repository": "https://github.com/xenos2025/Skill-Self-Check",
   "license": "MIT",

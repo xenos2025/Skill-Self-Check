@@ -147,6 +147,11 @@ class ImprovementTests(unittest.TestCase):
         self.assertGreater(report["findings"]["counts"]["resolved_critical"], 0)
         self.assertEqual(report["findings"]["counts"]["new_critical"], 0)
         self.assertEqual(report["scores"]["basic_usable"]["direction"], "improved")
+        self.assertEqual(report["scores"]["scoring_effect"], "informational_only")
+        self.assertEqual(
+            report["gates"]["gate_verdict"]["direction"],
+            "improved",
+        )
         self.assertEqual(report["gates"]["ship_floor"]["before"], False)
         self.assertEqual(report["gates"]["ship_floor"]["after"], True)
         self.assertEqual(report["gates"]["ship_floor"]["direction"], "improved")
@@ -215,6 +220,32 @@ class ImprovementTests(unittest.TestCase):
 
 
 class RegressionTests(unittest.TestCase):
+    def test_score_drop_does_not_create_a_hard_regression(self) -> None:
+        without_verification = GOOD_SKILL.replace(
+            "## 验收\n\n- [ ] 已输出报告\n- [ ] 分数与脚本一致\n\n",
+            "",
+        ).replace("完成标准:", "结果:")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = write_skill(root, "score-drop-skill", GOOD_SKILL)
+            baseline = capture_baseline(target, root / "baseline.json")
+            (target / "SKILL.md").write_text(
+                without_verification.format(name="score-drop-skill"),
+                encoding="utf-8",
+            )
+            code, report = run_verify(target, baseline)
+        self.assertEqual(code, 0)
+        self.assertEqual(
+            report["scores"]["basic_usable"]["direction"],
+            "regressed",
+        )
+        self.assertFalse(report["hard_regression"])
+        self.assertEqual(
+            report["gates"]["gate_verdict"]["direction"],
+            "unchanged",
+        )
+        self.assertEqual(report["gates"]["gate_verdict"]["after"], "pass")
+
     def test_new_critical_marks_the_fix_as_regressed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -228,6 +259,10 @@ class RegressionTests(unittest.TestCase):
         self.assertEqual(report["verdict"], "regressed")
         self.assertTrue(report["regression_detected"])
         self.assertGreater(report["findings"]["counts"]["new_critical"], 0)
+        self.assertEqual(
+            report["gates"]["gate_verdict"]["direction"],
+            "regressed",
+        )
         self.assertEqual(report["gates"]["ship_floor"]["direction"], "regressed")
 
     def test_rewrite_that_adds_an_unguarded_loop_is_reported_not_hidden(self) -> None:

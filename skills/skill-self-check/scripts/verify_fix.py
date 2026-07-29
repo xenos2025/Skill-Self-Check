@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 SEVERITY_ORDER = {"critical": 3, "should_fix": 2, "nice": 1, "info": 0}
 SCORED_DIMENSIONS = ("basic_usable", "contract_clarity", "support_kit")
 # This product entry is permanently a read-only DRY_RUN with respect to the
@@ -240,8 +240,35 @@ def compare_findings(
 def gate_transition(
     baseline: dict[str, Any], current: dict[str, Any]
 ) -> tuple[dict[str, Any], bool, bool]:
-    before_floor = bool((baseline.get("scores") or {}).get("ship_floor_met"))
-    after_floor = bool((current.get("scores") or {}).get("ship_floor_met"))
+    def gate_state(report: dict[str, Any]) -> tuple[str, str]:
+        explicit = str(report.get("gate_verdict") or "").strip().casefold()
+        if explicit in {"pass", "fail", "invalid_skill_package"}:
+            return explicit, "gate_verdict"
+        package = (
+            report.get("package_health")
+            if isinstance(report.get("package_health"), dict)
+            else {}
+        )
+        package_status = str(
+            package.get("status") or "not_assessed"
+        ).casefold()
+        if package_status == "invalid_skill_package" or (
+            package_status != "not_assessed"
+            and package.get("assessable") is False
+        ):
+            return "invalid_skill_package", "package_health"
+        legacy_floor = bool(
+            (report.get("scores") or {}).get("ship_floor_met")
+        )
+        return (
+            "pass" if legacy_floor else "fail",
+            "scores.ship_floor_met",
+        )
+
+    before_gate, before_gate_source = gate_state(baseline)
+    after_gate, after_gate_source = gate_state(current)
+    before_floor = before_gate == "pass"
+    after_floor = after_gate == "pass"
     before_package = str(
         (baseline.get("package_health") or {}).get("status") or "not_assessed"
     )
@@ -258,6 +285,21 @@ def gate_transition(
     )
     return (
         {
+            "gate_verdict": {
+                "before": before_gate,
+                "after": after_gate,
+                "before_source": before_gate_source,
+                "after_source": after_gate_source,
+                "direction": (
+                    "improved"
+                    if after_floor and not before_floor
+                    else "regressed"
+                    if before_floor and not after_floor
+                    else "unchanged"
+                    if before_gate == after_gate
+                    else "changed"
+                ),
+            },
             "ship_floor": {
                 "before": before_floor,
                 "after": after_floor,
@@ -268,6 +310,8 @@ def gate_transition(
                     if before_floor and not after_floor
                     else "unchanged"
                 ),
+                "deprecated": True,
+                "replacement": "gate_verdict",
             },
             "package_health": {
                 "before": before_package,
@@ -366,20 +410,19 @@ def verify(target: Path, baseline_path: Path, *, strict: bool) -> dict[str, Any]
     baseline = load_baseline(baseline_path)
     current = run_hard_gates(script, target)
 
-    scores, score_up, score_down = compare_scores(baseline, current)
+    scores, _score_up, _score_down = compare_scores(baseline, current)
     findings, finding_up, finding_hard, finding_soft = compare_findings(
         baseline, current
     )
     gates, gate_up, gate_down = gate_transition(baseline, current)
 
-    hard_regression = score_down or finding_hard or gate_down
+    hard_regression = finding_hard or gate_down
     # Findings can also disappear because a check stopped applying (a Skill that
     # loses its steps no longer owes examples). Minor items that vanish only
     # count as progress when nothing hard broke at the same time.
     resolved_any = findings["counts"]["resolved"] > 0
     improved = (
-        score_up
-        or gate_up
+        gate_up
         or finding_up
         or (resolved_any and not hard_regression)
     )
@@ -403,7 +446,10 @@ def verify(target: Path, baseline_path: Path, *, strict: bool) -> dict[str, Any]
         "hard_regression": hard_regression,
         "strict": strict,
         "target": target_identity(baseline, current, target),
-        "scores": scores,
+        "scores": {
+            "scoring_effect": "informational_only",
+            **scores,
+        },
         "gates": gates,
         "findings": findings,
         "efficiency": efficiency_transition(baseline, current),
@@ -418,6 +464,7 @@ def verify(target: Path, baseline_path: Path, *, strict: bool) -> dict[str, Any]
             "本次复检没有执行被检查的 Skill，也没有修改它",
             "分数上限变化的维度标为 not_comparable：检查项的适用范围变了，"
             "前后分数不能直接比",
+            "数字分数变化仅供参考，不改变复检门禁或退出状态",
         ],
     }
 
@@ -477,7 +524,7 @@ def main() -> int:
         f"introduced={counts['introduced']} "
         f"(critical {counts['new_critical']}) · "
         f"remaining_critical={report['remaining_critical']} · "
-        f"ship_floor={report['gates']['ship_floor']['after']}",
+        f"gate={report['gates']['gate_verdict']['after']}",
         file=sys.stderr,
     )
     return 1 if report["regression_detected"] else 0

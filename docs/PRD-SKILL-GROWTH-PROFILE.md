@@ -494,8 +494,8 @@ Lv1 自动化类型的个人练习应包含：
 
 ```json
 {
-  "profile_schema_version": "0.4",
-  "ruleset_version": "0.4",
+  "profile_schema_version": "0.6",
+  "ruleset_version": "0.6",
   "archetype": {
     "id": "automation-craftsperson",
     "label": "自动化工匠",
@@ -570,7 +570,7 @@ Lv1 自动化类型的个人练习应包含：
 不同平台记录。
 
 Token 消耗与运行时长是独立运行指标，不是第七、第八项能力轴，也不参与类型、
-等级、交付结论或 ship floor。静态 Token 值只估算 `SKILL.md` 输入；目标运行
+等级、交付结论或核心 `gate_verdict`。静态 Token 值只估算 `SKILL.md` 输入；目标运行
 时长必须来自可信行为记录，没有记录时保持 `not_measured`。
 
 所有 `evidence_ids` 必须能回到原始审计结果。  

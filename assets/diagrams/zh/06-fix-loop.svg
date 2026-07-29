@@ -40,11 +40,11 @@
 <rect x="884.0" y="60.0" width="240" height="100" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
 <text x="1004.0" y="86.0" text-anchor="middle" class="label-tiny" font-size="11" letter-spacing="0.08em">4</text>
 <text x="1004.0" y="112.0" text-anchor="middle" class="label" font-size="18">出报告</text>
-<text x="1004.0" y="138.0" text-anchor="middle" class="label-tiny" font-size="13">分数 + 修改意见</text>
+<text x="1004.0" y="138.0" text-anchor="middle" class="label-tiny" font-size="13">门禁 + 聚焦整改</text>
 <line x1="1004.0" y1="160.0" x2="1004.0" y2="216" stroke="#D0D7E2" stroke-width="2"/>
 <polygon points="1004.0,216 1068.0,280 1004.0,344 940.0,280" fill="#F0F4FA" stroke="#0B3D91" stroke-width="1.6"/>
 <text x="1004.0" y="274" text-anchor="middle" class="label" font-size="13">过门槛了吗？</text>
-<text x="1004.0" y="294" text-anchor="middle" class="label-tiny" font-size="11">看 ship floor / Critical</text>
+<text x="1004.0" y="294" text-anchor="middle" class="label-tiny" font-size="11">看 gate verdict / Critical</text>
 <rect x="160.0" y="232.0" width="280" height="96" rx="2" fill="#FFF5F5" stroke="#B42318" stroke-width="1.6"/>
 <text x="300" y="270.0" text-anchor="middle" class="label" font-size="17" fill="#B42318">按意见改</text>
 <text x="300" y="298.0" text-anchor="middle" class="label-tiny" font-size="12">先改 Critical，再说「按意见改」</text>
@@ -59,11 +59,11 @@
 <text x="1129.0" y="266" text-anchor="middle" fill="#1B7A4E" font-size="12" class="label-tiny">是 / 无 Critical</text>
 <text x="740.0" y="400" text-anchor="middle" class="label-tiny" font-size="13">报告里重点看这三项</text>
 <rect x="160.0" y="420" width="360" height="72" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
-<text x="340.0" y="448" text-anchor="middle" class="label" font-size="15">结构过关</text>
-<text x="340.0" y="472" text-anchor="middle" class="label-tiny mono" font-size="12">basic_usable ≥ 4 · 绿灯</text>
+<text x="340.0" y="448" text-anchor="middle" class="label" font-size="15">包结构有效</text>
+<text x="340.0" y="472" text-anchor="middle" class="label-tiny mono" font-size="12">package health · 必备</text>
 <rect x="560.0" y="420" width="360" height="72" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
-<text x="740.0" y="448" text-anchor="middle" class="label" font-size="15">说清楚查什么</text>
-<text x="740.0" y="472" text-anchor="middle" class="label-tiny mono" font-size="12">contract_clarity · 黄灯</text>
+<text x="740.0" y="448" text-anchor="middle" class="label" font-size="15">必备检查通过</text>
+<text x="740.0" y="472" text-anchor="middle" class="label-tiny mono" font-size="12">required checks · 必备</text>
 <rect x="960.0" y="420" width="360" height="72" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
 <text x="1140.0" y="448" text-anchor="middle" class="label" font-size="15">有出口证据</text>
 <text x="1140.0" y="472" text-anchor="middle" class="label-tiny mono" font-size="12">Verification / Done when · 验收</text>

@@ -1,11 +1,10 @@
 ---
 name: skill-growth-scorecard
 description: >-
-  Combines readiness, hard-gate, ship-safety, and optional advanced-audit
-  behavior JSON into offline personal and project scorecards for building
-  usable business Skill employees. Use when users want a growth type, level,
-  enterprise next practice, suite audit scorecard, or printable offline result
-  without changing the audited Skill.
+  Optionally renders existing readiness, hard-gate, ship-safety, and
+  advanced-audit JSON as offline personal and project scorecards. Use only when
+  users explicitly want a scorecard, growth type, level, project profile,
+  suite scorecard, or printable result after source checks have produced JSON.
 ---
 
 # Skill Growth Scorecard
@@ -15,6 +14,11 @@ original audit facts. Default narrative helps enterprises build **usable
 business Skill employees** — clear triggers, steps, acceptance, stop rules —
 not multi-platform certification engineering.
 
+This Skill is an optional downstream renderer. `skill-self-check` owns its
+deterministic gate, findings, and fixes. This Skill consumes that result once,
+preserves `gate_verdict`, keeps model judgment advisory, and leaves the core
+audit independent of this package.
+
 Present the growth view as a personal capability profile based on the current
 work sample; keep project delivery verdicts in detection and technical evidence
 rather than turning them into personal labels.
@@ -23,6 +27,8 @@ rather than turning them into personal labels.
 
 - Someone finished a business Skill draft and wants a plain scorecard: can we
   trial it, what’s the one next practice.
+- `skill-self-check` completed and the user explicitly requested a scorecard,
+  personal/project profile, printable HTML, or full report.
 - `readiness_gates.py` has produced a business-readiness JSON report.
 - `hard_gates.py` or `ship_safety.py` has produced a Skill audit JSON report.
 - A beginner needs a plain-language type, level, strength, and next quest.
@@ -40,11 +46,15 @@ rather than turning them into personal labels.
 - Replacing a missing behavior test with model confidence.
 - Publishing a real client report inside this open-source repository.
 - Executing the audited Skill or its external actions.
+- Running automatically after every core audit when no scorecard was requested.
+- Recalculating or overriding `gate_verdict`, gate reasons, or script findings.
 
 ## Check axes
 
-- **Enterprise mainline** — package health, ship floor, static safety, plain
-  next practice (trial one real scenario / tighten acceptance).
+- **Core gate preservation** — prefer `hard_gates.gate_verdict`; read legacy
+  `scores.ship_floor_met` only as a compatibility fallback.
+- **Enterprise mainline** — package health, explicit core gate, optional static
+  safety, plain next practice (trial one real scenario / tighten acceptance).
 - **Advanced audit (optional)** — behavior JSON, failure recovery, portable
   contract, two-platform fingerprints; shown in `advanced_audit`, not as the
   default next quest.
@@ -81,13 +91,18 @@ All inputs are optional individually, but at least one is required:
 
 ## Process
 
-1. **Run the source checks.**
-   Run only the checks that have valid inputs. Mark unavailable reports as not supplied.
+1. **Reuse source reports.**
+   When routed from `skill-self-check`, consume its existing audit JSON exactly
+   once. Mark unavailable optional reports as not supplied.
    Read `hard_gates.package_health` before computing Skill maturity. When it is
    invalid, preserve raw diagnostics but emit `skill_engineering.status =
    invalid_package`, `level = null`, null dimension states, no capability badge,
    and the root verdict `invalid_skill_package`.
-   **Done when:** each available report is saved as UTF-8 JSON.
+   If a Skill scorecard was requested but no hard-gates JSON exists, stop with
+   a missing-input explanation. Keep installation user-controlled, source facts
+   script-produced, and missing audit state explicit.
+   **Done when:** each supplied report parses as UTF-8 JSON and its original
+   gate/finding fields remain unchanged.
 
 2. **Generate the profile.**
 
@@ -150,12 +165,14 @@ All inputs are optional individually, but at least one is required:
 
 - No Skill audit: engineering state is `not_started`, not a failure.
 - `stop_ship`: engineering maturity is capped at Lv1.
-- Static floor plus static safety pass can reach Lv2 — **enterprise mainline
+- Explicit core gate plus static safety pass can reach Lv2 — **enterprise mainline
   “ready enough to trial”**.
 - Root `verdict` is `ready_for_controlled_use` when package health is
-  assessable, ship floor and the contract minimum are met, static safety passes,
-  and Critical count is zero. Missing behavior JSON is an advanced-audit note,
-  not an enterprise fail.
+  assessable, `gate_verdict=pass`, static safety passes, and Critical count is
+  zero. Numeric scores remain maturity information; the project gate follows
+  `gate_verdict`. Legacy reports without `gate_verdict` fall back to
+  `scores.ship_floor_met` and the previous contract threshold for compatibility.
+  Missing behavior JSON is an advanced-audit note, not an enterprise fail.
 - Root `next_quest` after that enterprise-ready gate is enterprise practice
   (real scenario / acceptance / materials). Author steps live in
   `advanced_audit.next_quest`.
@@ -200,7 +217,7 @@ means that dimension's declared full-evidence criteria are met within the
 current rules and test scope.
 Token consumption and runtime duration are not seventh and eighth evidence
 axes: they remain quantitative operational metrics, and profile type, level,
-verdict, and ship floor are computed independently of them.
+verdict, and the preserved core gate are computed independently of them.
 
 Persistent comparison is **N/A** inside this stateless generator. A caller may
 store previous profile JSON in an approved private workspace and compare it in a
@@ -209,6 +226,8 @@ future invocation.
 ## Verification
 
 - [ ] Every available source report was produced by its script.
+- [ ] Existing source JSON was reused when routed from `skill-self-check`.
+- [ ] `gate_verdict` was preserved; legacy fallback is identified by source.
 - [ ] Missing reports remain `not_started` or `needs_confirmation`.
 - [ ] `stop_ship` is visible in detection and technical evidence, caps the
       engineering-derived ability level, and is not shown as a personal badge.
@@ -244,6 +263,8 @@ future invocation.
 
 | Rationalization | Required response |
 | --- | --- |
+| “The scorecard should start another audit to be safe.” | Reuse the routed audit JSON; start a fresh audit only after an explicit refresh request. |
+| “A high score can override a failed gate.” | Preserve `gate_verdict`; scores are informational only. |
 | “The type looks advanced, so it can ship.” | Delivery follows safety and behavior gates, not the type. |
 | “No Skill exists, so give it Lv0.” | Use `not_started`; continue the business-readiness next quest. |
 | “Static pass proves the workflow works.” | Enterprise may trial at Lv2; advanced audit still needs behavior evidence for Lv3+. |
@@ -256,6 +277,8 @@ future invocation.
 ## Red Flags
 
 - Showing a level without the underlying script JSON
+- Starting another audit for routed JSON without an explicit refresh request
+- Replacing or overriding the core `gate_verdict`
 - Promoting past Lv2 without behavior evidence
 - Averaging suite scores so a weak Skill disappears
 - Writing real client reports into the public repository

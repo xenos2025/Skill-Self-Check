@@ -9,8 +9,9 @@
 
 # 中文版本
 
-把「AI 怎么做事」写成说明书（Skill）之后，用本包做一次**验货式自检**：  
-电脑先打分，再给修改意见。规则在本地，**不会联网去 GitHub 拉规则**。
+把「AI 怎么做事」写成说明书（Skill）之后，用本包做一次**验货式自检**：
+电脑先跑明确的硬门槛，再给修改意见。数字分数和成绩单按需生成，不影响门禁。
+规则在本地，**不会联网去 GitHub 拉规则**。
 
 适合：写说明书的人、要拍板「能不能推广」的老板、外贸 / 工厂 / 电商里要先问清流程的人。
 
@@ -31,20 +32,21 @@ https://github.com/xenos2025/Skill-Self-Check
 3. 先出报告，不要直接改我的文件；等我说「按意见改」再改
 ```
 
-3. **看普通用户版报告里的三盏灯**：绿灯不亮 → 先改“必须解决的问题”；绿灯过了再看黄灯（契约）和蓝灯（资料/案例/记忆/脚本是否齐）。
-   看不懂分数时，把报告贴回同一个 AI，问：「用白话告诉我先改哪三条。」
+3. **先看 `gate_verdict` 和必须解决的问题**：默认报告会列出全部
+   Critical、最多三项 Should fix，并给可直接采用的修改建议。数字分数不决定通过。
 4. **说「按意见改」之后，要再跑一轮证明修好了**：用改前保存的 `hard-gates.json` 对照改后结果（`verify_fix.py`）。不能凭记忆说“已修复”。
-5. **有本机 Python 时**，优先跑一键审计，打开两份离线成绩单：个人看成长画像，项目看检测结果（示例图见下面「成绩单长什么样」）。
+5. **明确需要成绩单时**，再让 AI 路由到可选的
+   **skill-growth-scorecard**，生成个人 / 项目离线 HTML。
 
 更细的本机安装见下面「三分钟上手」；只会点聊天、不会开终端的人，**只用上面 1–4 就够了**。
 
 如果公司很多事情还靠口头约定，先用 **agent-work-readiness** 把一个具体工作
 练到“目标、步骤、负责人、交接、标准和权限”说清楚，再写 Skill。写完后用
-**skill-growth-scorecard**（或一键审计）生成个人 / 项目两份离线 HTML 成绩单；
-原来的三盏灯和技术证据仍完整保留。
+明确要求打分、画像或 HTML 时，再由 **skill-self-check** 把已经生成的审计
+JSON 路由给可选的 **skill-growth-scorecard**；不会为了成绩单重复审计目标。
 
-**两条轨道（别混）：** 日常合格线是企业主线——结构 / 契约 / 静态安全够用即可进入受控试用；
-行为证据、跨平台指纹属于可选的**高级审计（作者轨道）**，缺它们不等于主线失败。
+**三条路径（别混）：** 默认快速审计只看确定性门禁并给整改；模型的
+PDCA / SMART 属于显式深审；数字分数、画像和 HTML 属于显式成绩单路由。
 
 ## 可视化上手（先看图）
 
@@ -56,22 +58,23 @@ https://github.com/xenos2025/Skill-Self-Check
 
 ### 2. 改完再检（闭环）
 
-写好 → 跑检查 → 看报告；**不过就改，改完再跑**。结构、契约和静态安全共同达到企业主线门槛后，可以进入受控试用；涉及外部发送或真实数据时仍需单独的行为安全验证。
+写好 → 跑检查 → 看报告；**不过就改，改完再跑**。核心门禁通过表示
+Skill 包结构和必备检查达标且没有脚本 Critical；外部发送、真实数据和运行行为
+仍需可选的安全 / 行为证据。
 
 ![改完再检](assets/diagrams/zh/06-fix-loop.svg)
 
-### 3. 三盏灯怎么读（给老板）
+### 3. 门禁与三盏灯怎么读（给老板）
 
 ![三盏灯](assets/diagrams/zh/05-three-lights.svg)
 
 | 灯 | 白话 |
 | --- | --- |
-| 绿灯 `basic_usable` | 结构过关，达到静态基础门槛 |
-| 黄灯 `contract_clarity` | 查什么、何时用 / 不用、验收说清楚了吗 |
-| 蓝灯 `support_kit` | 资料 / 案例 / 落地记忆 / 脚本是否按需配齐 |
-| 三盏都亮 | 可以进入受控试用；不等于真实行为已验证 |
-| 绿灯亮、黄或蓝暗 | 静态可用，但容易各做各的或不好交接 |
-| 绿灯不亮 | 先改，别急着推广 |
+| `gate_verdict` | 权威门禁：包有效、必备检查通过、没有脚本 Critical |
+| `basic_usable` | 信息性结构分，不决定门禁 |
+| `contract_clarity` | 信息性契约分：何时用 / 不用、检查轴、验收 |
+| `support_kit` | 信息性配套分：资料 / 案例 / 记忆 / 脚本 |
+| 门禁通过 | 核心静态审计通过；不等于真实行为或外部动作已验证 |
 | 蓝灯某项 N/A | 声明不适用即可，不扣分 |
 
 ### 4. PDCA：做事要闭环
@@ -104,17 +107,26 @@ https://github.com/xenos2025/Skill-Self-Check
 git clone https://github.com/xenos2025/Skill-Self-Check.git
 cd Skill-Self-Check
 ./install.ps1
+py -3 skills/skill-self-check/scripts/hard_gates.py C:\你的Skill目录 --pretty
+```
+
+上面的默认命令只运行独立、快速的确定性门禁。也可以在 Cursor 里点名
+**skill-self-check** 并给出待检说明书路径。默认只出整改报告；说「按意见改」
+后才编辑文件。
+
+明确需要个人 / 项目成绩单时，再运行显式完整入口：
+
+```powershell
 py -3 skills/skill-self-check/scripts/run_full_audit.py C:\你的Skill目录 `
   --out-dir "$HOME\Documents\skill-audits\本次成绩单" --pretty
 ```
 
-上面一条审计命令会生成**个人能力成绩单**和**项目检测成绩单**两份离线 HTML，
-并证明审计前后目标没有变化；真实报告会被拒绝写入目标或源码仓库。也可以在
-Cursor 里点名 **skill-self-check**，给出待检说明书路径。默认只出报告；说
-「按意见改」再改文件。同一次检查还会生成两种文字报告：普通用户版讲
-“能不能用、为什么、下一步”，技术版保留分数、问题编号和证据。
+完整入口会复用同一份门禁事实并生成离线 HTML；真实报告会被拒绝写入目标或
+源码仓库。`skill-self-check` 本身不依赖另外三个 Skill，缺少成绩单模块时核心
+审计仍正常完成。
 
-改完对照（把 `baseline.json` 换成一键审计输出里的 `hard-gates.json`）：
+准备让 AI 修改时，先把修改前 stdout 保存为仓库外的
+`hard-gates.json`；改完用它对照：
 
 ```powershell
 py -3 skills/skill-self-check/scripts/verify_fix.py C:\你的Skill目录 `
@@ -123,7 +135,7 @@ py -3 skills/skill-self-check/scripts/verify_fix.py C:\你的Skill目录 `
 
 ## 成绩单长什么样（示例截图）
 
-跑完一键审计后，用浏览器打开输出目录里的 HTML 即可。个人页默认看**成长画像**
+明确运行完整成绩单入口后，用浏览器打开输出目录里的 HTML。个人页默认看**成长画像**
 （类型、等级、下一练习）；项目页默认看**检测结果**（分数、风险、整改优先级）。
 默认面向企业做出**可用的业务 Skill 员工**；行为证据 / 跨平台属于可选的
 **高级审计（作者轨道）**，不是日常合格线。
@@ -170,7 +182,7 @@ py -3 skills/skill-growth-scorecard/scripts/suite_scorecards.py . `
 
 | 平台 | 状态 | 说明 |
 | --- | --- | --- |
-| Cursor | 在用 | 日常编写与一键审计入口 |
+| Cursor | 在用 | 日常编写与快速门禁入口 |
 | Codex | 可测 | 下一组跨平台对照的第二平台 |
 | Claude Code | 未测 | 后续适配候选 |
 | WorkBuddy | 未测 | 中国市场候选，安装/调用方式待探 |
@@ -199,7 +211,10 @@ py -3 skills/skill-growth-scorecard/scripts/suite_scorecards.py . `
 
 # English
 
-A beginner-friendly **Agent Skill self-check pack**: a local Python script scores hard gates; your coding agent suggests fixes — including a **PDCA × SMART** matrix. Nothing is fetched from GitHub at runtime.
+A beginner-friendly **Agent Skill self-check pack**: a local Python script
+evaluates explicit deterministic gates and your coding agent suggests focused
+fixes. Scores, PDCA × SMART, and offline scorecards are opt-in routes. Nothing
+is fetched from GitHub at runtime.
 
 Diagrams use a simple Swiss blue/white style. Regenerate with `python branding/generate_diagrams.py`.
 
@@ -218,10 +233,14 @@ Steps:
 3. Report only — do not edit my files until I say “apply fixes”
 ```
 
-3. **Read the business report's three lights:** if green is off, fix the must-resolve items first. Then check amber (contract) and blue (refs / examples / memory / scripts). A static green light is not behavioral or execution proof.
+3. **Read `gate_verdict` first:** the default response lists every Critical,
+   at most three Should-fix items, and actionable rewrites. Numeric scores do
+   not decide the gate.
 4. **After “apply fixes”, prove the delta:** re-check against the pre-edit `hard-gates.json` with `verify_fix.py`. Do not claim “fixed” from memory.
 
-**Two tracks:** the enterprise mainline (structure / contract / static safety) is the daily bar for controlled trial. Behavior evidence and cross-platform fingerprints are optional **advanced audit** for authors — missing them is not a mainline failure.
+**Three routes:** fast deterministic audit is the default; qualitative
+PDCA/SMART review is explicit deep audit; scores, profiles, and HTML are an
+explicit scorecard route.
 
 ## Visual guide
 
@@ -231,7 +250,9 @@ Steps:
 
 ### Fix & retry loop
 
-Write → run gates → report; if it fails, fix and run again. Passing the enterprise mainline (package/ship floor, contract minimum, and static safety) means the skill is ready for a controlled trial, not that external actions are proven safe.
+Write → run gates → report; if it fails, fix and run again. A passing core gate
+means the package and named required checks passed with no deterministic
+Criticals. It does not prove runtime behavior or external actions safe.
 
 ![Fix loop](assets/diagrams/06-fix-loop.svg)
 
@@ -263,25 +284,36 @@ records. A justified N/A does not lower the general self-check score. See
 git clone https://github.com/xenos2025/Skill-Self-Check.git
 cd Skill-Self-Check
 ./install.sh   # or ./install.ps1 on Windows
-python skills/skill-self-check/scripts/run_full_audit.py \
-  /path/to/your-skill \
-  --out-dir "$HOME/Documents/skill-audits/current" --pretty
+python skills/skill-self-check/scripts/hard_gates.py \
+  /path/to/your-skill --pretty
 ```
 
-The command creates separate **personal** and **project** offline HTML
-scorecards and records that the audit did not change the target. Real outputs
-are refused inside the target or its source repository. In Cursor, invoke
-**skill-self-check** and pass a skill path. Report-only by default; say “apply
-fixes” to edit. To prove fixes:
+The default command runs the standalone deterministic gate. In Cursor, invoke
+**skill-self-check** and pass a skill path. It reports all Criticals and up to
+three Should-fix items; say “apply fixes” to authorize edits. To prove fixes:
 
 ```bash
 python skills/skill-self-check/scripts/verify_fix.py /path/to/your-skill \
   --baseline "$HOME/Documents/skill-audits/current/hard-gates.json" --pretty
 ```
 
+Capture that baseline before authorizing edits; the optional full scorecard
+route also writes a reusable `hard-gates.json`.
+
+Only when you explicitly want personal/project scorecards:
+
+```bash
+python skills/skill-self-check/scripts/run_full_audit.py \
+  /path/to/your-skill \
+  --out-dir "$HOME/Documents/skill-audits/current" --pretty
+```
+
+The optional full route creates offline HTML and records target integrity.
+The core self-check remains usable when the other three Skills are absent.
+
 ## What the scorecards look like
 
-After the one-command audit, open the HTML files in a browser. The personal
+After explicitly running the scorecard route, open the HTML files in a browser. The personal
 card defaults to **Growth Profile**; the project card defaults to **Detection
 Results**. Screenshots below are a sanitized run of this repository’s four
 shipped Skills (no client data):
@@ -327,7 +359,7 @@ Chinese and English skills score identically: `用于` / `适用` / `当用户` 
 
 | Platform | Status | Notes |
 | --- | --- | --- |
-| Cursor | In active use | Primary authoring + full-audit entry |
+| Cursor | In active use | Primary authoring + fast deterministic gate |
 | Codex | Available for testing | Chosen second platform for the next comparable pair |
 | Claude Code | Not tested yet | Later adapter candidate |
 | WorkBuddy | Not tested yet | China-market candidate |

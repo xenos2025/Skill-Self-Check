@@ -9,8 +9,9 @@
 **Passes covered:** 0 Script · 1 Hard gates · 2 Predictability · 3 Anatomy · 4 Prune · 5 PDCA+SMART
 
 > Worked example. Regenerate after changing scoring logic — CI (`.github/workflows/hard-gates.yml`) keeps the fixture failing, but the numbers below are maintained by hand.
-> Revalidated on 2026-07-27 after the one-command audit and growth ruleset
-> 0.2 changes: hard-gate scores and counts remain unchanged.
+> Revalidated on 2026-07-30 after the explicit-gate routing change.
+> Scores remain unchanged. The Critical count now includes package-level
+> `PKG.2`; `gate_verdict` is authoritative.
 
 ## 分数（脚本，禁止手改）
 
@@ -19,9 +20,9 @@
 | 基础可用 `basic_usable` | `2/5` | 只拿到「有 frontmatter」「正文有编号步骤」两分 |
 | 契约清晰 `contract_clarity` | `0/5` | When / When-NOT / 检查轴 / Verification / 反合理化 全缺 |
 | 配套齐备 `support_kit` | `0/2` | 工作流缺资料包与案例包（记忆/脚本 N/A） |
-| Ship floor | `no` | 4 个 Critical，且 `basic_usable < 4` |
+| Core gate | `invalid_skill_package` | 包名不合法且不匹配目录，并有 5 个 Critical |
 
-不能发布：`name` 非法且与目录不一致、description 第一人称且无触发词、全文没有任何出口证据。先修 4 个 Critical，再补 Verification、完成标准，以及蓝灯配套。
+不能发布：`name` 非法且与目录不一致、description 第一人称且无触发词、全文没有任何出口证据。先修 5 个 Critical，再补 Verification、完成标准，以及蓝灯配套。
 
 | 模块 | 状态 | 说明 |
 |------|------|------|
@@ -32,11 +33,11 @@
 
 | Severity | Count (script + model) |
 |----------|------:|
-| Critical | 4 |
+| Critical | 5 |
 | Should fix | 12 |
 | Nice | 1 |
 
-脚本计数为 Critical 4 / Should fix 12 / Nice 0（含 `6.1`/`6.2`）；下面的 N1 是模型追加的定性发现。
+脚本计数为 Critical 5 / Should fix 12 / Nice 0（含 `6.1`/`6.2`）；下面的 N1 是模型追加的定性发现。
 
 ---
 
@@ -73,19 +74,26 @@
 name: writing-commit-messages
 ```
 
-### C2. `name` 与目录不一致 · source: `script`
+### C2. 包声明名与目录名不一致 · source: `script`
+
+- **问题:** 包检查 `PKG.2`：`declared_name='Helper' root='bad-commit-helper'`。
+- **为什么:** 可安装包的声明名必须与根目录 basename 一致，否则包身份不确定。
+- **建议改法:** 把 frontmatter `name` 改为 `bad-commit-helper`；若产品名应为
+  `writing-commit-messages`，则同时把目标目录改为同名目录。
+
+### C3. `name` 与目录不一致 · source: `script`
 
 - **问题:** 脚本 1.4：`name='Helper' dir='bad-commit-helper'`。
 - **为什么:** 名称与目录不一致时，安装后可能加载不到或重名覆盖。
 - **建议改法:** 目录同步改名为 `writing-commit-messages/`，与 `name` 逐字相同。
 
-### C3. description 用第一 / 第二人称 · source: `script`
+### C4. description 用第一 / 第二人称 · source: `script`
 
 - **问题:** `I can help you with git stuff when you need it.`（脚本 1.6）。
 - **为什么:** description 会被注入系统提示，须第三人称陈述能力，而不是对用户说话。
 - **建议改法:** 见 C4 的整段重写。
 
-### C4. description 缺 WHEN 触发词 · source: `script`
+### C5. description 缺 WHEN 触发词 · source: `script`
 
 - **问题:** 脚本 1.7：模型可调用的技能没有可判定的触发条件。
 - **为什么:** 触发过宽会到处乱调用，过窄则永不触发——两者都会让行为不可预测。
@@ -141,7 +149,7 @@ description: >-
 
 ## 还需你确认（只有你知道的空缺）
 
-C4 / S4 / S6 里给的都是**建议稿**：触发场景、排除范围、验收凭据取决于你团队怎么做事，我不替你定。
+C5 / S4 / S6 里给的都是**建议稿**：触发场景、排除范围、验收凭据取决于你团队怎么做事，我不替你定。
 一次问一个，一轮最多三个。
 
 | # | 对应 finding | 要问你的一句话 | 我建议的答案（可直接改） | 状态 |
@@ -154,8 +162,8 @@ C4 / S4 / S6 里给的都是**建议稿**：触发场景、排除范围、验收
 
 | Pass | 结果 |
 |------|------|
-| 0 脚本 | 已运行；exit 1，`ship_floor_met: false` |
-| 1 硬门禁 | fail：4 Critical（1.3 / 1.4 / 1.6 / 1.7） |
+| 0 脚本 | 已运行；exit 1，`gate_verdict: invalid_skill_package`；legacy `ship_floor_met: false` |
+| 1 硬门禁 | invalid skill package：5 Critical（PKG.2 / 1.3 / 1.4 / 1.6 / 1.7） |
 | 2 可预测性 | S9 / S10（脚本命中）+ N1（模型） |
 | 3 结构解剖 | S3–S7 |
 | 4 修剪 | S8；`line_count` 23，无超长问题 |
@@ -164,7 +172,7 @@ C4 / S4 / S6 里给的都是**建议稿**：触发场景、排除范围、验收
 
 ## 下一步
 
-Ship floor 未达到：先修 4 个 Critical，再按 S1–S10 补契约，不要指望「先用起来再观察」。  
+核心门禁未通过：先修 5 个 Critical，再按 S1–S10 补契约，不要指望「先用起来再观察」。
 Smoke 判据：`before-after.md` 列出的主题（弱 description、缺 verification、no-op、negation、缺完成标准）全部被命中。  
 说 **「按意见改」** 可对真实目标技能应用 Critical / Should fix。  
 说 **「帮我补」** 我按 Q1–Q3 一次问一个，答完再写进文件。

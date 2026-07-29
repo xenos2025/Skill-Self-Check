@@ -16,18 +16,19 @@ Level B is the portable core. A platform without Level D must report behavior
 as `not_safely_verified`; a temporary directory does not raise the capability
 level.
 
-The installed four-Skill pack exposes one Level-B entry:
+The independently installed core exposes the default Level-B entry:
 
 ```bash
-python path/to/skill-self-check/scripts/run_full_audit.py \
-  /path/to/target-skill \
-  --out-dir /private/path/target-skill-audit \
-  --pretty
+python path/to/skill-self-check/scripts/hard_gates.py \
+  /path/to/target-skill --pretty
 ```
 
-It runs static structure and safety checks and creates separate personal and
-project HTML scorecards. It does not execute the target Skill. The output
-directory must be outside the target and its source repository.
+It runs the fast deterministic core gate and does not require the other three
+Skills. It does not execute the target Skill.
+
+When the user explicitly requests scorecards and the optional pack is
+installed, `run_full_audit.py` adds static safety and offline personal/project
+HTML. Its output directory must be outside the target and source repository.
 
 ## Portable result contract
 
@@ -36,6 +37,7 @@ Script results include:
 - `schema_version`
 - `audit_level`
 - `target_platform`
+- `gate_verdict` and `gate_reasons` for hard-gate reports
 - `limitations`
 - `execution` for safety scans
 
@@ -43,8 +45,8 @@ Readiness reports add `level`, `gates`, and `next_quest`. Growth profiles add
 `profile_schema_version`, two independent progress lines, `sources`, and one
 prioritized next quest. The HTML is only a local view of that profile JSON.
 
-Platform adapters may add metadata, but they must not change core scores,
-finding IDs, or a stricter verdict into a looser one.
+Platform adapters may add metadata, but they must not change `gate_verdict`,
+core scores, finding IDs, or a stricter verdict into a looser one.
 
 All four shipped `SKILL.md` files use the common `name` and `description`
 frontmatter contract. Platform-specific discovery metadata belongs in an
@@ -69,7 +71,8 @@ two-platform SHA-256 proof below.
 
 **Advanced-audit comparable pair (optional):** Cursor + Codex (or another
 verified pair) using the **same** contract file and sanitized fixture.
-Enterprise scorecards stay on ship floor + static safety without this pair.
+Enterprise scorecards preserve the explicit core gate plus static safety
+without this pair.
 
 ## Comparable two-platform proof (advanced audit only)
 

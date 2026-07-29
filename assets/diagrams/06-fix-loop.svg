@@ -40,11 +40,11 @@
 <rect x="884.0" y="60.0" width="240" height="100" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
 <text x="1004.0" y="86.0" text-anchor="middle" class="label-tiny" font-size="11" letter-spacing="0.08em">4</text>
 <text x="1004.0" y="112.0" text-anchor="middle" class="label" font-size="18">Read report</text>
-<text x="1004.0" y="138.0" text-anchor="middle" class="label-tiny" font-size="13">Scores + ranked fixes</text>
+<text x="1004.0" y="138.0" text-anchor="middle" class="label-tiny" font-size="13">Gate + ranked fixes</text>
 <line x1="1004.0" y1="160.0" x2="1004.0" y2="216" stroke="#D0D7E2" stroke-width="2"/>
 <polygon points="1004.0,216 1068.0,280 1004.0,344 940.0,280" fill="#F0F4FA" stroke="#0B3D91" stroke-width="1.6"/>
-<text x="1004.0" y="274" text-anchor="middle" class="label" font-size="13">Ship floor met?</text>
-<text x="1004.0" y="294" text-anchor="middle" class="label-tiny" font-size="11">Critical count → zero?</text>
+<text x="1004.0" y="274" text-anchor="middle" class="label" font-size="13">Gate passed?</text>
+<text x="1004.0" y="294" text-anchor="middle" class="label-tiny" font-size="11">gate_verdict + zero Criticals</text>
 <rect x="160.0" y="232.0" width="280" height="96" rx="2" fill="#FFF5F5" stroke="#B42318" stroke-width="1.6"/>
 <text x="300" y="270.0" text-anchor="middle" class="label" font-size="17" fill="#B42318">Apply fixes</text>
 <text x="300" y="298.0" text-anchor="middle" class="label-tiny" font-size="12">Fix Criticals, then say “apply fixes”</text>
@@ -59,11 +59,11 @@
 <text x="1129.0" y="266" text-anchor="middle" fill="#1B7A4E" font-size="12" class="label-tiny">Yes / clear</text>
 <text x="740.0" y="400" text-anchor="middle" class="label-tiny" font-size="13">Three things the report always covers</text>
 <rect x="160.0" y="420" width="360" height="72" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
-<text x="340.0" y="448" text-anchor="middle" class="label" font-size="15">Structure OK</text>
-<text x="340.0" y="472" text-anchor="middle" class="label-tiny mono" font-size="12">basic_usable ≥ 4 · green light</text>
+<text x="340.0" y="448" text-anchor="middle" class="label" font-size="15">Package valid</text>
+<text x="340.0" y="472" text-anchor="middle" class="label-tiny mono" font-size="12">package health · required</text>
 <rect x="560.0" y="420" width="360" height="72" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
-<text x="740.0" y="448" text-anchor="middle" class="label" font-size="15">Scope clear</text>
-<text x="740.0" y="472" text-anchor="middle" class="label-tiny mono" font-size="12">contract_clarity · amber light</text>
+<text x="740.0" y="448" text-anchor="middle" class="label" font-size="15">Required checks</text>
+<text x="740.0" y="472" text-anchor="middle" class="label-tiny mono" font-size="12">all pass · required</text>
 <rect x="960.0" y="420" width="360" height="72" rx="2" fill="#FFFFFF" stroke="#D0D7E2" stroke-width="1"/>
 <text x="1140.0" y="448" text-anchor="middle" class="label" font-size="15">Exit evidence</text>
 <text x="1140.0" y="472" text-anchor="middle" class="label-tiny mono" font-size="12">Verification / Done when · proof</text>

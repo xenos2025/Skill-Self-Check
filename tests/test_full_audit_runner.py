@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Integration checks for the ordinary-user one-command audit entry."""
+"""Integration checks for the explicit compatibility full-audit entry."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ def write_target(root: Path) -> Path:
     (target / "SKILL.md").write_text(
         """---
 name: sample-skill
-description: Reviews a sample workflow when a user asks for a local check.
+description: Reviews a supplied sample workflow. Use when the user requests a local check.
 ---
 
 # Sample Skill
@@ -59,6 +59,11 @@ Do not use for external sends.
 
 - [ ] Summary names the supplied sample.
 - [ ] No external action was performed.
+
+## Review axes
+
+- Input identity: the response names the supplied sample.
+- Action boundary: the response performs no external action.
 """,
         encoding="utf-8",
     )
@@ -109,6 +114,7 @@ class FullAuditRunnerTests(unittest.TestCase):
                 manifest["checks"]["package_health"],
                 "valid_skill_package",
             )
+            self.assertEqual(manifest["checks"]["core_gate"], "pass")
             self.assertEqual(
                 manifest["audit_execution"]["status"],
                 "observed",
@@ -122,6 +128,18 @@ class FullAuditRunnerTests(unittest.TestCase):
             )
             project = json.loads(
                 (output / "project-profile.json").read_text(encoding="utf-8")
+            )
+            hard = json.loads(
+                (output / "hard-gates.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(hard["gate_verdict"], "pass")
+            self.assertEqual(
+                project["skill_engineering"]["gate"],
+                {
+                    "verdict": "pass",
+                    "source": "gate_verdict",
+                    "reasons": [],
+                },
             )
             self.assertEqual(personal["default_view"], "growth")
             self.assertEqual(project["default_view"], "detection")

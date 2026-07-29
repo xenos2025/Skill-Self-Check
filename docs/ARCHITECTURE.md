@@ -20,54 +20,59 @@
 - **`exp/`** — sandbox for productizing **PM / workflow planning** (外贸 / 工厂 / 电商).
   Not on the default install path. See [exp/README.md](../exp/README.md).
 
-## Four-skill product flow
+## Independent core with optional routes
 
 ```text
-口头约定 / 零散流程
-        │
-        ▼
-agent-work-readiness ──► B0–B6 业务准备度
-        │                         │
-        ▼                         │
-     写成 Skill                   │
-        │                         │
-        ├─► skill-self-check ─────┤
-        └─► skill-ship-safety ────┤
-                                  ▼
-                       skill-growth-scorecard
-                         JSON + 离线 HTML
+                         Skill 目录
+                             │
+                             ▼
+                    skill-self-check
+                  独立快速门禁 + 整改
+                             │
+              ┌──────────────┼──────────────┐
+              │明确深审       │明确要成绩单   │明确安全预检
+              ▼              ▼              ▼
+       model_review    skill-growth-   skill-ship-
+       advisory only   scorecard       safety
+                      JSON + HTML
+
+agent-work-readiness ──► 可选业务准备度 JSON ──► scorecard
 ```
 
+- `skill-self-check` 是默认核心入口，独立评估包结构、明确必备检查和脚本
+  Critical，并输出聚焦整改。
 - `agent-work-readiness` 独立评估业务目标、步骤、职责、标准、委派边界和运行复盘。
-- `skill-self-check` 保留确定性的结构与契约检查。
 - `skill-ship-safety` 保留静态承诺差距和外部动作预检。
-- `skill-growth-scorecard` 只组合已有 JSON 事实，不替代上游检查，也不虚构缺失分数。
+- `skill-growth-scorecard` 是显式可选下游，只组合已有 JSON 事实，不重跑默认
+  审计、不替代上游检查，也不虚构缺失分数。
 
-普通用户不需要手工串联四个脚本。安装完整产品包后，
-`skill-self-check/scripts/run_full_audit.py` 是统一入口：它调用结构检查和安全
-预检，按需读取业务工作包与可信行为证据，并从同一事实集生成个人能力与项目
-两份成绩单。脚本会比较审计前后的目标指纹，并拒绝把真实报告写进目标或其源码
-仓库。
+普通用户默认只需要 `skill-self-check/scripts/hard_gates.py`。核心 Skill
+不得要求另外三个 Skill 已安装。只有用户明确要求成绩单或完整报告时，
+`skill-self-check/scripts/run_full_audit.py` 才作为兼容的完整入口：它调用可用
+的增强检查，并从同一事实集生成个人能力与项目两份成绩单。脚本会比较审计
+前后的目标指纹，并拒绝把真实报告写进目标或其源码仓库。
 
 ## skill-self-check runtime split
 
 ```text
 User / Agent
     │
-    ├─1─► hard_gates.py ──► JSON scores + Critical findings  (deterministic)
+    ├─default─► hard_gates.py ──► gate_verdict + ranked fixes (deterministic)
     │
-    └─2─► Checklist Pass 2–4 ──► qualitative Should/Nice + rewrites (model)
-              │
-              ├─► REPORT-BUSINESS-TEMPLATE.md  (plain language)
-              └─► REPORT-TEMPLATE.md           (technical evidence)
+    ├─apply fixes─► verify_fix.py ──► gate/finding delta
+    │
+    ├─explicit deep audit─► model_review priorities (advisory only)
+    │
+    └─explicit scorecard─► existing JSON ──► skill-growth-scorecard
 ```
 
 | Concern | Owner |
 | --- | --- |
-| Frontmatter, name, description shape, line count, axis headings, checkbox Verification | Script |
-| Completion-criterion quality, leading words, prose pruning | Model |
-| Numeric scores in the report | Script only |
-| Business/technical wording | Model/templates; facts and IDs must match |
+| `gate_verdict`, required checks, Criticals, exit code | `hard_gates.py` only |
+| Numeric scores | Script-produced, informational only |
+| Completion-criterion quality, leading words, prose pruning | Optional model review; non-blocking |
+| Scorecard level/type/HTML | `skill-growth-scorecard`, consuming source JSON |
+| Applied-fix proof | `verify_fix.py`; score changes do not create hard regression |
 
 ## skill-ship-safety execution boundary
 
@@ -81,7 +86,9 @@ process/time limits. A copied directory plus `DRY_RUN=1` is not treated as a
 security sandbox. When such a runner is unavailable, the result stays
 `execution_unverified`.
 
-`skill-growth-scorecard` 的 Lv3–Lv5 必须接收额外行为证据。静态报告最高只能
+`skill-growth-scorecard` 优先读取 `hard_gates.gate_verdict`，只对旧 JSON
+回退读取已弃用的 `scores.ship_floor_met`。它不得通过数字分数覆盖核心门禁。
+其 Lv3–Lv5 必须接收额外行为证据。静态报告最高只能
 解锁 Lv2。只读场景的 `not_applicable` 必须由范围证据和目标未变化证据支持；
 跨平台等级必须有至少两个平台使用同一契约和同一夹具指纹的 `verified` 记录。
 
