@@ -88,12 +88,9 @@ If there is any chance the user will say 「按意见改」, keep this run as th
 **baseline** for Pass 7 — save the stdout JSON to a file outside the target:
 
 ```bash
-python scripts/hard_gates.py /absolute/path/to/target-skill \
-  --out-json /private/path/baseline.json --pretty
+python scripts/hard_gates.py /absolute/path/to/target-skill > /private/path/baseline.json
 ```
 
-- `--out-json` writes the same report as UTF-8 JSON and refuses a destination
-  inside the audited Skill. Keep real reports outside the source repository too.
 - Read **stdout JSON** as the source of truth for `gate_verdict`,
   `gate_reasons`, scores, and script findings.
 - Stderr is a gate/count summary for humans.
@@ -129,12 +126,46 @@ Default output:
 1. Gate verdict and plain-language reasons.
 2. Every script Critical, each with 问题 → 为什么 → 可直接采用的建议改法.
 3. At most three highest-priority Should fix findings.
-4. One next action: say 「按意见改」 to authorize edits, or explicitly ask for
-   deep audit / scorecard.
+4. Deliver the next-action route guide — call AskUserQuestion once so the user
+   can pick the next route explicitly (see "Next action — 路线引导" below).
+   Always offer the guide; start an optional route only after the user picks
+   it.
 
 **Fast-mode completion criterion:** Every script Critical is covered, no more
-than three Should fix items are shown, and each displayed finding has an
-actionable fix. Stop here unless the user explicitly requests another route.
+than three Should fix items are shown, each displayed finding has an
+actionable fix, and the route guide was offered via AskUserQuestion. Stop
+only after the user picks a route or explicitly stops.
+
+### Next action — 路线引导
+
+After the fast-audit report, call AskUserQuestion once with these mutually
+exclusive options (single select). The user's click is the explicit request
+the optional routes require.
+
+Before building the options, check whether
+`~/.workbuddy/skills/skill-growth-scorecard` is installed (directory exists).
+If absent, drop the scorecard option and note "未安装"; skip auto-install.
+
+Options (recommended first; the label is the key the model reads back):
+
+- "按意见改 (Recommended)" — authorize applying the Critical fixes listed
+  above. On confirmation, edit the target and proceed to Pass 7 (改完复检).
+- "深度产品型审计" — append Predictability / Anatomy / Prune / PDCA+SMART
+  (the "Optional route — deep qualitative audit" passes). Label every model
+  finding `source: model_review`; advisory only.
+- "出成绩单" — only when skill-growth-scorecard is installed. Route the
+  existing fast-audit JSON to it; reuse that JSON instead of rerunning target
+  checks.
+- "到此为止" — keep the current fast-audit result and stop.
+
+Rules:
+
+- Cap at this single prompt after the fast audit; each route runs without
+  further option prompts.
+- A click on an optional route satisfies the "explicit request" gate for that
+  route only. PDCA/SMART and scorecard generation still require that click.
+- Treat a "到此为止" pick or a free-text answer as a stop; infer routes only
+  from an explicit click.
 
 ### Optional route — deep qualitative audit
 
