@@ -4,8 +4,8 @@ description: >-
   Deterministically audits an existing Agent Skill package, reports package
   health, gate_verdict, and ranked paste-ready fixes, and verifies
   user-authorized repairs against a saved baseline. Use when a user requests
-  an audit, review, self-check, blocker diagnosis, prompt optimization, context
-  efficiency review, or pre-share validation. For Skill creation, behavioral
+  an audit, review, self-check, blocker diagnosis, prompt optimization, workflow
+  prompt validation, context efficiency review, or pre-share validation. For Skill creation, behavioral
   evaluation, visual scorecards, or edits lacking explicit authorization, use
   another workflow.
 ---
@@ -15,8 +15,9 @@ description: >-
 Fast static review of a target skill. Output deterministic gate status and
 ranked fixes. Edit the target only when the user asks to apply fixes.
 
-Sources fused: predictability, Skill anatomy/verification, Cursor hard rules,
-PDCA, and SMART. Full checks live in [CHECKLIST.md](CHECKLIST.md).
+Full checks: [CHECKLIST.md](CHECKLIST.md).
+
+Workflow prompt audit: N/A — one agent instruction context; no separately orchestrated model-call prompts.
 
 <authority_contract>
 
@@ -144,6 +145,7 @@ Load only the reference selected by the user's explicit request:
 | --- | --- | --- |
 | Deep review, Predictability, Anatomy, PDCA, or SMART | [references/deep-qualitative-audit.md](references/deep-qualitative-audit.md) | Advisory model findings layered onto the unchanged script gate |
 | Prompt optimization or context efficiency | [references/prompt-optimization.md](references/prompt-optimization.md) | Evidence-bounded optimization findings without treating token reduction as quality gain |
+| Workflow prompt nodes | [references/workflow-prompt-audit.md](references/workflow-prompt-audit.md) | [scripts/workflow_prompt_audit.py](scripts/workflow_prompt_audit.py) validates a node manifest |
 | Complete installed check pack or saved source reports | [references/full-static-audit.md](references/full-static-audit.md) | Read-only JSON reports outside the target and source repository |
 | Apply fixes / 「按意见改」 | [references/fix-verification.md](references/fix-verification.md) | Authorized edits followed by baseline verification |
 
@@ -167,6 +169,7 @@ Only for explicitly requested routes:
 - [ ] Deep audit: PDCA×SMART matrix gaps map to advisory priorities
 - [ ] Prompt optimization: static reduction, quality, and behavior claims remain separate
 - [ ] Prompt optimization: comparative claims use a saved pre-edit baseline
+- [ ] Workflow prompt audit: node findings remain separate from `gate_verdict`
 - [ ] Full static audit: source JSON is outside the target and source repository
 - [ ] Full static audit: target fingerprint is unchanged
 - [ ] Applied fixes: `verify_fix.py` ran against the pre-fix baseline

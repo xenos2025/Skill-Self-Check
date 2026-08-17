@@ -36,6 +36,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Optional node-level workflow prompt audit: `workflow_prompt_audit.py` reads a
+  declared `references/workflow-prompts.json` and checks every model-call
+  node's prompt file, input/output contract, decision gates, acceptance and
+  stop conditions, untrusted-source isolation, declared placeholders,
+  manifest-to-Prompt control linkage, XML-style tag nesting, and graph
+  reachability. Its `status` remains separate
+  from the package `gate_verdict`; it never executes the target Skill or calls
+  a model. Skills without separately orchestrated model-call prompts can now
+  declare a reasoned `not_applicable`; a manifest always takes precedence.
 - Explicit deterministic gate contract in `hard_gates.py` schema 1.4:
   `gate_verdict`, structured `gate_reasons`, and named required checks replace
   numeric score thresholds as the blocking source of truth. Scores carry
