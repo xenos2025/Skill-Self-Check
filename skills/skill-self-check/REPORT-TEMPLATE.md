@@ -61,7 +61,7 @@
 | Token 预算 | `within/exceeded/not_assessed` | 上限 `<max_recommended_input_tokens>` | 超出时对应 `EFF.3` |
 | 运行时长 | `observed/not_measured` | `<duration_ms> ms` 或 `未测量` | 作者进阶行为证据里的目标运行时长；不得用审计器自身耗时代替 |
 | 循环护栏 | `pass/warn/not_applicable` | 指令数 / 有护栏数 | 未设停止条件的行号；对应 `EFF.1` / `EFF.2` |
-| 成绩单轨道 | `enterprise` / `advanced_audit` | 主结论 / 旁注 | 核心 gate 与可选安全证据保持分栏；行为 JSON / 跨平台只在高级审计 |
+| 安全预检 | `pass/warn/stop` | 静态外部动作线索 | 仅取自 `skill-ship-safety`；不覆盖核心 gate |
 
 `<明确说明这些值和数字分数都不改变 gate_verdict；EFF.* 以 Should fix 形式列入问题清单。>`
 `<不要把「未附 --behavior」写成核心 gate 失败；behavior 只属于显式高级审计。>`

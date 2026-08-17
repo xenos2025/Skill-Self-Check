@@ -4,11 +4,9 @@
 | --- | --- | --- | --- |
 | Hard-gate script | Skill directory | Explicit `gate_verdict`, ranked findings, informational scores | No |
 | Agent self-check skill | Skill path + chat | Fast gate result + all Criticals + up to three Should-fix items | Only if user says apply |
-| Explicit full audit | Skill path; optional work package / trusted behavior JSON | Read-only manifest + personal/project JSON and offline HTML | No |
+| Explicit full audit | Skill path; optional work package | Read-only manifest + checker source JSON | No |
 | Static ship-safety scan | Skill directory | Promise inventory, external-action hints, execution status | No |
 | Work-readiness gates | One structured work package | B0–B6 business readiness, missing fields, one next quest | No |
-| Optional growth scorecard | Existing readiness / audit / safety / behavior JSON | One JSON fact set + offline HTML | No |
-| Whole-suite scorecards | Repository `skills/` + local regression suite | Private audit JSON + separate personal/project HTML | No |
 | Deterministic gate | Script | `gate_verdict`, `gate_reasons`, named required checks | No |
 | Three-light scores | Script | Informational `basic_usable`, `contract_clarity`, `support_kit` | No |
 | Optional deep checklist | Explicit user request | Advisory model-review priorities | No |
@@ -38,20 +36,8 @@ The deterministic gate does not certify behavioral correctness, platform
 compatibility, or safe external execution. `skill-ship-safety` never executes
 target code; trusted isolated behavior evidence is a separate requirement.
 
-## Growth levels
+## Readiness levels
 
-The product deliberately keeps two independent progress lines:
-
-| Line | Levels | What it measures |
-| --- | --- | --- |
-| Business readiness | B0–B6 | From oral experience to a measurable, delegable, reviewed workflow |
-| Skill engineering | Lv0–Lv5 | From a draft to static quality, behavior closure, safety, and cross-platform evidence |
-
-The HTML scorecard is a view, not a second scoring system. Its three tabs reuse
-the same JSON: `成长画像`, `检测结果`, and `技术证据`.
-
-Lv4 treats applicability as evidence, not a checkbox: an inapplicable write-back
-gate needs a trusted unchanged-target record, and an inapplicable external-action
-gate needs a clean static safety scope plus a shareable evidence reference. Lv5
-counts two platforms only when both use the same contract and fixture SHA-256
-identifiers.
+`agent-work-readiness` reports B0–B6, from oral experience to a measurable,
+delegable, reviewed workflow. These levels describe the supplied work package;
+they do not change `skill-self-check` gate results.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install the four stable workflow, audit, safety, and scorecard skills
+# Install the three stable workflow, audit, and safety skills
 # (default) or a project.
 # Usage:
 #   ./install.sh
@@ -9,6 +9,16 @@
 
 set -euo pipefail
 
+remove_maintainer_only_content() {
+  local target="$1"
+
+  rm -rf -- "$target/tests" "$target/examples/fixtures"
+  find "$target" -type d \( -iname backup -o -iname backups -o -name __pycache__ \) \
+    -prune -exec rm -rf -- {} +
+  find "$target" -type f \
+    \( -iname '*.bak' -o -iname '*.backup' -o -name '*.pyc' \) -delete
+}
+
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 DEST=""
 PROJECT=""
@@ -17,7 +27,6 @@ SKILLS=(
   skill-self-check
   skill-ship-safety
   agent-work-readiness
-  skill-growth-scorecard
 )
 
 while [[ $# -gt 0 ]]; do
@@ -84,6 +93,7 @@ for SKILL in "${SKILLS[@]}"; do
   fi
   rm -rf "$TARGET"
   cp -R "$SRC" "$TARGET"
+  remove_maintainer_only_content "$TARGET"
   echo "Installed $SKILL -> $TARGET"
 done
 
@@ -100,13 +110,9 @@ echo "Requires Python 3.10+ (stdlib only). Try:"
 if has_skill skill-self-check; then
   echo "  python \"\$HOME/.cursor/skills/skill-self-check/scripts/hard_gates.py\" path/to/your-skill --out-json \"\$HOME/Documents/skill-audits/hard-gates.json\" --pretty"
 fi
-if has_skill skill-growth-scorecard; then
-  echo "  python \"\$HOME/.cursor/skills/skill-growth-scorecard/scripts/profile_engine.py\" --hard-gates \"\$HOME/Documents/skill-audits/hard-gates.json\" --out-html \"\$HOME/Documents/skill-audits/scorecard.html\""
-fi
 if has_skill skill-self-check &&
-  has_skill skill-ship-safety &&
-  has_skill skill-growth-scorecard; then
-  echo "  compatibility full route: python \"\$HOME/.cursor/skills/skill-self-check/scripts/run_full_audit.py\" path/to/your-skill --out-dir path/outside/the/repo --pretty"
+  has_skill skill-ship-safety; then
+  echo "  full static audit: python \"\$HOME/.cursor/skills/skill-self-check/scripts/run_full_audit.py\" path/to/your-skill --out-dir path/outside/the/repo --pretty"
 fi
 if has_skill skill-ship-safety; then
   echo "  python \"\$HOME/.cursor/skills/skill-ship-safety/scripts/ship_safety.py\" path/to/your-skill --pretty"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the installed audit pack once and create two private offline scorecards.
+"""Run the installed static audit pack and save its source JSON reports.
 
 The runner performs deterministic checks only. It never executes the audited
 Skill, never performs a network action, and refuses to store real reports
@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import importlib.util
 import json
 import subprocess
 import sys
@@ -60,14 +59,14 @@ def ensure_private_output(target: Path, output: Path) -> None:
         resolved_output == resolved_target
         or is_relative_to(resolved_output, resolved_target)
     ):
-        raise ValueError("成绩单目录不能放在被检查的 Skill 里面")
+        raise ValueError("审计报告目录不能放在被检查的 Skill 里面")
     if repo_root and (
         resolved_output == repo_root
         or is_relative_to(resolved_output, repo_root)
     ):
         raise ValueError("真实审计报告必须保存在源码仓库外，避免被同步到 GitHub")
     if resolved_output.exists() and any(resolved_output.iterdir()):
-        raise ValueError("成绩单目录已经存在且不是空目录，请换一个新目录")
+        raise ValueError("审计报告目录已经存在且不是空目录，请换一个新目录")
 
 
 def target_fingerprint(target: Path) -> dict[str, Any]:
@@ -116,25 +115,6 @@ def run_json_script(script: Path, target: Path) -> dict[str, Any]:
     return report
 
 
-def load_json(path: Path) -> dict[str, Any]:
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise ValueError(f"无法读取 JSON：{path.name}：{exc}") from exc
-    if not isinstance(value, dict):
-        raise ValueError(f"JSON 顶层必须是对象：{path.name}")
-    return value
-
-
-def load_profile_engine(script: Path) -> Any:
-    spec = importlib.util.spec_from_file_location("skill_growth_profile_engine", script)
-    if spec is None or spec.loader is None:
-        raise ValueError("无法加载成长成绩单引擎")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
 def write_json(path: Path, payload: dict[str, Any], pretty: bool) -> None:
     path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2 if pretty else None) + "\n",
@@ -147,8 +127,6 @@ def audit(
     output: Path,
     *,
     work_package: Path | None,
-    behavior_path: Path | None,
-    subject_name: str | None,
     pretty: bool,
 ) -> dict[str, Any]:
     if not target.is_dir() or not (target / "SKILL.md").is_file():
@@ -168,25 +146,13 @@ def audit(
         / "scripts"
         / "readiness_gates.py"
     )
-    profile_script = (
-        skills_root
-        / "skill-growth-scorecard"
-        / "scripts"
-        / "profile_engine.py"
-    )
-    template = (
-        skills_root
-        / "skill-growth-scorecard"
-        / "assets"
-        / "scorecard-template.html"
-    )
-    required = [hard_script, safety_script, profile_script, template]
+    required = [hard_script, safety_script]
     if work_package is not None:
         required.append(readiness_script)
     missing = [path.name for path in required if not path.is_file()]
     if missing:
         raise ValueError(
-            "缺少完整审计包，请重新安装四个正式 Skill："
+            "缺少完整审计包，请重新安装三个正式 Skill："
             + "、".join(sorted(missing))
         )
 
@@ -197,18 +163,6 @@ def audit(
         run_json_script(readiness_script, work_package)
         if work_package is not None
         else None
-    )
-    behavior = (
-        load_json(behavior_path)
-        if behavior_path is not None
-        else {
-            "schema_version": "1.1",
-            "source": "not_supplied",
-            "platforms": [],
-            "limitations": [
-                "本次只运行静态检查；没有把静态声明当作行为验证"
-            ],
-        }
     )
     after = target_fingerprint(target)
     unchanged = before["digest"] == after["digest"]
@@ -249,9 +203,6 @@ def audit(
             "business_readiness": (
                 "completed" if readiness is not None else "not_supplied"
             ),
-            "behavior_evidence": (
-                "supplied" if behavior_path is not None else "not_supplied"
-            ),
         },
         "limitations": [
             "没有执行被检查的 Skill",
@@ -260,42 +211,15 @@ def audit(
         ],
     }
     if not unchanged:
-        raise ValueError("审计前后目标文件指纹发生变化，已停止生成成绩单")
+        raise ValueError("审计前后目标文件指纹发生变化，已停止生成报告")
 
-    engine = load_profile_engine(profile_script)
-    title_name = subject_name or str(
+    title_name = str(
         ((hard.get("frontmatter") or {}).get("name")) or target.name
     )
-    base_profile = engine.build_profile(
-        readiness,
-        hard,
-        safety,
-        behavior,
-        "Skill 成长与项目成绩单",
-        subject_name,
-    )
-    personal = dict(base_profile)
-    personal["title"] = f"{title_name} · 个人能力成绩单"
-    personal["default_view"] = (
-        "detection"
-        if base_profile.get("verdict") == "invalid_skill_package"
-        else "growth"
-    )
-    personal["report_kind"] = "personal_capability"
-    personal["audit_manifest"] = {
-        "target_unchanged": unchanged,
-        "evidence": "audit-manifest.json#target",
-    }
-    project = dict(base_profile)
-    project["title"] = f"{title_name} · 项目成绩单"
-    project["default_view"] = "detection"
-    project["report_kind"] = "project_delivery"
-    project["audit_manifest"] = personal["audit_manifest"]
 
     output.mkdir(parents=True, exist_ok=True)
     write_json(output / "hard-gates.json", hard, pretty)
     write_json(output / "ship-safety.json", safety, pretty)
-    write_json(output / "behavior.json", behavior, pretty)
     if readiness is not None:
         write_json(output / "readiness.json", readiness, pretty)
     audit_duration_ms = round(
@@ -306,34 +230,15 @@ def audit(
         "status": "observed",
         "duration_ms": audit_duration_ms,
         "unit": "ms",
-        "scope": (
-            "audit checks, target fingerprinting, profile composition, "
-            "and source-report serialization"
-        ),
-        "excludes": "final profile and HTML artifact serialization",
+        "scope": "static checks, target fingerprinting, and report serialization",
         "clock": "monotonic",
     }
     manifest["audit_execution"] = audit_execution
-    personal["audit_execution"] = audit_execution
-    project["audit_execution"] = audit_execution
     write_json(output / "audit-manifest.json", manifest, pretty)
-    write_json(output / "personal-profile.json", personal, pretty)
-    write_json(output / "project-profile.json", project, pretty)
-    (output / "personal-scorecard.html").write_text(
-        engine.render_html(personal, template),
-        encoding="utf-8",
-    )
-    (output / "project-scorecard.html").write_text(
-        engine.render_html(project, template),
-        encoding="utf-8",
-    )
     return {
         "status": "completed",
         "subject": title_name,
-        "project_verdict": project["verdict"],
-        "personal_level": (
-            ((personal.get("skill_engineering") or {}).get("level") or {}).get("id")
-        ),
+        "gate_verdict": manifest["checks"]["core_gate"],
         "audit_duration_ms": audit_duration_ms,
         "target_unchanged": unchanged,
         "output_directory": str(output),
@@ -344,13 +249,11 @@ def audit(
 def main() -> int:
     force_utf8_streams()
     parser = argparse.ArgumentParser(
-        description="显式运行兼容完整审计，并生成个人能力与项目两份离线成绩单"
+        description="运行完整静态检查包并保存源 JSON 报告"
     )
     parser.add_argument("target_skill", type=Path)
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--work-package", type=Path)
-    parser.add_argument("--behavior", type=Path)
-    parser.add_argument("--subject-name")
     parser.add_argument("--pretty", action="store_true")
     args = parser.parse_args()
     try:
@@ -360,8 +263,6 @@ def main() -> int:
             work_package=(
                 args.work_package.resolve() if args.work_package else None
             ),
-            behavior_path=args.behavior.resolve() if args.behavior else None,
-            subject_name=args.subject_name,
             pretty=args.pretty,
         )
     except (OSError, ValueError) as exc:

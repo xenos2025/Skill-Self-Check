@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Integration checks for the explicit compatibility full-audit entry."""
+"""Integration checks for the full static-audit entry."""
 
 from __future__ import annotations
 
@@ -19,6 +19,15 @@ SCRIPT = (
     / "skill-self-check"
     / "scripts"
     / "run_full_audit.py"
+)
+READINESS_FIXTURE = (
+    REPO
+    / "skills"
+    / "agent-work-readiness"
+    / "examples"
+    / "fixtures"
+    / "agent-ready"
+    / "work-readiness.json"
 )
 
 
@@ -71,7 +80,7 @@ Do not use for external sends.
 
 
 class FullAuditRunnerTests(unittest.TestCase):
-    def test_one_command_writes_two_views_without_changing_target(self) -> None:
+    def test_one_command_writes_source_reports_without_changing_target(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             target = write_target(root)
@@ -98,11 +107,6 @@ class FullAuditRunnerTests(unittest.TestCase):
                 "audit-manifest.json",
                 "hard-gates.json",
                 "ship-safety.json",
-                "behavior.json",
-                "personal-profile.json",
-                "project-profile.json",
-                "personal-scorecard.html",
-                "project-scorecard.html",
             }
             self.assertEqual({path.name for path in output.iterdir()}, expected)
             manifest = json.loads(
@@ -123,55 +127,49 @@ class FullAuditRunnerTests(unittest.TestCase):
                 manifest["audit_execution"]["duration_ms"],
                 0,
             )
-            personal = json.loads(
-                (output / "personal-profile.json").read_text(encoding="utf-8")
-            )
-            project = json.loads(
-                (output / "project-profile.json").read_text(encoding="utf-8")
-            )
             hard = json.loads(
                 (output / "hard-gates.json").read_text(encoding="utf-8")
             )
             self.assertEqual(hard["gate_verdict"], "pass")
+            safety = json.loads(
+                (output / "ship-safety.json").read_text(encoding="utf-8")
+            )
+            self.assertIsInstance(safety, dict)
+
+    def test_work_package_adds_readiness_source_report(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            target = write_target(root)
+            output = root / "private-report"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    str(target),
+                    "--out-dir",
+                    str(output),
+                    "--work-package",
+                    str(READINESS_FIXTURE),
+                    "--pretty",
+                ],
+                cwd=REPO,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            readiness = json.loads(
+                (output / "readiness.json").read_text(encoding="utf-8")
+            )
+            manifest = json.loads(
+                (output / "audit-manifest.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(readiness["level"]["id"], "B5")
             self.assertEqual(
-                project["skill_engineering"]["gate"],
-                {
-                    "verdict": "pass",
-                    "source": "gate_verdict",
-                    "reasons": [],
-                },
-            )
-            self.assertEqual(personal["default_view"], "growth")
-            self.assertEqual(project["default_view"], "detection")
-            self.assertEqual(project["sources"]["behavior"], "not_supplied")
-            self.assertIn(
-                "没有把静态声明当作行为验证",
-                " ".join(project["limitations"]),
-            )
-            metrics = project["skill_engineering"]["operational_metrics"]
-            self.assertEqual(
-                metrics["token_consumption"]["status"],
-                "estimated",
-            )
-            self.assertGreater(
-                metrics["token_consumption"]["estimated_input_tokens"],
-                0,
-            )
-            self.assertEqual(
-                metrics["runtime_duration"]["status"],
-                "not_measured",
-            )
-            self.assertEqual(
-                project["audit_execution"]["duration_ms"],
-                manifest["audit_execution"]["duration_ms"],
-            )
-            self.assertIn(
-                "sample-skill",
-                (output / "personal-scorecard.html").read_text(encoding="utf-8"),
-            )
-            self.assertIn(
-                "Token 消耗",
-                (output / "project-scorecard.html").read_text(encoding="utf-8"),
+                manifest["checks"]["business_readiness"],
+                "completed",
             )
 
     def test_invalid_package_is_reported_without_a_maturity_level(self) -> None:
@@ -228,34 +226,22 @@ Do not use for external sends.
             )
 
             self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
-            project = json.loads(
-                (output / "project-profile.json").read_text(encoding="utf-8")
-            )
-            personal = json.loads(
-                (output / "personal-profile.json").read_text(encoding="utf-8")
+            hard = json.loads(
+                (output / "hard-gates.json").read_text(encoding="utf-8")
             )
             manifest = json.loads(
                 (output / "audit-manifest.json").read_text(encoding="utf-8")
             )
-            html = (output / "project-scorecard.html").read_text(
-                encoding="utf-8"
-            )
 
-        self.assertEqual(project["verdict"], "invalid_skill_package")
         self.assertEqual(
-            project["skill_engineering"]["status"],
-            "invalid_package",
+            hard["package_health"]["status"],
+            "invalid_skill_package",
         )
-        self.assertIsNone(project["skill_engineering"]["level"])
-        self.assertEqual(personal["default_view"], "detection")
+        self.assertEqual(hard["gate_verdict"], "invalid_skill_package")
         self.assertEqual(
             manifest["checks"]["package_health"],
             "invalid_skill_package",
         )
-        self.assertIn("package-health-banner", html)
-        self.assertIn("不是标准 Skill 包 · 暂停成熟度评分", html)
-        self.assertIn("局部文件诊断", html)
-        self.assertNotIn('"level": {"id": "Lv', html)
 
     def test_report_is_refused_inside_target(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

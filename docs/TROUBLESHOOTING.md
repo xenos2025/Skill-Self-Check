@@ -67,9 +67,8 @@ marked 未完成安全验证.
   `references/plain-language-response.md`.
 - Explicit deep/full route: `REPORT-TEMPLATE.md` remains the technical
   compatibility template.
-- Explicit scorecard route: open the optional personal/project HTML.
 
-Every optional view must preserve the same source findings and gate conclusion.
+Every report must preserve the same source findings and gate conclusion.
 
 ## Installer says destination exists
 

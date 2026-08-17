@@ -230,8 +230,6 @@ is [references/gap-questions.md](references/gap-questions.md).
 | **Fast audit** (default) | Deterministic PKG / hard gate / EFF checks; all Criticals; top three Should fix | Yes, script only |
 | **Apply + verify** | Authorized edits plus Pass 7 | Yes, script only |
 | **Deep review** (explicit) | Predictability / anatomy / PDCA+SMART | No, advisory |
-| **Scorecard** (explicit) | Existing JSON → optional profile / HTML | No new gate |
-| **Advanced evidence** (explicit) | Behavior JSON, failure recovery, platform fingerprints | Separate author track |
 
 Default audit success = package valid + named required checks + zero script Critical.
 Missing behavior JSON does **not** mean “tonight’s certification failed.”
@@ -266,22 +264,6 @@ run, and by marking dimensions whose maximum changed as `not_comparable`.
 
 Rewrite recipes for the mechanical IDs live in
 [references/fix-templates.md](references/fix-templates.md).
-
----
-
-## Advanced audit (optional)
-
-Skip this band unless the author explicitly wants author-track maturity
-(Lv3+) or multi-platform proof.
-
-| # | Check (plain) | Fail if | Sev |
-|---|----------------|---------|-----|
-| A.1 | Trusted behavior JSON supplied when claiming Lv3+ | Level claimed from static files alone | Nice (advanced) |
-| A.2 | `core_flow_tested` + `pdca_evidence` with shareable evidence refs | Booleans true without evidence references | Should fix (advanced) |
-| A.3 | Cross-platform records share contract/fixture SHA-256 | Two platforms with different fixtures counted as comparable | Should fix (advanced) |
-
-See growth scorecard `references/profile-contract.md` (Dual track) and
-`references/platform-evidence.md`.
 
 ---
 

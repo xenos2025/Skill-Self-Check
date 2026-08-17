@@ -311,6 +311,19 @@ def is_path_placeholder(value: str) -> bool:
     )
 
 
+def path_match_is_placeholder(line: str, match: re.Match[str]) -> bool:
+    """Check placeholder markers attached to one matched path, not its whole line."""
+    context_start = match.start()
+    context_breaks = "`'\",;，；|"
+    while (
+        context_start > 0
+        and not line[context_start - 1].isspace()
+        and line[context_start - 1] not in context_breaks
+    ):
+        context_start -= 1
+    return is_path_placeholder(line[context_start : match.end()])
+
+
 def collect_absolute_path_evidence(
     skill_dir: Path, files: list[Path]
 ) -> list[str]:
@@ -330,15 +343,20 @@ def collect_absolute_path_evidence(
         if text is None:
             continue
         for line_number, line in enumerate(text.splitlines(), 1):
-            hits = [
-                match.group(0)
+            matches = [
+                match
                 for pattern in (
                     ABSOLUTE_WINDOWS_PATH_RE,
                     ABSOLUTE_POSIX_PATH_RE,
                 )
                 for match in pattern.finditer(line)
             ]
-            if any(not is_path_placeholder(hit) for hit in hits):
+            # Placeholder context can sit before the matched POSIX fragment,
+            # for example <workspace>/tmp/tool/<operation-id>/.
+            if any(
+                not path_match_is_placeholder(line, match)
+                for match in matches
+            ):
                 relative = path.relative_to(skill_dir).as_posix()
                 evidence.append(f"{relative}:{line_number}")
     return sorted(set(evidence))
@@ -815,7 +833,9 @@ def assess_support_kit(
         script_files = [
             p
             for p in scripts_dir.rglob("*")
-            if p.is_file() and p.suffix.lower() in {".py", ".sh", ".ps1", ".js", ".ts"}
+            if p.is_file()
+            and p.suffix.lower()
+            in {".py", ".sh", ".ps1", ".js", ".mjs", ".cjs", ".ts", ".mts", ".cts"}
         ]
     scripts_on_disk = bool(script_files)
     scripts_claimed = bool(SCRIPT_CLAIM_RE.search(body)) or scripts_on_disk

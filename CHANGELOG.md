@@ -6,6 +6,34 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Optimized the `skill-self-check` prompt contract: frontmatter now carries
+  positive triggers and exclusions, script/model authority uses one explicit
+  semantic boundary, and optional deep audit, full static audit, and
+  fix-verification procedures load from dedicated references only when
+  requested. An evidence-bounded prompt-optimization route now checks trigger
+  precision, default-path economy, progressive disclosure, authority, output
+  contracts, and behavior-preservation claims. The default fast path remains
+  in `SKILL.md`; its current static input estimate is 2,413 tokens, down 1,631
+  (about 40%) from 4,044, while the deterministic gate stays `pass` with no
+  introduced findings.
+- Tightened portable-path detection so a placeholder-prefixed path no longer
+  hides a separate machine-specific absolute path on the same line.
+- Expanded `skill-ship-safety` Shopify Admin GraphQL inventory to preserve
+  distinct Store/App execute commands, resolve query files, respect Store's
+  default mutation guard, and treat unreferenced mutation definitions as
+  inventory rather than automatic stop-ship actions. Repository-level
+  `skills/...` commands now resolve exactly and cannot fall back to a target
+  script with the same basename.
+- Separated external suite facts from auditor facts: auditor tests no longer
+  unlock target behavior levels or runtime evidence, external target Git
+  commands are disabled, conclusions are derived from current target results,
+  and same-repository `--allow-repo-output` compatibility remains available.
+- Narrowed the shipped pack to three check modules: `skill-self-check`,
+  `skill-ship-safety`, and `agent-work-readiness`. The offline growth scorecard
+  is no longer installed, documented, or required by the full static runner.
+
 ### Added
 
 - Explicit deterministic gate contract in `hard_gates.py` schema 1.4:
@@ -18,17 +46,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   This makes JSON reuse reliable across PowerShell versions without shell
   redirection encoding differences.
 - One-way optional routing: `skill-self-check` now completes a standalone fast
-  audit first, routes deep model review only on an explicit request, and routes
-  existing audit JSON to `skill-growth-scorecard` only for explicit scorecard /
-  profile / HTML requests. The other three shipped Skills are optional
+  audit first and routes deep model review only on an explicit request. The
+  other two shipped Skills are optional
   enhancements and are never required for the core audit.
 - The former root-level business report template is now the focused
   `references/plain-language-response.md` contract. It translates the core
-  gate and ranked findings without pulling scorecard, safety, readiness, token,
+  gate and ranked findings without pulling safety, readiness, token,
   or runtime fields into the default route.
-- Scorecard compatibility parsing prefers `gate_verdict` and identifies legacy
-  fallback to `scores.ship_floor_met`. Profile schema/ruleset 0.6 and suite
-  schema 0.5 preserve the upstream gate alongside informational scores.
 - Closed-loop fix verification: `skill-self-check/scripts/verify_fix.py` compares
   a Skill against the `hard_gates.py` JSON captured before the edits and reports
   score movement, resolved / introduced / persisting findings, gate and
@@ -54,29 +78,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   input-token budget. Anti-loop instructions count as guards; results surface
   as a `loop_guard` metric and a token `budget` block, wired into both report
   templates and the checklist.
-- README scorecard gallery: personal Growth and project Detection screenshots
-  under `assets/scorecards/`, plus CN/EN copy explaining the two offline HTML
-  views and how to regenerate a suite demo.
 - Maintainer platform matrix in `docs/PLATFORM-COMPATIBILITY.md` and README:
   Cursor in active use, Codex as the next comparable second platform; Claude
   Code, WorkBuddy, and Coze listed as not tested yet (not a certification).
-- Red Flags sections on `agent-work-readiness` and `skill-growth-scorecard` so
-  skip-prone discipline steps have explicit observable failure signals.
-- `skill-self-check/scripts/run_full_audit.py`: an explicit read-only full route produces
-  matched personal/project offline scorecards, source JSON, and a before/after
-  target fingerprint manifest; real reports are refused inside the target or
-  its source repository.
-- Comparable cross-platform evidence contract requiring two distinct platforms
-  to share the same contract and sanitized-fixture SHA-256 identifiers, plus
-  `platform_record.py` for generating review-gated records.
+- Red Flags section on `agent-work-readiness` so skip-prone discipline steps
+  have explicit observable failure signals.
+- `skill-self-check/scripts/run_full_audit.py`: an explicit read-only full route
+  produces checker source JSON and a before/after target fingerprint manifest;
+  real reports are refused inside the target or its source repository.
 - `agent-work-readiness`: deterministic B0–B6 gates for turning one oral,
   repeated business process into a goal, workflow, role/handoff, metric,
   delegation-control, and learning-evidence work package.
-- `skill-growth-scorecard`: combines readiness, hard-gate, ship-safety, and
-  optional behavior JSON into one rules-based growth profile plus a
-  single-file offline HTML with growth, detection, and technical-evidence views.
-- Regression coverage for readiness evidence boundaries, static-vs-behavior
-  level caps, stop-ship suppression, cross-platform evidence, and offline HTML.
+- Regression coverage for readiness evidence boundaries, hard gates, static
+  ship safety, and the JSON-only full static runner.
 - `skill-ship-safety` skill: static preflight audit for external-action skills
   complements the static self-check. `scripts/ship_safety.py` (stdlib-only)
   inventories documented commands, flags promises without implementation
@@ -138,58 +152,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Default self-check output is now focused: gate verdict and reasons, every
   deterministic Critical, at most three Should-fix items, and paste-ready
-  changes. Dual reports, PDCA×SMART, growth profiles, and HTML are no longer
-  default completion requirements.
+  changes. PDCA×SMART remains explicit deep-review work.
 - README: beginner path now includes fix verification (`verify_fix.py`) and
-  spells out enterprise mainline vs optional advanced audit; not a full rewrite.
-- Scorecards and self-check docs use a **dual track** after the explicit core
-  route: enterprise mainline
-  (usable business Skill employee — package health, core gate, static safety,
-  plain next practice) vs optional **advanced audit** (behavior JSON, failure
-  recovery, portable contract, two-platform fingerprints). Growth profile
-  schema/ruleset **0.6**: after the core gate, root `verdict` is
-  `ready_for_controlled_use` without behavior evidence; author steps move to
-  `advanced_audit.next_quest`. Lv4–Lv5 labels marked as author track. HTML
-  shows a separate advanced-audit panel. Learning quests drop Harness /
-  cross-platform as the default practice.
+  separates the fast gate from optional deep review; not a full rewrite.
 - `skill-self-check` now bounds its own retry instructions and states the
   package-health rule positively, clearing the `EFF.1` and `2.5` findings it
   raised against itself.
-- `skill-growth-scorecard` states its four aggregation and metric-isolation
-  rules as positive targets, clearing its `2.5` negation-density finding. All
-  four shipped Skills now audit at 5/5, 5/5, kit 3/3 with zero findings.
-- `CONTRIBUTING.md` and `AGENTS.md` updated for the four-skill pack: full
-  unittest discover, scorecard private-output rules, script ownership map, and
-  platform-evidence pointers.
-- `skill-growth-scorecard` description and check axes tightened for clearer
-  triggers and named review axes (business readiness, maturity, type, next
-  quest, privacy, browser behavior).
-- Growth ruleset 0.2 makes external-action and write-back applicability
-  evidence-based: verified N/A can satisfy a control, but omission or an
-  absolute local evidence path cannot. Write-back N/A also requires a trusted
-  unchanged-target record.
-- Default installers and plugin metadata now expose four stable skills:
-  readiness, self-check, ship-safety, and growth scorecard.
-- Growth scorecards now identify the analyzed Skill or work process in the
-  header, detection view, technical evidence, document title, and profile JSON.
-- The growth view now presents an original Skill navigator character, a
-  type-first declaration, and six single-direction evidence-coverage axes.
-  Percentages are deterministic 0–4 state translations, not personality
-  probabilities or complementary gap scores. Each axis states its 100%
-  full-evidence condition; detection and technical views remain available from
-  the same fact set.
-- The growth view now frames type and level as personal Skill-building
-  capability demonstrated by the analyzed work sample. Project delivery
-  verdicts remain unchanged in detection and technical evidence, but no longer
-  appear as personal badges.
-- Personal capability cards now use a deterministic evidence-based assessment:
-  one concrete capability headline, the current stage, and up to three growth
-  priorities. Product-explanation meta copy is no longer shown as if it were a
-  personal evaluation; the same fields are preserved in profile JSON.
-- Growth “next quest” cards now teach personal capability development by level,
-  including measurable goals, scenario judgment, reusable components or
-  scripts, Harness placement, testing, safety, recovery, and portability.
-  Finding-specific remediation remains separately visible in Detection Results.
+- `CONTRIBUTING.md` and `AGENTS.md` updated for the three-checker pack: full
+  unittest discovery, private-output rules, and script ownership map.
+- Default installers and plugin metadata now expose three stable skills:
+  readiness, self-check, and ship-safety.
 - `ship_safety.py --exec` is now a safe compatibility refusal: it does not run
   target code and returns `execution_unverified` until a trusted isolation
   runner supplies behavioral evidence.

@@ -45,6 +45,7 @@ credentials.json
 # Local scratch / generated reports at repo root
 /outputs/
 /_scratch*/
+/backup/
 *.log
 
 # Archives

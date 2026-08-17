@@ -18,7 +18,7 @@ Open an issue with the `roadmap` label to propose items.
 - [x] Boss-friendly SVGs under `assets/diagrams/` (+ `zh/`)
 - [x] Third light `support_kit` (资料/案例/落地记忆/脚本; N/A; not ship floor)
 - [x] Generic B0–B6 work-readiness gates promoted to `skills/agent-work-readiness`
-- [x] Offline dual-line growth scorecard with preserved audit and evidence views
+- [x] Retire the offline growth scorecard from the shipped checker pack
 
 ## Productization hook (`exp/`)
 
@@ -37,7 +37,7 @@ factory, and ecommerce teams:
       inventory, send-gate scan, and explicit execution-unverified boundary
 - [ ] Trusted-runner adapter for isolated gate-bypass behavior tests
 - [ ] Lightweight behavioral evals (trigger / non-trigger cases)
-- [ ] User research for whether beginners understand B0–B6, Lv0–Lv5, and the
-      single “next quest” without facilitator explanation
+- [ ] User research for whether beginners understand B0–B6 and the single
+      “next quest” without facilitator explanation
 - [x] CI job: regression tests + `hard_gates.py` on all `skills/*` + diagram reproducibility
 - [ ] Optional uninstall.ps1 / uninstall.sh for Cursor skills dir

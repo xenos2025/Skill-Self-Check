@@ -79,6 +79,179 @@ class BadFixtureTests(unittest.TestCase):
 
 
 class CleanTargetTests(unittest.TestCase):
+    def test_node_shopify_cli_and_graphql_mutation_are_inventoried(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "multi-runtime"
+            (skill / "scripts").mkdir(parents=True)
+            (skill / "graphql").mkdir()
+            (skill / "SKILL.md").write_text(
+                GOOD_SKILL_MD.replace("good-cli", "multi-runtime")
+                + "\nnode scripts/helper.mjs sync\n"
+                + "shopify store auth --store example.myshopify.com --scopes read_products\n"
+                + "shopify store execute --store example.myshopify.com --query-file graphql/update.graphql\n",
+                encoding="utf-8",
+            )
+            (skill / "scripts" / "tool.py").write_text(GOOD_TOOL_PY, encoding="utf-8")
+            (skill / "scripts" / "helper.mjs").write_text("console.log('sync');\n", encoding="utf-8")
+            (skill / "graphql" / "update.graphql").write_text(
+                "mutation UpdateProduct { productUpdate(product: {id: \"gid://shopify/Product/1\"}) { userErrors { message } } }\n",
+                encoding="utf-8",
+            )
+            (skill / "graphql" / "read.graphql").write_text("query ReadShop { shop { name } }\n", encoding="utf-8")
+            _, report = run_script(skill)
+        kinds = {command["kind"] for command in report["commands"]}
+        self.assertTrue({"python", "node", "shopify_cli"} <= kinds)
+        capabilities = {
+            capability
+            for action in report["external_actions"]
+            for capability in action["capabilities"]
+        }
+        self.assertIn("shopify_cli", capabilities)
+        self.assertIn("graphql_mutation_definition", capabilities)
+        mutation_files = [
+            action["file"]
+            for action in report["external_actions"]
+            if "graphql_mutation_definition" in action["capabilities"]
+        ]
+        self.assertEqual(["graphql/update.graphql"], mutation_files)
+
+    def test_distinct_shopify_execute_commands_preserve_write_guards(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "shopify-commands"
+            (skill / "scripts").mkdir(parents=True)
+            (skill / "graphql").mkdir()
+            (skill / "SKILL.md").write_text(
+                GOOD_SKILL_MD.replace("good-cli", "shopify-commands")
+                + "\nshopify store execute --store example.myshopify.com --query-file graphql/read.graphql\n"
+                + "shopify store execute --store example.myshopify.com --query-file graphql/update.graphql\n"
+                + "shopify store execute --store example.myshopify.com --query-file graphql/update.graphql --allow-mutations\n"
+                + "shopify app execute --store example.myshopify.com --query-file graphql/update.graphql\n",
+                encoding="utf-8",
+            )
+            (skill / "scripts" / "tool.py").write_text(GOOD_TOOL_PY, encoding="utf-8")
+            (skill / "graphql" / "read.graphql").write_text(
+                "query ReadShop { shop { name } }\n",
+                encoding="utf-8",
+            )
+            (skill / "graphql" / "update.graphql").write_text(
+                "mutation UpdateProduct { productUpdate(product: {id: \"gid://shopify/Product/1\"}) { userErrors { message } } }\n",
+                encoding="utf-8",
+            )
+            code, report = run_script(skill)
+        shopify_commands = [
+            command for command in report["commands"] if command["kind"] == "shopify_cli"
+        ]
+        self.assertEqual(4, len(shopify_commands))
+        guarded = [
+            action
+            for action in report["external_actions"]
+            if action.get("guard_status") == "mutations_disabled_by_default"
+        ]
+        self.assertEqual(1, len(guarded))
+        critical_writes = [
+            finding
+            for finding in report["findings"]
+            if finding["severity"] == "critical"
+            and "business_data_write" in finding["message"]
+        ]
+        self.assertEqual(2, len(critical_writes))
+        self.assertEqual(1, code)
+
+    def test_unreferenced_graphql_mutation_is_inventory_not_stop_ship(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "mutation-library"
+            (skill / "scripts").mkdir(parents=True)
+            (skill / "graphql").mkdir()
+            (skill / "SKILL.md").write_text(
+                GOOD_SKILL_MD.replace("good-cli", "mutation-library"),
+                encoding="utf-8",
+            )
+            (skill / "scripts" / "tool.py").write_text(GOOD_TOOL_PY, encoding="utf-8")
+            (skill / "graphql" / "update.graphql").write_text(
+                "mutation UpdateProduct { productUpdate(product: {id: \"gid://shopify/Product/1\"}) { userErrors { message } } }\n",
+                encoding="utf-8",
+            )
+            code, report = run_script(skill)
+        self.assertEqual(0, code, report["findings"])
+        self.assertEqual(0, report["counts"]["critical"])
+        self.assertIn(
+            "graphql_mutation_definition",
+            report["external_actions"][0]["capabilities"],
+        )
+
+    def test_repo_relative_command_resolves_only_from_approved_repo(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "pack"
+            target = repo / "skills" / "target"
+            sibling = repo / "skills" / "shared" / "scripts"
+            target.mkdir(parents=True)
+            sibling.mkdir(parents=True)
+            (target / "SKILL.md").write_text(
+                GOOD_SKILL_MD.replace("good-cli", "target").replace(
+                    "python3 scripts/tool.py ping <host>",
+                    "python3 skills/shared/scripts/tool.py ping",
+                ),
+                encoding="utf-8",
+            )
+            (sibling / "tool.py").write_text(GOOD_TOOL_PY, encoding="utf-8")
+            code, report = run_script(target, "--repo-root", str(repo))
+        self.assertEqual(0, code, report["findings"])
+        self.assertEqual("repo", report["commands"][0]["resolution_scope"])
+
+    def test_repo_relative_command_does_not_fall_back_to_target_basename(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "pack"
+            target = repo / "skills" / "target"
+            local_scripts = target / "scripts"
+            local_scripts.mkdir(parents=True)
+            (target / "SKILL.md").write_text(
+                GOOD_SKILL_MD.replace("good-cli", "target").replace(
+                    "python3 scripts/tool.py ping <host>",
+                    "python3 skills/shared/scripts/tool.py ping",
+                ),
+                encoding="utf-8",
+            )
+            (local_scripts / "tool.py").write_text(GOOD_TOOL_PY, encoding="utf-8")
+            code, report = run_script(target, "--repo-root", str(repo))
+        self.assertEqual(1, code)
+        self.assertIn("CMD.1", [finding["id"] for finding in report["findings"]])
+
+    def test_repo_relative_command_auto_detects_nearest_git_pack(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "pack"
+            target = repo / "skills" / "target"
+            sibling = repo / "skills" / "shared" / "scripts"
+            (repo / ".git").mkdir(parents=True)
+            target.mkdir(parents=True)
+            sibling.mkdir(parents=True)
+            (target / "SKILL.md").write_text(
+                GOOD_SKILL_MD.replace("good-cli", "target").replace(
+                    "python3 scripts/tool.py ping <host>",
+                    "python3 skills/shared/scripts/tool.py ping",
+                ),
+                encoding="utf-8",
+            )
+            (sibling / "tool.py").write_text(GOOD_TOOL_PY, encoding="utf-8")
+            code, report = run_script(target)
+        self.assertEqual(0, code, report["findings"])
+        self.assertEqual("repo", report["commands"][0]["resolution_scope"])
+
+    def test_repo_relative_path_traversal_remains_critical(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "pack"
+            target = repo / "skills" / "target"
+            target.mkdir(parents=True)
+            (target / "SKILL.md").write_text(
+                GOOD_SKILL_MD.replace("good-cli", "target").replace(
+                    "python3 scripts/tool.py ping <host>",
+                    "python3 skills/../outside/tool.py ping",
+                ),
+                encoding="utf-8",
+            )
+            code, report = run_script(target, "--repo-root", str(repo))
+        self.assertEqual(1, code)
+        self.assertIn("CMD.1", [finding["id"] for finding in report["findings"]])
+
     def test_fully_implemented_command_passes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             skill = Path(tmp) / "good-cli"

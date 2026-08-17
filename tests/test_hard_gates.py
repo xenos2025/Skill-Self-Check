@@ -353,6 +353,45 @@ class ParsingRegressionTests(unittest.TestCase):
 
 
 class SupportKitTests(unittest.TestCase):
+    def test_placeholder_prefixed_posix_path_is_portable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = write_skill(Path(tmp), "portable-placeholder", ZH_SKILL)
+            (skill / "references").mkdir()
+            (skill / "references" / "paths.md").write_text(
+                "Write temporary state under <workspace>/tmp/tool/<operation-id>/.\n",
+                encoding="utf-8",
+            )
+            _, report = run_script(skill)
+        self.assertNotIn("PKG.4", [finding["id"] for finding in report["findings"]])
+
+    def test_placeholder_does_not_hide_real_path_on_same_line(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = write_skill(Path(tmp), "mixed-paths", ZH_SKILL)
+            (skill / "references").mkdir()
+            (skill / "references" / "paths.md").write_text(
+                "Use <workspace>/tmp/<operation-id>/, never C:\\Users\\Alice\\private.txt.\n",
+                encoding="utf-8",
+            )
+            _, report = run_script(skill)
+        pkg_findings = [
+            finding for finding in report["findings"] if finding["id"] == "PKG.4"
+        ]
+        self.assertEqual(1, len(pkg_findings))
+        self.assertIn("references/paths.md:1", pkg_findings[0]["evidence"])
+
+    def test_node_esm_helper_counts_as_documented_script(self) -> None:
+        body = ZH_SKILL.replace(
+            "## 常见借口",
+            "Run `node scripts/helper.mjs` for deterministic automation.\n\n## 常见借口",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = write_skill(Path(tmp), "esm-helper", body)
+            (skill / "scripts").mkdir()
+            (skill / "scripts" / "helper.mjs").write_text("console.log('ok');\n", encoding="utf-8")
+            _, report = run_script(skill)
+        self.assertNotIn("6.4b", [finding["id"] for finding in report["findings"]])
+        self.assertEqual("pass", report["scores"]["support_kit"]["modules"]["scripts"]["status"])
+
     def test_workflow_without_kit_gets_should_fix_not_critical(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             skill = write_skill(Path(tmp), "bare-flow", ZH_SKILL)

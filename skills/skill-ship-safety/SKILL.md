@@ -47,8 +47,10 @@ alone is not a sandbox. Script stop-ship findings stay authoritative.
 
 This audit always reports on:
 
-- **Promise vs implementation** — every documented command exists and its
-  subcommand is implemented (script)
+- **Promise vs implementation** — documented Python, Node, shell, PowerShell,
+  and supported Shopify Admin GraphQL CLI entrypoints are inventoried; Python
+  subcommands are checked statically, while non-Python behavior remains
+  unverified without trusted isolation
 - **Send gates in code** — blacklist / dedupe / per-day caps documented in
   prose are actually enforced by the send entrypoints (trusted isolated test)
 - **Default dry-run** — real SMTP / WhatsApp / API sending requires an
@@ -76,6 +78,30 @@ available or unavailable.
 python scripts/ship_safety.py /absolute/path/to/target-skill --pretty
 ```
 
+For a skill inside a multi-skill repository, approve the repository root explicitly when docs contain `skills/...` paths:
+
+```bash
+python scripts/ship_safety.py /absolute/path/to/repo/skills/target --repo-root /absolute/path/to/repo --pretty
+```
+
+Resolution stays inside the target skill except that documented paths beginning
+with `skills/` resolve exactly from the approved repository root and never fall
+back to a same-named target-local file. Each command record reports
+`resolution_scope: target|repo|external_cli`. Path traversal and absolute
+documented script paths remain unresolved Criticals. A nearest `.git`
+repository whose relative target begins with `skills/` may be detected
+conservatively when `--repo-root` is omitted.
+
+The static external-action inventory includes Node network/process entrypoints,
+shell/PowerShell helpers, `shopify store auth`, Store/App `execute` and
+`bulk execute`, and `.graphql`/`.gql` mutation definitions. Distinct Shopify
+invocations keep their flags and query files. A Store mutation without
+`--allow-mutations` is recorded as blocked by Shopify's default guard; an
+enabled Store mutation or an App mutation is a business-data write Critical.
+A mutation file with no documented execution entrypoint is inventory evidence,
+not an external action by itself. Read-only GraphQL queries are not classified
+as business-data writes. None of these entrypoints are executed.
+
 The compatibility flag `--exec` does **not** run target code. It returns
 `execution_unverified` and explains that a separately supplied trusted runner
 is required. Only such a runner satisfies the behavior-test step; a temporary
@@ -91,9 +117,12 @@ directory or sanitized environment is insufficient.
 ### Pass 1 — Map script findings
 
 Copy script findings into the report. `CMD.1` (missing script), `CMD.2`
-(documented subcommand not implemented), and `EXT.1` on SMTP/IMAP files are
-stop-ship Criticals. `EXEC.0` means execution was requested but intentionally
-not performed. You may explain findings; you may not mark them passed.
+(documented subcommand not implemented), `EXT.1` on SMTP/IMAP files, and
+an enabled Shopify business-data mutation are stop-ship Criticals. `EXT.4`
+records an unreferenced mutation definition; `EXT.5` records a Store mutation
+blocked by the default `--allow-mutations` gate. `EXEC.0` means execution was
+requested but intentionally not performed. You may explain findings; you may
+not mark them passed.
 
 **Completion criterion:** every script Critical appears with a fix suggestion.
 

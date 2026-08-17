@@ -1,7 +1,7 @@
 # Plain-Language Gate Response
 
 Use this reference to translate the deterministic core audit into concise,
-plain language. It is a response shape, not a second audit, scorecard, or
+plain language. It is a response shape, not a second audit or
 business-readiness assessment.
 
 ## Source mapping
@@ -63,7 +63,7 @@ in the source JSON.
 Give one action:
 
 - If blockers remain: “说‘按意见改’，我会先保存基线，再修改并复检。”
-- If the gate passed: “可以进入受控试用；如需 PDCA/SMART 深审或成绩单，请明确提出。”
+- If the gate passed: “可以进入受控试用；如需 PDCA/SMART 深审或完整静态检查，请明确提出。”
 - If fixes were already applied: report the `verify_fix.py` gate transition and
   remaining Critical count.
 
@@ -71,7 +71,7 @@ Give one action:
 
 - Explain internal IDs after the plain-language title, not instead of it.
 - Say “静态门禁通过”, never “已经完全安全” or “行为已经认证”.
-- Do not treat a missing optional scorecard, safety scan, readiness package, or
+- Do not treat a missing optional safety scan, readiness package, or
   behavior record as a core-audit failure.
 - Do not invent scores, findings, evidence, or a before/after improvement.
 - Keep the default response short: conclusion, all Criticals, up to three

@@ -31,7 +31,6 @@ The default all-suite destinations are:
 - `~/.cursor/skills/skill-self-check`
 - `~/.cursor/skills/skill-ship-safety`
 - `~/.cursor/skills/agent-work-readiness`
-- `~/.cursor/skills/skill-growth-scorecard`
 
 ## Path B — Project skill
 
@@ -46,12 +45,11 @@ Shared with anyone using the repo:
 ```
 
 The core destination is `<project>/.cursor/skills/skill-self-check`. Omit the
-skill selector to install all four destinations:
+skill selector to install all three destinations:
 
 - `<project>/.cursor/skills/skill-self-check`
 - `<project>/.cursor/skills/skill-ship-safety`
 - `<project>/.cursor/skills/agent-work-readiness`
-- `<project>/.cursor/skills/skill-growth-scorecard`
 
 ## Path C — Manual copy
 
@@ -64,7 +62,6 @@ Optional enhancements:
 ```bash
 cp -R skills/skill-ship-safety ~/.cursor/skills/skill-ship-safety
 cp -R skills/agent-work-readiness ~/.cursor/skills/agent-work-readiness
-cp -R skills/skill-growth-scorecard ~/.cursor/skills/skill-growth-scorecard
 ```
 
 For another AI/Agent platform, copy each skill directory into that platform's
@@ -90,22 +87,11 @@ python ~/.cursor/skills/skill-self-check/scripts/hard_gates.py \
 Read `gate_verdict`, `gate_reasons`, every Critical, and the highest-priority
 Should-fix items. Numeric scores are informational only.
 
-Only when a scorecard was explicitly requested and the optional scorecard
-Skill is installed, reuse the saved JSON:
-
-```bash
-python ~/.cursor/skills/skill-growth-scorecard/scripts/profile_engine.py \
-  --hard-gates "$HOME/Documents/skill-audits/first-run/hard-gates.json" \
-  --out-json "$HOME/Documents/skill-audits/first-run/growth-profile.json" \
-  --out-html "$HOME/Documents/skill-audits/first-run/growth-scorecard.html" \
-  --pretty
-```
-
 The output directory must be outside the audited Skill and its source
-repository. The core audit remains complete if the scorecard Skill is absent.
+repository.
 
-The compatibility full runner remains available when an explicit request
-requires optional checks plus matched personal/project HTML:
+The full runner remains available when an explicit request requires structure
+and static safety checks in one JSON-only report set:
 
 ```bash
 python ~/.cursor/skills/skill-self-check/scripts/run_full_audit.py \
@@ -131,18 +117,11 @@ python skills/skill-ship-safety/scripts/ship_safety.py \
 The compatibility flag `--exec` does not execute target code. It reports that
 trusted isolated behavior evidence is still required.
 
-Assess one business work package, then optionally generate an offline scorecard:
+Assess one business work package:
 
 ```bash
 python skills/agent-work-readiness/scripts/readiness_gates.py \
   path/to/work-package --out readiness.json --pretty
-
-python skills/skill-growth-scorecard/scripts/profile_engine.py \
-  --readiness readiness.json \
-  --hard-gates hard-gates.json \
-  --ship-safety ship-safety.json \
-  --out-json profile.json \
-  --out-html scorecard.html
 ```
 
 Real reports should be written outside the public repository. Do not commit

@@ -7,7 +7,7 @@ Thanks for helping improve Skill Self-Check.
 1. Fork and clone `https://github.com/xenos2025/Skill-Self-Check.git`.
 2. Use **Python 3.10+**. Core scripts are **stdlib only** (no `pip install` for
    product paths under `skills/`).
-3. Install the four shipped skills locally:
+3. Install the three shipped skills locally:
 
 ```powershell
 ./install.ps1 -Force
@@ -39,10 +39,7 @@ Individual entry points when you touch one area:
 python tests/test_hard_gates.py
 python tests/test_ship_safety.py
 python tests/test_readiness_gates.py
-python tests/test_profile_engine.py
 python tests/test_full_audit_runner.py
-python tests/test_platform_record.py
-python tests/test_suite_scorecards.py
 python tests/test_verify_fix.py
 ```
 
@@ -65,16 +62,13 @@ ship floor, or a score drop). Paste the `verdict`, resolved / introduced counts,
 and `remaining_critical` into the PR. Add `--strict` to also fail on newly
 surfaced non-critical findings.
 
-7. Optional: generate private offline scorecards for this repo (output **must**
-   stay outside the repository):
+7. Optional: run the full static audit pack (output **must** stay outside the
+   repository):
 
 ```bash
 python skills/skill-self-check/scripts/run_full_audit.py \
   skills/skill-self-check \
   --out-dir "$HOME/Documents/skill-audits/contrib-demo" --pretty
-
-python skills/skill-growth-scorecard/scripts/suite_scorecards.py . \
-  --out-dir "$HOME/Documents/skill-audits/suite-demo" --pretty
 ```
 
 ## Project structure
@@ -84,15 +78,13 @@ skills/                      # product skills (installable)
   agent-work-readiness/      # oral process → B0–B6 work package
   skill-self-check/          # static structure / contract audit + run_full_audit
   skill-ship-safety/         # static external-action preflight
-  skill-growth-scorecard/    # JSON facts → personal/project offline HTML
 exp/                         # experiments — NOT installed by default
   pm-workflow-planning/      # PM / interview → workflow hook
 tests/                       # stdlib regression suite
 assets/diagrams/             # README SVGs (zh/ for Chinese)
-assets/scorecards/           # README scorecard screenshots (sanitized demos)
 docs/                        # architecture, installation, platform matrix, …
 install.ps1 / install.sh
-plugin.json                  # lists the four shipped skill folder names
+plugin.json                  # lists the three shipped skill folder names
 ```
 
 Shipped skill names are the source of truth in `plugin.json` → `skills`.
@@ -107,22 +99,18 @@ Shipped skill names are the source of truth in `plugin.json` → `skills`.
   - Structure scores → `skill-self-check/scripts/hard_gates.py`
   - Safety verdict → `skill-ship-safety/scripts/ship_safety.py`
   - Business readiness B0–B6 → `agent-work-readiness/scripts/readiness_gates.py`
-  - Growth level / type / HTML → `skill-growth-scorecard/scripts/profile_engine.py`
-    (and `suite_scorecards.py` for whole-repo runs)
   - Before/after fix deltas → `skill-self-check/scripts/verify_fix.py`
   - Never invent numeric scores or soften a stricter script verdict in prose.
 - Built-in audit scripts are **read-only** toward the target Skill: they must not
-  execute target code or send external messages. Real scorecards and client
+  execute target code or send external messages. Real audit and client
   reports stay in a private directory outside this repository.
 - Scoring / gate changes need green tests, fixture updates when behavior
   changes, and refreshed smoke numbers in
   `skills/skill-self-check/examples/smoke-report-before.md` (and the business
   twin when that report’s numbers move).
-- Update README scorecard screenshots under `assets/scorecards/` only from a
-  sanitized local suite/fixture run (no client paths or PII).
 - Update `CHANGELOG.md` under `[Unreleased]` for user-visible behavior or docs.
 - Never commit secrets, client PII, store tokens, filled export CSVs, or private
-  audit HTML/JSON from real engagements.
+  audit JSON from real engagements.
 
 ## Platform notes
 

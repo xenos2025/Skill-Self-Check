@@ -116,10 +116,10 @@ def how_to_use(zh: bool) -> str:
         banner = "一句话：像验货一样，验「AI 工作说明书」能不能用"
         steps = [
             ("第 1 步", "写好说明书", ["把做事步骤写清楚", "（也叫 Skill）"], False),
-            ("第 2 步", "快速门禁", ["先看 gate verdict", "不等成绩单"], True),
+            ("第 2 步", "快速门禁", ["先看 gate verdict", "只认脚本结果"], True),
             ("第 3 步", "看硬问题", ["全部 Critical", "最多三项改进"], False),
             ("第 4 步", "授权后修复", ["改前留基线", "改完再验证"], False),
-            ("可选", "生成成绩单", ["明确要求才路由", "复用审计 JSON"], False),
+            ("可选", "安全预检", ["明确要求才运行", "静态检查外部动作"], False),
         ]
         title = "skill-self-check.app -> docs -> how-to-use.svg"
         corner = "01 · 怎么用"
@@ -127,10 +127,10 @@ def how_to_use(zh: bool) -> str:
         banner = "In plain words: inspect an AI playbook before you trust it"
         steps = [
             ("STEP 1", "Write the playbook", ["Clear steps for the AI", "(called a Skill)"], False),
-            ("STEP 2", "Run fast gate", ["Read gate verdict", "No scorecard wait"], True),
+            ("STEP 2", "Run fast gate", ["Read gate verdict", "Trust script results"], True),
             ("STEP 3", "Read blockers", ["Every Critical", "Up to three fixes"], False),
             ("STEP 4", "Authorize fixes", ["Keep baseline", "Verify the delta"], False),
-            ("OPTIONAL", "Build scorecard", ["Route only on request", "Reuse audit JSON"], False),
+            ("OPTIONAL", "Safety preflight", ["Run only on request", "Scan external actions"], False),
         ]
         title = "skill-self-check.app -> docs -> how-to-use.svg"
         corner = "01 · how to use"

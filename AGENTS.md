@@ -9,14 +9,12 @@ Guidance for coding agents working **on this repository**.
 
 | Path | Role |
 | --- | --- |
-| `skills/` | Installable product skills (four shipped names in `plugin.json`) |
+| `skills/` | Installable product skills (three shipped names in `plugin.json`) |
 | `skills/agent-work-readiness/` | Oral process → B0–B6 work package |
 | `skills/skill-self-check/` | Structure/contract audit + `run_full_audit.py` |
 | `skills/skill-ship-safety/` | Static external-action preflight |
-| `skills/skill-growth-scorecard/` | Offline personal/project scorecards |
 | `exp/` | Experiments — do not install by default; may be unstable |
 | `tests/` | Stdlib regression suite (mirrors CI intent) |
-| `assets/scorecards/` | README scorecard screenshots only (sanitized) |
 | `docs/` | Human docs including platform compatibility |
 | `install.ps1` / `install.sh` | Copy shipped skills into Cursor skills dirs |
 
@@ -24,7 +22,7 @@ Guidance for coding agents working **on this repository**.
 
 1. Prefer editing the relevant skill under `skills/` for product behavior.
 2. Put speculative PM / industry workflow work under `exp/`, not `skills/`.
-3. Hard-gate, ship-safety, readiness, and growth scores come from their scripts
+3. Hard-gate, ship-safety, and readiness results come from their scripts
    only — never invent scores in prose without running the script.
 4. Keep Python stdlib-only unless CONTRIBUTING is updated.
 5. Do not commit secrets, client PII, or real audit reports inside this repo.
@@ -34,7 +32,7 @@ Guidance for coding agents working **on this repository**.
 7. After editing a shipped Skill's `SKILL.md`, capture a `hard_gates.py`
  baseline first and report the `verify_fix.py` delta instead of asserting the
  findings are fixed.
-8. Real scorecard `--out-dir` values must stay outside the audited Skill and
+8. Real audit `--out-dir` values must stay outside the audited Skill and
    this source repository.
 
 ## Quick commands

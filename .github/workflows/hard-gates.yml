@@ -64,7 +64,6 @@ jobs:
           test -f "$target/.cursor/skills/skill-self-check/SKILL.md"
           test -f "$target/.cursor/skills/skill-ship-safety/SKILL.md"
           test -f "$target/.cursor/skills/agent-work-readiness/SKILL.md"
-          test -f "$target/.cursor/skills/skill-growth-scorecard/SKILL.md"
           if bash install.sh --dest "$target/not-the-skill-name" --force; then
             echo "installer accepted an unsafe destination leaf"
             exit 1
@@ -80,7 +79,6 @@ jobs:
           if (-not (Test-Path (Join-Path $target ".cursor/skills/skill-self-check/SKILL.md"))) { throw "skill-self-check missing" }
           if (-not (Test-Path (Join-Path $target ".cursor/skills/skill-ship-safety/SKILL.md"))) { throw "skill-ship-safety missing" }
           if (-not (Test-Path (Join-Path $target ".cursor/skills/agent-work-readiness/SKILL.md"))) { throw "agent-work-readiness missing" }
-          if (-not (Test-Path (Join-Path $target ".cursor/skills/skill-growth-scorecard/SKILL.md"))) { throw "skill-growth-scorecard missing" }
           try {
             ./install.ps1 -Dest (Join-Path $target "not-the-skill-name") -Force
             throw "installer accepted an unsafe destination leaf"
