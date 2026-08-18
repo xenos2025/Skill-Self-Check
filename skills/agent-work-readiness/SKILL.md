@@ -9,6 +9,8 @@ Turn one loosely described business process into a confirmed, machine-checkable
 work package. Keep this business-readiness assessment separate from the
 engineering audit of the final Skill.
 
+Workflow prompt audit: N/A — one agent instruction context; the deterministic readiness script does not orchestrate model-call prompts.
+
 ## When to use
 
 - The user relies on oral instructions, repeated chat, or personal memory.

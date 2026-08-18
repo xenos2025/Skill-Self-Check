@@ -121,6 +121,19 @@ py -3 skills/skill-self-check/scripts/run_full_audit.py C:\你的Skill目录 `
   --out-dir "$HOME\Documents\skill-audits\完整报告" --pretty
 ```
 
+多步骤 workflow 如果每一步都会单独调用模型，可复制
+`skills/skill-self-check/examples/workflow-prompts.example.json` 到目标 Skill
+的 `references/workflow-prompts.json`，声明每个节点后运行：
+
+```powershell
+py -3 skills/skill-self-check/scripts/workflow_prompt_audit.py C:\你的Skill目录 --pretty
+```
+
+这个可选检查验证节点契约、Prompt 文件、占位符、结构标签、资料隔离和节点连接；
+结果不改变核心 `gate_verdict`，也不代表真实模型行为已经通过。
+没有独立模型调用节点时，可在 `SKILL.md` 写明
+`Workflow prompt audit: N/A — <理由>`；结果为 `not_applicable`，不会冒充通过。
+
 真实报告必须写在目标和源码仓库之外。`skill-self-check` 本身不依赖另外两个
 Skill；核心审计可以单独使用。
 
@@ -286,6 +299,22 @@ python skills/skill-self-check/scripts/run_full_audit.py \
   --out-dir "$HOME/Documents/skill-audits/full-report" --pretty
 ```
 
+For a multi-step workflow with a separate model call at each step, copy
+`skills/skill-self-check/examples/workflow-prompts.example.json` to the target
+Skill as `references/workflow-prompts.json`, declare every node, then run:
+
+```bash
+python skills/skill-self-check/scripts/workflow_prompt_audit.py \
+  /path/to/your-skill --pretty
+```
+
+This optional audit checks node contracts, prompt files, placeholders,
+XML-style tags, source isolation, and graph links. It does not change the core
+`gate_verdict` or prove runtime model behavior.
+When no separate model-call nodes exist, declare
+`Workflow prompt audit: N/A — <reason>` in `SKILL.md`; the result is
+`not_applicable`, never `pass`.
+
 The core self-check remains usable when the other two Skills are absent.
 
 ## Layout
@@ -293,6 +322,7 @@ The core self-check remains usable when the other two Skills are absent.
 ```text
 skills/skill-self-check/    # static structure/contract audit
   references/plain-language-response.md # default plain-language response contract
+  scripts/workflow_prompt_audit.py # optional model-call node contract audit
 skills/skill-ship-safety/   # static external-action preflight
 skills/agent-work-readiness/# oral workflow → B0–B6 readiness
 exp/                        # PM interview → workflow experiments (not installed)

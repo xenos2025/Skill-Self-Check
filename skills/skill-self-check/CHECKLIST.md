@@ -231,6 +231,8 @@ is [references/gap-questions.md](references/gap-questions.md).
 | **Fast audit** (default) | Deterministic PKG / hard gate / EFF checks; all Criticals; top three Should fix | Yes, script only |
 | **Apply + verify** | Authorized edits plus Pass 7 | Yes, script only |
 | **Deep review** (explicit) | Predictability / anatomy / PDCA+SMART | No, advisory |
+| **Prompt optimization** (explicit) | Static efficiency and model-owned contract review | No, advisory |
+| **Workflow prompt audit** (explicit) | Declared model-call nodes, or reasoned `not_applicable`; prompt resources, controls, and graph | Separate route status only |
 
 Default audit success = package valid + named required checks + zero script Critical.
 Missing behavior JSON does **not** mean “tonight’s certification failed.”

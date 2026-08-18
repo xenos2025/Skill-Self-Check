@@ -15,9 +15,23 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 POWERSHELL_INSTALLER = REPO / "install.ps1"
 BASH_INSTALLER = REPO / "install.sh"
+SHIP_SAFETY_SKILL = REPO / "skills" / "skill-ship-safety"
 
 
 class InstallerTests(unittest.TestCase):
+    def test_shipped_ship_safety_retains_a_runtime_example(self) -> None:
+        examples = SHIP_SAFETY_SKILL / "examples"
+        retained = [
+            path
+            for path in examples.rglob("*")
+            if path.is_file()
+            and "fixtures" not in path.relative_to(examples).parts
+        ]
+        self.assertTrue(
+            retained,
+            "installers remove examples/fixtures, so ship-safety needs a runtime example",
+        )
+
     @contextmanager
     def source_skill(self) -> Iterator[tuple[Path, str]]:
         with tempfile.TemporaryDirectory(
