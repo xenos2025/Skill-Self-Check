@@ -2,7 +2,7 @@
 """Deterministic hard-gate checks and informational scores for an Agent Skill.
 
 Usage:
-  python hard_gates.py <skill-dir>
+  python hard_gates.py <skill-dir> [--repo-root <approved-repository>]
 
 Stdout: JSON report
 Stderr: human one-line summary
@@ -62,6 +62,11 @@ RESOURCE_PATH_RE = re.compile(
     r"(?i)(?<![a-z0-9_.-])"
     r"((?:agents|assets|references|scripts)/[^\s`\"'()<>\[\]{}]+)"
 )
+MARKDOWN_LINK_RE = re.compile(
+    r"\]\(\s*(?P<target><[^>\r\n]+>|[^)\s]+)"
+    r"(?:\s+(?:\"[^\"\r\n]*\"|'[^'\r\n]*'|\([^)]*\)))?\s*\)"
+)
+URL_SCHEME_RE = re.compile(r"(?i)^[a-z][a-z0-9+.-]*:")
 NOOP_RE = re.compile(
     r"(?i)\b(be careful|think step by step|write good code|always be thorough)\b"
 )
@@ -366,19 +371,108 @@ def clean_resource_token(token: str) -> str:
     return token.rstrip(".,;:!?，。；：！？、）】》")
 
 
+def is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+    except ValueError:
+        return False
+    return True
+
+
+def approved_repo_root(skill_dir: Path, repo_root: Path | None) -> Path | None:
+    if repo_root is None:
+        return None
+    selected = repo_root.expanduser().resolve()
+    target = skill_dir.expanduser().resolve()
+    if not selected.is_dir():
+        raise ValueError("--repo-root must be an existing directory")
+    if target != selected and not is_relative_to(target, selected):
+        raise ValueError("--repo-root must contain the audited Skill")
+    return selected
+
+
+def clean_markdown_target(raw: str) -> str | None:
+    target = raw.strip()
+    if target.startswith("<") and target.endswith(">"):
+        target = target[1:-1].strip()
+    if not target or target.startswith(("#", "//")):
+        return None
+    if not re.match(r"^[a-zA-Z]:[\\/]", target) and URL_SCHEME_RE.match(target):
+        return None
+    target = target.split("#", 1)[0].split("?", 1)[0].strip()
+    return target or None
+
+
+def resolve_resource_reference(
+    skill_dir: Path,
+    reference: str,
+    repo_root: Path | None,
+) -> tuple[Path | None, str | None]:
+    normalized = reference.replace("\\", "/")
+    rel = Path(normalized)
+    if rel.is_absolute() or rel.drive:
+        return None, None
+
+    target_root = skill_dir.resolve()
+    candidates: list[Path] = []
+    if repo_root is not None and rel.parts and rel.parts[0].casefold() == "skills":
+        candidates.append((repo_root / rel).resolve())
+    else:
+        candidates.append((target_root / rel).resolve())
+
+    seen: set[Path] = set()
+    for candidate in candidates:
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        if candidate == target_root or is_relative_to(candidate, target_root):
+            scope = "target"
+        elif repo_root is not None and (
+            candidate == repo_root or is_relative_to(candidate, repo_root)
+        ):
+            scope = "repo"
+        else:
+            continue
+        if candidate.exists():
+            return candidate, scope
+    return None, None
+
+
 def collect_resource_link_evidence(
-    skill_dir: Path, source_text: str
-) -> tuple[list[str], int]:
+    skill_dir: Path,
+    source_text: str,
+    repo_root: Path | None = None,
+) -> tuple[list[str], int, list[dict[str, str | None]]]:
     missing: list[str] = []
-    references = {
-        clean_resource_token(match.group(1)).replace("\\", "/")
-        for match in RESOURCE_PATH_RE.finditer(source_text)
-    }
+    references: set[str] = set()
+    markdown_spans: list[tuple[int, int]] = []
+    for match in MARKDOWN_LINK_RE.finditer(source_text):
+        markdown_spans.append(match.span("target"))
+        target = clean_markdown_target(match.group("target"))
+        if target is not None:
+            references.add(target.replace("\\", "/"))
+    for match in RESOURCE_PATH_RE.finditer(source_text):
+        if any(start <= match.start(1) < end for start, end in markdown_spans):
+            continue
+        references.add(clean_resource_token(match.group(1)).replace("\\", "/"))
+
+    records: list[dict[str, str | None]] = []
     for reference in sorted(references):
-        target = skill_dir.joinpath(*reference.split("/"))
-        if not target.exists():
+        _, resolution_scope = resolve_resource_reference(
+            skill_dir,
+            reference,
+            repo_root,
+        )
+        records.append(
+            {
+                "reference": reference,
+                "status": "resolved" if resolution_scope else "missing",
+                "resolution_scope": resolution_scope,
+            }
+        )
+        if resolution_scope is None:
             missing.append(reference)
-    return missing, len(references)
+    return missing, len(references), records
 
 
 def collect_duplicate_groups(
@@ -422,6 +516,7 @@ def assess_package_health(
     skill_dir: Path,
     frontmatter: dict[str, str] | None,
     source_text: str,
+    repo_root: Path | None = None,
 ) -> tuple[dict, list[dict]]:
     """Assess whether the target is one installable Skill package.
 
@@ -550,9 +645,11 @@ def assess_package_health(
             )
         )
 
-    missing_resources, resource_reference_count = collect_resource_link_evidence(
-        skill_dir, source_text
-    )
+    (
+        missing_resources,
+        resource_reference_count,
+        resource_reference_records,
+    ) = collect_resource_link_evidence(skill_dir, source_text, repo_root)
     if missing_resources:
         findings.append(
             package_finding(
@@ -649,6 +746,8 @@ def assess_package_health(
             "blocking": bool(missing_resources),
             "reference_count": resource_reference_count,
             "missing_count": len(missing_resources),
+            "repo_root_enabled": repo_root is not None,
+            "references": resource_reference_records,
         },
         "file_hygiene": {
             "status": "warn" if residue_files or irregular_names else "pass",
@@ -1052,8 +1151,9 @@ def detect_check_axes(body: str) -> tuple[bool, list[str]]:
     return len(uniq) >= 2, uniq[:12]
 
 
-def check_skill(skill_dir: Path) -> dict:
+def check_skill(skill_dir: Path, repo_root: Path | None = None) -> dict:
     skill_dir = skill_dir.resolve()
+    repo_root = approved_repo_root(skill_dir, repo_root)
     skill_md = skill_dir / "SKILL.md"
     findings: list[dict] = []
     points = {
@@ -1096,7 +1196,7 @@ def check_skill(skill_dir: Path) -> dict:
     if not skill_md.is_file():
         fail("1.1", "critical", "Missing SKILL.md in skill directory")
         package_health, package_findings = assess_package_health(
-            skill_dir, None, ""
+            skill_dir, None, "", repo_root
         )
         findings.extend(package_findings)
         return finalize(
@@ -1120,7 +1220,7 @@ def check_skill(skill_dir: Path) -> dict:
     fm, body, has_fm = parse_frontmatter(text)
     line_count = text.count("\n") + (0 if text.endswith("\n") else 1)
     package_health, package_findings = assess_package_health(
-        skill_dir, fm, text
+        skill_dir, fm, text, repo_root
     )
     findings.extend(package_findings)
 
@@ -1694,6 +1794,14 @@ def main() -> int:
         type=Path,
         help="Also write the same report as UTF-8 JSON outside the audited Skill",
     )
+    parser.add_argument(
+        "--repo-root",
+        type=Path,
+        help=(
+            "Approved repository root for relative resources outside the target; "
+            "the strict target-local default is unchanged"
+        ),
+    )
     args = parser.parse_args()
     if not args.skill_dir.exists():
         report = {
@@ -1747,7 +1855,26 @@ def main() -> int:
         print("hard_gates: path not found", file=sys.stderr)
         return 1
 
-    report = check_skill(args.skill_dir)
+    try:
+        report = check_skill(args.skill_dir, repo_root=args.repo_root)
+    except ValueError as exc:
+        report = {
+            "schema_version": SCHEMA_VERSION,
+            "audit_level": "static_contract_check",
+            "target_platform": "generic",
+            "error": str(exc),
+            "gate_verdict": "fail",
+            "limitations": ["approved repository root was invalid"],
+        }
+        if not emit_report(
+            report,
+            pretty=args.pretty,
+            out_json=args.out_json,
+            skill_dir=args.skill_dir,
+        ):
+            return 2
+        print(f"hard_gates: {exc}", file=sys.stderr)
+        return 2
     if not emit_report(
         report,
         pretty=args.pretty,

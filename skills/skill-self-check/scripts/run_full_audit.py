@@ -46,7 +46,10 @@ def is_relative_to(path: Path, parent: Path) -> bool:
 def nearest_repo_root(path: Path) -> Path | None:
     current = path.resolve()
     for candidate in (current, *current.parents):
-        if (candidate / ".git").exists():
+        if not (candidate / ".git").exists():
+            continue
+        relative = current.relative_to(candidate)
+        if not relative.parts or relative.parts[0].casefold() == "skills":
             return candidate
     return None
 
@@ -95,11 +98,15 @@ def target_fingerprint(target: Path) -> dict[str, Any]:
     }
 
 
-def run_json_script(script: Path, target: Path) -> dict[str, Any]:
+def run_json_script(
+    script: Path,
+    target: Path,
+    *extra_args: str,
+) -> dict[str, Any]:
     if not READ_ONLY_DRY_RUN:
         raise ValueError("显式完整审计入口必须保持只读预演模式")
     result = subprocess.run(
-        [sys.executable, str(script), str(target)],
+        [sys.executable, str(script), str(target), *extra_args],
         cwd=script.parent,
         capture_output=True,
         text=True,
@@ -127,10 +134,16 @@ def audit(
     output: Path,
     *,
     work_package: Path | None,
+    repo_root: Path | None,
     pretty: bool,
 ) -> dict[str, Any]:
     if not target.is_dir() or not (target / "SKILL.md").is_file():
         raise ValueError("被检查目录必须存在，并且包含 SKILL.md")
+    if repo_root is not None:
+        if not repo_root.is_dir():
+            raise ValueError("--repo-root 必须是已存在的目录")
+        if target != repo_root and not is_relative_to(target, repo_root):
+            raise ValueError("--repo-root 必须包含被检查的 Skill")
     ensure_private_output(target, output)
     audit_started_ns = time.perf_counter_ns()
 
@@ -157,8 +170,9 @@ def audit(
         )
 
     before = target_fingerprint(target)
-    hard = run_json_script(hard_script, target)
-    safety = run_json_script(safety_script, target)
+    repo_args = ("--repo-root", str(repo_root)) if repo_root is not None else ()
+    hard = run_json_script(hard_script, target, *repo_args)
+    safety = run_json_script(safety_script, target, *repo_args)
     readiness = (
         run_json_script(readiness_script, work_package)
         if work_package is not None
@@ -185,6 +199,9 @@ def audit(
             "before": before,
             "after": after,
             "unchanged": unchanged,
+        },
+        "resource_resolution": {
+            "repo_root_supplied": repo_root is not None,
         },
         "checks": {
             "package_health": package_status,
@@ -254,6 +271,11 @@ def main() -> int:
     parser.add_argument("target_skill", type=Path)
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--work-package", type=Path)
+    parser.add_argument(
+        "--repo-root",
+        type=Path,
+        help="Approved multi-Skill repository root for shared relative resources",
+    )
     parser.add_argument("--pretty", action="store_true")
     args = parser.parse_args()
     try:
@@ -263,6 +285,7 @@ def main() -> int:
             work_package=(
                 args.work_package.resolve() if args.work_package else None
             ),
+            repo_root=(args.repo_root.resolve() if args.repo_root else None),
             pretty=args.pretty,
         )
     except (OSError, ValueError) as exc:

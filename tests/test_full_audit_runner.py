@@ -80,6 +80,58 @@ Do not use for external sends.
 
 
 class FullAuditRunnerTests(unittest.TestCase):
+    def test_repo_root_is_forwarded_to_hard_gate_and_safety_checks(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            repo = root / "pack"
+            skills_root = repo / "skills"
+            skills_root.mkdir(parents=True)
+            target = write_target(skills_root)
+            shared = repo / "skills" / "shared" / "references"
+            shared.mkdir(parents=True)
+            skill_md = target / "SKILL.md"
+            skill_md.write_text(
+                skill_md.read_text(encoding="utf-8").replace(
+                    "1. Read the supplied sample.",
+                    "1. Read [shared guidance](../shared/references/guide.md).",
+                ),
+                encoding="utf-8",
+            )
+            (shared / "guide.md").write_text("# Shared\n", encoding="utf-8")
+            output = root / "private-report"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    str(target),
+                    "--repo-root",
+                    str(repo),
+                    "--out-dir",
+                    str(output),
+                    "--pretty",
+                ],
+                cwd=REPO,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            hard = json.loads((output / "hard-gates.json").read_text(encoding="utf-8"))
+            manifest = json.loads(
+                (output / "audit-manifest.json").read_text(encoding="utf-8")
+            )
+            links = hard["package_health"]["checks"]["resource_links"]
+            record = next(
+                item
+                for item in links["references"]
+                if item["reference"] == "../shared/references/guide.md"
+            )
+            self.assertEqual("repo", record["resolution_scope"])
+            self.assertTrue(manifest["resource_resolution"]["repo_root_supplied"])
+
     def test_one_command_writes_source_reports_without_changing_target(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

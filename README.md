@@ -277,6 +277,10 @@ The default command runs the standalone deterministic gate. In Cursor, invoke
 three Should-fix items; say “apply fixes” to authorize edits. Run `./install.sh`
 without `--skills` only when you want all three shipped Skills. To prove fixes:
 
+For a multi-Skill source pack with intentional sibling/shared resource links,
+add `--repo-root /path/to/source-repository`. The default remains strictly
+target-local, and paths outside the approved root remain Critical.
+
 ```bash
 python skills/skill-self-check/scripts/verify_fix.py /path/to/your-skill \
   --baseline "$HOME/Documents/skill-audits/current/hard-gates.json" --pretty
@@ -291,6 +295,7 @@ include work-readiness:
 ```bash
 python skills/skill-self-check/scripts/run_full_audit.py \
   /path/to/your-skill \
+  --repo-root /path/to/source-repository \
   --out-dir "$HOME/Documents/skill-audits/full-report" --pretty
 ```
 
