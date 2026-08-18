@@ -61,9 +61,13 @@ description: 检查中文技能说明书的结构，用于用户写完说明书�
 """
 
 
-def run_script(target: Path, env: dict[str, str] | None = None) -> tuple[int, dict]:
+def run_script(
+    target: Path,
+    *args: str,
+    env: dict[str, str] | None = None,
+) -> tuple[int, dict]:
     proc = subprocess.run(
-        [sys.executable, str(SCRIPT), str(target)],
+        [sys.executable, str(SCRIPT), str(target), *args],
         capture_output=True,
         env=env,
     )
@@ -438,6 +442,100 @@ class SupportKitTests(unittest.TestCase):
 
 
 class PackageHealthTests(unittest.TestCase):
+    def test_explicit_repo_root_resolves_complete_sibling_markdown_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "pack"
+            target = repo / "skills" / "consumer"
+            shared = repo / "skills" / "shared" / "references"
+            target.mkdir(parents=True)
+            shared.mkdir(parents=True)
+            body = ZH_SKILL.format(name="consumer").replace(
+                "1. 读取目标文件",
+                "1. 读取 [共享说明](../shared/references/guide.md)",
+            )
+            (target / "SKILL.md").write_text(body, encoding="utf-8")
+            (shared / "guide.md").write_text("# Shared\n", encoding="utf-8")
+
+            strict_code, strict_report = run_script(target)
+            repo_code, repo_report = run_script(
+                target,
+                "--repo-root",
+                str(repo),
+            )
+
+        self.assertEqual(1, strict_code)
+        self.assertIn("PKG.5", [item["id"] for item in strict_report["findings"]])
+        self.assertEqual(0, repo_code, repo_report["findings"])
+        links = repo_report["package_health"]["checks"]["resource_links"]
+        self.assertTrue(links["repo_root_enabled"])
+        record = next(
+            item
+            for item in links["references"]
+            if item["reference"] == "../shared/references/guide.md"
+        )
+        self.assertEqual("resolved", record["status"])
+        self.assertEqual("repo", record["resolution_scope"])
+
+    def test_repo_root_does_not_allow_traversal_outside_approved_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            repo = base / "pack"
+            target = repo / "skills" / "consumer"
+            outside = base / "outside" / "references"
+            target.mkdir(parents=True)
+            outside.mkdir(parents=True)
+            body = ZH_SKILL.format(name="consumer").replace(
+                "1. 读取目标文件",
+                "1. 读取 [越界说明](../../../outside/references/guide.md)",
+            )
+            (target / "SKILL.md").write_text(body, encoding="utf-8")
+            (outside / "guide.md").write_text("# Outside\n", encoding="utf-8")
+
+            code, report = run_script(target, "--repo-root", str(repo))
+
+        self.assertEqual(1, code)
+        self.assertIn("PKG.5", [item["id"] for item in report["findings"]])
+        links = report["package_health"]["checks"]["resource_links"]
+        record = next(
+            item
+            for item in links["references"]
+            if item["reference"] == "../../../outside/references/guide.md"
+        )
+        self.assertEqual("missing", record["status"])
+        self.assertIsNone(record["resolution_scope"])
+
+    def test_repo_root_does_not_change_target_relative_markdown_semantics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "pack"
+            target = repo / "skills" / "consumer"
+            shared = repo / "references"
+            target.mkdir(parents=True)
+            shared.mkdir(parents=True)
+            body = ZH_SKILL.format(name="consumer").replace(
+                "1. 读取目标文件",
+                "1. 读取 [本地说明](references/guide.md)",
+            )
+            (target / "SKILL.md").write_text(body, encoding="utf-8")
+            (shared / "guide.md").write_text("# Repo root\n", encoding="utf-8")
+
+            code, report = run_script(target, "--repo-root", str(repo))
+
+        self.assertEqual(1, code)
+        self.assertIn("PKG.5", [item["id"] for item in report["findings"]])
+
+    def test_repo_root_must_contain_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            target = write_skill(base / "target-parent", "contained-skill", ZH_SKILL)
+            unrelated = base / "unrelated"
+            unrelated.mkdir()
+
+            code, report = run_script(target, "--repo-root", str(unrelated))
+
+        self.assertEqual(2, code)
+        self.assertEqual("fail", report["gate_verdict"])
+        self.assertIn("must contain", report["error"])
+
     def test_workspace_like_target_blocks_maturity_assessment(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "project-workspace"

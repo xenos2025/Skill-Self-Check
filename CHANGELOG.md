@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Added opt-in `--repo-root` resource resolution to `hard_gates.py` and the
+  full static runner for intentional multi-Skill source packs. The default
+  remains target-local; every resolved resource reports `target` or `repo`
+  scope, and absolute or repository-escaping paths remain Critical.
 - Optimized the `skill-self-check` prompt contract: frontmatter now carries
   positive triggers and exclusions, script/model authority uses one explicit
   semantic boundary, and optional deep audit, full static audit, and

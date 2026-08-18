@@ -33,8 +33,9 @@ Plain-language items for auditing a target skill. Optional Matt-style terms appe
   `examples/`, `references/`, or `scripts/`; populated output/build folders block
 - `portable_paths` — no machine-specific absolute paths in the instruction or
   bundled reference/agent text
-- `resource_links` — explicit `agents/`, `assets/`, `references/`, or `scripts/`
-  references resolve
+- `resource_links` — local Markdown targets and explicit `agents/`, `assets/`,
+  `references/`, or `scripts/` references resolve; optional `--repo-root`
+  permits only relative resources inside an explicitly approved source pack
 - `file_hygiene` and `resource_uniqueness` — suspicious names/residue and
   duplicate large resources are reported as cleanup items
 - `package_health.assessable=false` stops maturity levels, types, badges, and
@@ -73,7 +74,7 @@ Optional model review uses `priority: high|medium|low`, not script severity.
 | PKG.3 | Top-level layout is installable | Generated/runtime files are inside the Skill package | Critical |
 | PKG.3b | Non-standard directories are consolidated | Unclassified top-level content remains | Should fix |
 | PKG.4 | Bundled instructions use portable paths | Real machine-specific absolute path appears | Critical |
-| PKG.5 | Explicit resource links resolve | Referenced bundled path is missing | Critical |
+| PKG.5 | Explicit resource links resolve | Referenced path is missing, escapes the target without approval, or escapes an approved repository root | Critical |
 | PKG.6 | Filenames and residue are portable | Archive/temp/system residue or unsafe filename remains | Should fix |
 | PKG.7 | Large resources are unambiguous | Duplicate large files exist in multiple package locations | Should fix |
 

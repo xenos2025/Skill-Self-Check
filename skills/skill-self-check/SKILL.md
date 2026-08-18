@@ -92,6 +92,11 @@ python scripts/hard_gates.py /absolute/path/to/target-skill --pretty
 
 On Windows, `py -3` is fine if `python` is missing.
 
+For a multi-Skill source pack, add `--repo-root /absolute/path/to/repository`.
+Omitting it keeps resolution target-local; supplying it permits only relative
+links inside that root. Absolute/escaping paths remain Critical, and each link
+reports `resolution_scope: target|repo`.
+
 If fixes may follow, save the same run as a baseline outside the target and
 source repository:
 
