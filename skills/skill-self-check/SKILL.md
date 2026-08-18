@@ -1,23 +1,20 @@
 ---
 name: skill-self-check
 description: >-
-  Deterministically audits an existing Agent Skill package, reports package
-  health, gate_verdict, and ranked paste-ready fixes, and verifies
-  user-authorized repairs against a saved baseline. Use when a user requests
-  an audit, review, self-check, blocker diagnosis, prompt optimization, workflow
-  prompt validation, context efficiency review, or pre-share validation. For Skill creation, behavioral
-  evaluation, visual scorecards, or edits lacking explicit authorization, use
-  another workflow.
+  Deterministically audits an Agent Skill package, reports package health,
+  gate_verdict, and ranked paste-ready fixes, then verifies authorized repairs
+  against a saved baseline. Use when users request audit, review, self-check, blocker diagnosis,
+  prompt optimization, workflow prompt validation, context-efficiency review,
+  or pre-share validation. Do not use for Skill creation, behavioral evaluation,
+  visual scorecards, or unauthorized edits.
 ---
 
 # Skill Self-Check
 
-Fast static review of a target skill. Output deterministic gate status and
-ranked fixes. Edit the target only when the user asks to apply fixes.
-
+Run a fast static review with deterministic gate status and ranked fixes.
 Full checks: [CHECKLIST.md](CHECKLIST.md).
 
-Workflow prompt audit: N/A — one agent instruction context; no separately orchestrated model-call prompts.
+Workflow prompt audit: N/A — one agent instruction context; no separate model calls.
 
 <authority_contract>
 
@@ -25,7 +22,7 @@ Workflow prompt audit: N/A — one agent instruction context; no separately orch
   `package_health`, `gate_verdict`, script findings, severity, and exit code.
 - [scripts/verify_fix.py](scripts/verify_fix.py) exclusively owns fix
   verification against a saved baseline.
-- Numeric scores are script-produced and informational only.
+- Script scores are informational only.
 - Qualitative review is optional and model-owned; script findings, gate status,
   counts, severity, and exit code remain unchanged.
 - Edit the target only after explicit user authorization.
@@ -91,12 +88,11 @@ other shipped Skills:
 python scripts/hard_gates.py /absolute/path/to/target-skill --pretty
 ```
 
-On Windows, `py -3` is fine if `python` is missing.
+Windows may use `py -3`.
 
-For a multi-Skill source pack, add `--repo-root /absolute/path/to/repository`.
-Omitting it keeps resolution target-local; supplying it permits only relative
-links inside that root. Absolute/escaping paths remain Critical, and each link
-reports `resolution_scope: target|repo`.
+For multi-Skill packs, pass `--repo-root /absolute/repository`; otherwise links
+stay target-local. It allows only in-root relative links; reports label each
+`resolution_scope` as `target` or `repo`. Absolute/escaping paths stay Critical.
 
 If fixes may follow, save the same run as a baseline outside the target and
 source repository:
@@ -148,11 +144,11 @@ Load only the reference selected by the user's explicit request:
 
 | User request | Required reference | Route result |
 | --- | --- | --- |
-| Deep review, Predictability, Anatomy, PDCA, or SMART | [references/deep-qualitative-audit.md](references/deep-qualitative-audit.md) | Advisory model findings layered onto the unchanged script gate |
-| Prompt optimization or context efficiency | [references/prompt-optimization.md](references/prompt-optimization.md) | Evidence-bounded optimization findings without treating token reduction as quality gain |
-| Workflow prompt nodes | [references/workflow-prompt-audit.md](references/workflow-prompt-audit.md) | [scripts/workflow_prompt_audit.py](scripts/workflow_prompt_audit.py) validates a node manifest |
-| Complete installed check pack or saved source reports | [references/full-static-audit.md](references/full-static-audit.md) | Read-only JSON reports outside the target and source repository |
-| Apply fixes / 「按意见改」 | [references/fix-verification.md](references/fix-verification.md) | Authorized edits followed by baseline verification |
+| Deep review, Predictability, Anatomy, PDCA, or SMART | [references/deep-qualitative-audit.md](references/deep-qualitative-audit.md) | Advisory; script gate unchanged |
+| Prompt optimization or context efficiency | [references/prompt-optimization.md](references/prompt-optimization.md) | Evidence-bounded; token cuts do not prove quality |
+| Workflow prompt nodes | [references/workflow-prompt-audit.md](references/workflow-prompt-audit.md) | [scripts/workflow_prompt_audit.py](scripts/workflow_prompt_audit.py) validates node manifest |
+| Complete installed check pack or saved source reports | [references/full-static-audit.md](references/full-static-audit.md) | Read-only JSON outside target/repo |
+| Apply fixes / 「按意见改」 | [references/fix-verification.md](references/fix-verification.md) | Authorized edits + baseline verification |
 
 For an explicitly requested deep/full technical report, use
 [REPORT-TEMPLATE.md](REPORT-TEMPLATE.md) only for that explicit route.
