@@ -74,5 +74,5 @@ Give one action:
 - Do not treat a missing optional safety scan, readiness package, or
   behavior record as a core-audit failure.
 - Do not invent scores, findings, evidence, or a before/after improvement.
-- Keep the default response short: conclusion, all Criticals, up to three
-  Should-fix items, and one next action.
+- Keep the default response short: gate plus workflow/role statuses, all
+  Criticals, up to three Should-fix items, and one next action.

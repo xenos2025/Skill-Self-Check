@@ -15,6 +15,7 @@
 | 来源 | 结果 |
 |------|------|
 | 脚本 verdict（禁止手改宽松） | `stop_ship / static_pass / execution_unverified` |
+| 命令清单覆盖率 | `full / partial / none（none 或 partial 时 static_pass 不代表命令已检查）` |
 | 目标程序执行 | `未执行 / 可信隔离运行器已执行` |
 | 门禁旁路测试（可信隔离） | `全部拦截 / 有放行（Critical）/ 未验证` |
 | 默认不真发 | `已验证 / 未验证 / 默认真发（Critical）` |

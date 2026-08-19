@@ -25,7 +25,6 @@ READINESS_FIXTURE = (
     / "skills"
     / "agent-work-readiness"
     / "examples"
-    / "fixtures"
     / "agent-ready"
     / "work-readiness.json"
 )
@@ -158,13 +157,16 @@ class FullAuditRunnerTests(unittest.TestCase):
             expected = {
                 "audit-manifest.json",
                 "hard-gates.json",
+                "role-contract.json",
                 "ship-safety.json",
+                "workflow-prompt.json",
             }
             self.assertEqual({path.name for path in output.iterdir()}, expected)
             manifest = json.loads(
                 (output / "audit-manifest.json").read_text(encoding="utf-8")
             )
             self.assertTrue(manifest["target"]["unchanged"])
+            self.assertEqual("1.4", manifest["schema_version"])
             self.assertEqual(manifest["audit_mode"], "read_only_static")
             self.assertEqual(
                 manifest["checks"]["package_health"],
@@ -187,6 +189,28 @@ class FullAuditRunnerTests(unittest.TestCase):
                 (output / "ship-safety.json").read_text(encoding="utf-8")
             )
             self.assertIsInstance(safety, dict)
+            workflow_prompt = json.loads(
+                (output / "workflow-prompt.json").read_text(encoding="utf-8")
+            )
+            role_contract = json.loads(
+                (output / "role-contract.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                manifest["checks"]["workflow_prompt"],
+                workflow_prompt["status"],
+            )
+            self.assertEqual(
+                manifest["checks"]["role_contract"],
+                role_contract["status"],
+            )
+            self.assertEqual(
+                manifest["role_contract_summary"],
+                {
+                    "runtime_mode": role_contract["runtime_mode"],
+                    "role_mode": role_contract["role_mode"],
+                    "role_count": role_contract["role_count"],
+                },
+            )
 
     def test_work_package_adds_readiness_source_report(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

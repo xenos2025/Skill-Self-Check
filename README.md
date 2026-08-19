@@ -1,12 +1,12 @@
 # Skill Self-Check · Agent Skill 静态审计包
 
-[![Version: 0.2.0](https://img.shields.io/badge/version-0.2.0-2563eb.svg)](CHANGELOG.md)
+[![Version: 0.4.1](https://img.shields.io/badge/version-0.4.1-2563eb.svg)](CHANGELOG.md)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](docs/INSTALLATION.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **[中文](#中文)** · **[English](#english)**
 
-当前版本：**0.2.0**。版本来源以 [`plugin.json`](plugin.json) 为准，变更记录见
+当前版本：**0.4.1**。版本来源以 [`plugin.json`](plugin.json) 为准，变更记录见
 [`CHANGELOG.md`](CHANGELOG.md)。
 
 ---
@@ -111,16 +111,22 @@ py -3 skills/skill-self-check/scripts/verify_fix.py C:\你的Skill目录 `
 
 ### 完整静态检查
 
-需要把结构门禁和外部操作安全预检汇总到同一输出目录时使用：
+需要把结构门禁、外部操作安全、workflow Prompt 和角色契约汇总到同一输出目录时使用：
 
 ```powershell
 py -3 skills/skill-self-check/scripts/run_full_audit.py C:\你的Skill目录 `
   --out-dir "$HOME\Documents\skill-audits\完整报告" --pretty
 ```
 
+输出包含独立的 `workflow-prompt.json` 和 `role-contract.json`；N/A 或未评估不会改变核心门禁。
 增加 `--work-package <文件路径>` 后，还会检查工作准备度。真实报告必须写在目标 Skill 和源码仓库之外。
 
-### Workflow 节点 Prompt 检查
+### Workflow 角色与 Prompt 检查
+
+常规审计现在自动运行 `hard_gates.py`、`workflow_prompt_audit.py` 和
+`role_contract_audit.py`；后二者保持独立状态，不改变 `gate_verdict`。只有明确说
+“快速检查/只看门禁”时才只运行 `hard_gates.py`。询问“角色或 Prompt 是否审查”时，
+会在同一轮执行对应只读检查和已点名的模型建议审阅，而不是只返回 `not_run`。
 
 如果一个 workflow 的多个环节会分别调用模型，可把
 [`workflow-prompts.example.json`](skills/skill-self-check/examples/workflow-prompts.example.json)
@@ -130,9 +136,37 @@ py -3 skills/skill-self-check/scripts/run_full_audit.py C:\你的Skill目录 `
 py -3 skills/skill-self-check/scripts/workflow_prompt_audit.py C:\你的Skill目录 --pretty
 ```
 
-该检查覆盖节点输入输出契约、Prompt 文件、占位符、结构标签、非可信资料隔离、决策门和节点连接。
+schema 1.1 还会检查每个节点的角色、目的、职责、禁区、决策权限和交接是否写入 Prompt，
+并与 `decision_gates`、`next` 保持一致；schema 1.0 继续兼容。点名角色设计质量或改写建议时，
+加载 [`role-prompt-review.md`](skills/skill-self-check/references/role-prompt-review.md) 做模型审阅。
+基础检查还覆盖输入输出契约、Prompt 文件、占位符、结构标签和非可信资料隔离。
 结果独立于核心 `gate_verdict`，也不代表真实模型输出已经通过。没有独立模型调用节点时，在
 `SKILL.md` 中声明 `Workflow prompt audit: N/A — <理由>`。
+
+角色检查会根据真实调用形态选择层级：存在 manifest 时检查每个节点；只有一个 Agent 指令上下文时，
+改查 `references/role-contract.json` 与 `SKILL.md` 中的 Skill 级功能角色合同。普通步骤、审阅 Pass 或
+`agents/openai.yaml` 启动提示不会被自动当成独立模型节点：
+
+```powershell
+py -3 skills/skill-self-check/scripts/role_contract_audit.py C:\你的Skill目录 --pretty
+```
+
+角色只有在会改变决策、证据处理、输出、权限或交接时才需要；泛化的“专家”职业不是通过条件。
+可参考 [`role-archetypes.md`](skills/skill-self-check/references/role-archetypes.md)，但目标 Skill 证据优先。
+角色拆分前还会判断集成耦合：文案、证据、素材和视觉必须联合优化时，默认保留一个端到端角色，
+把合规或 QA 写成内部检查点。
+
+单一 Agent 上下文现在支持 schema 1.1：`single_role` 表示一个功能角色，
+`sequential_roles` 表示同一次模型调用中顺序执行多个功能角色。内部角色交接写入 `next`，
+交给外部 Skill、人员或交付步骤写入 `handoff_to`；两者都不会创建子智能体或新的模型调用节点。
+旧 schema 1.0 继续兼容。
+
+点名“角色与 Prompt 增强”时，模型审阅先固定全局目标、共享上下文、端到端负责人和集成验收，
+再整理工作单元并判断是否拆角色，最后给出角色合同与 Prompt。改动后的同素材前后证据可用
+[`role_prompt_behavior_check.py`](skills/skill-self-check/scripts/role_prompt_behavior_check.py)
+独立验证；全局目标丢失或 `single_context` 被执行成多个子智能体时判定为回归，且不影响核心门禁。
+
+![模型调用拓扑与功能角色拓扑](assets/diagrams/zh/07-workflow-prompt-audit.svg)
 
 ## 处理流程
 
@@ -150,7 +184,7 @@ py -3 skills/skill-self-check/scripts/workflow_prompt_audit.py C:\你的Skill目
 ## 仓库结构
 
 ```text
-skills/skill-self-check/     # 结构与契约门禁、修复复检、workflow Prompt 检查
+skills/skill-self-check/     # 结构门禁、修复复检、workflow 角色与 Prompt 检查
 skills/skill-ship-safety/    # 外部操作静态安全预检
 skills/agent-work-readiness/ # 口头流程到 B0–B6 工作包
 exp/                         # 实验性流程规划内容；默认不安装
@@ -190,7 +224,7 @@ Skill Self-Check uses deterministic Python scripts to audit Agent Skill package 
 usage contracts, and static safety signals. An AI can then propose focused fixes from the
 script evidence. Built-in scripts read local files only and **never execute target Skill code**.
 
-Current version: **0.2.0**. [`plugin.json`](plugin.json) is the version source of truth;
+Current version: **0.4.1**. [`plugin.json`](plugin.json) is the version source of truth;
 see [`CHANGELOG.md`](CHANGELOG.md) for release notes.
 
 `gate_verdict` is authoritative. Numeric scores are diagnostic only. Runtime behavior,
@@ -263,6 +297,13 @@ python skills/skill-self-check/scripts/run_full_audit.py /path/to/your-skill \
 
 Add `--work-package <path>` to include work-readiness. Keep real audit output outside both
 the target Skill and its source repository.
+The runner also writes separate `workflow-prompt.json` and `role-contract.json`;
+their N/A or not-assessed status does not change the core gate.
+
+A standard audit runs `hard_gates.py`, `workflow_prompt_audit.py`, and
+`role_contract_audit.py`; only an explicit fast/gate-only request skips the last
+two. Asking whether role or Prompt review ran selects those read-only routes in
+the same turn instead of returning only `not_run`.
 
 For workflows with separate model-call nodes, copy
 [`workflow-prompts.example.json`](skills/skill-self-check/examples/workflow-prompts.example.json)
@@ -273,15 +314,53 @@ python skills/skill-self-check/scripts/workflow_prompt_audit.py \
   /path/to/your-skill --pretty
 ```
 
-This optional audit checks node contracts, prompt files, placeholders, XML-style tags,
-untrusted-source isolation, decision gates, and graph links. It does not change the core
+Schema 1.1 also verifies that each node's role, purpose, responsibilities, exclusions,
+decision authority, and handoff appear in its Prompt and agree with `decision_gates` and
+`next`; schema 1.0 remains compatible. Load
+[`role-prompt-review.md`](skills/skill-self-check/references/role-prompt-review.md) for
+advisory role-quality findings and paste-ready rewrites. Base checks still cover prompt
+files, placeholders, XML-style tags, source isolation, contracts, and graph links.
+This audit does not change the core
 `gate_verdict` or prove runtime model behavior. If there are no separate model-call nodes,
 declare `Workflow prompt audit: N/A — <reason>` in `SKILL.md`.
+
+Role audit selects its layer from the actual call shape: a manifest uses node
+roles; one agent instruction context uses `references/role-contract.json` plus
+the matching Skill-level functional-role contract in `SKILL.md`. Ordinary steps, review
+passes, and `agents/openai.yaml` invocation prompts are not separate model-call
+nodes by themselves:
+
+```bash
+python skills/skill-self-check/scripts/role_contract_audit.py \
+  /path/to/your-skill --pretty
+```
+
+Use a role only when it changes decisions, evidence handling, output,
+permissions, or handoff. See
+[`role-archetypes.md`](skills/skill-self-check/references/role-archetypes.md) for
+candidate functional contracts; target evidence remains authoritative.
+The review also checks integration coupling first. When copy, evidence, assets,
+and visuals must be optimized together, it defaults to one end-to-end role and
+keeps compliance or QA as internal checkpoints.
+
+Single-context schema 1.1 supports `single_role` and `sequential_roles`.
+Sequential roles run inside one model invocation: `next` names the internal
+role transition and `handoff_to` names an external downstream destination.
+Neither field creates a subagent or model-call node, and schema 1.0 remains compatible.
+
+An explicit role-and-Prompt enhancement request fixes the global objective,
+shared context, end-to-end owner, and integration tests before inventorying work
+units or splitting roles. Supplied same-fixture evidence can then be validated
+with [`role_prompt_behavior_check.py`](skills/skill-self-check/scripts/role_prompt_behavior_check.py).
+Loss of global purpose or implicit delegation under `single_context` is a
+regression; this advisory verdict remains separate from `gate_verdict`.
+
+![Model-call and functional-role topology](assets/diagrams/07-workflow-prompt-audit.svg)
 
 ## Repository layout
 
 ```text
-skills/skill-self-check/     # core gate, fix verification, workflow prompt audit
+skills/skill-self-check/     # core gate, fix verification, role-aware workflow Prompt audit
 skills/skill-ship-safety/    # static external-action preflight
 skills/agent-work-readiness/ # oral process to B0–B6 work package
 exp/                         # experiments; not installed by default

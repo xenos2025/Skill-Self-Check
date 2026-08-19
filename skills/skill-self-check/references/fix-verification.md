@@ -15,6 +15,27 @@ python scripts/verify_fix.py /absolute/path/to/target-skill \
   --pretty
 ```
 
+If the baseline used `hard_gates.py --repo-root /absolute/repository`, pass the
+same root to verification:
+
+```bash
+python scripts/verify_fix.py /absolute/path/to/target-skill \
+  --baseline /private/path/baseline.json \
+  --repo-root /absolute/repository \
+  --pretty
+```
+
+`verify_fix.py` rejects a missing or newly added repository scope so the
+before/after comparison cannot silently change resource-resolution rules.
+
+## Managed sandbox failures
+
+If a Python test fails before assertions because a managed Windows sandbox
+denies creation under the user temporary directory, classify it as an
+environment/permission failure. Re-run the identical test command once in an
+approved writable environment. If it still fails before assertions, stop and
+report the environment blocker; report a code defect only if assertions fail.
+
 If the baseline is missing, say so. Run `hard_gates.py` once and report a plain
 after-state only; never invent the before-state.
 

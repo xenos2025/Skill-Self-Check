@@ -78,6 +78,129 @@ class BadFixtureTests(unittest.TestCase):
         self.assertIn("EXEC.0", [f["id"] for f in report["findings"]])
 
 
+class CommandCoverageTests(unittest.TestCase):
+    def test_placeholder_path_to_owned_script_reports_lost_coverage(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "placeholder-docs"
+            (skill / "scripts").mkdir(parents=True)
+            (skill / "SKILL.md").write_text(
+                "---\nname: placeholder-docs\n"
+                "description: Fixture documenting commands with placeholder paths. Use when testing.\n"
+                "---\n\n# Placeholder docs\n\n"
+                "```bash\npython3 <skill-dir>/scripts/tool.py ping\n```\n",
+                encoding="utf-8",
+            )
+            (skill / "scripts" / "tool.py").write_text(GOOD_TOOL_PY, encoding="utf-8")
+            code, report = run_script(skill)
+
+        self.assertEqual(0, code)
+        self.assertEqual([], report["commands"])
+        inventory = report["command_inventory"]
+        self.assertEqual("none", inventory["coverage"])
+        self.assertEqual(0, inventory["documented"])
+        self.assertEqual(1, inventory["skipped_placeholder"])
+        self.assertEqual("scripts/tool.py", inventory["placeholders"][0]["resolved_script"])
+        doc2 = next(f for f in report["findings"] if f["id"] == "DOC.2")
+        self.assertEqual("should_fix", doc2["severity"])
+        self.assertNotIn("DOC.1", [f["id"] for f in report["findings"]])
+
+    def test_illustrative_placeholder_template_is_not_lost_coverage(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "template-docs"
+            (skill / "scripts").mkdir(parents=True)
+            (skill / "SKILL.md").write_text(
+                "---\nname: template-docs\n"
+                "description: Fixture illustrating another Skill's command shape. Use when testing.\n"
+                "---\n\n# Template docs\n\n"
+                "```bash\npython3 scripts/tool.py ping\npython3 scripts/<sender>.py batch.json\n```\n",
+                encoding="utf-8",
+            )
+            (skill / "scripts" / "tool.py").write_text(GOOD_TOOL_PY, encoding="utf-8")
+            code, report = run_script(skill)
+
+        self.assertEqual(0, code)
+        inventory = report["command_inventory"]
+        self.assertEqual("full", inventory["coverage"])
+        self.assertEqual(0, inventory["skipped_placeholder"])
+        self.assertNotIn("DOC.2", [f["id"] for f in report["findings"]])
+
+    def test_target_without_documented_commands_stays_info(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "no-commands"
+            (skill / "references").mkdir(parents=True)
+            (skill / "SKILL.md").write_text(
+                "---\nname: no-commands\n"
+                "description: Fixture with no documented commands at all. Use when testing.\n"
+                "---\n\n# No commands\n\nRead references/notes.md.\n",
+                encoding="utf-8",
+            )
+            (skill / "references" / "notes.md").write_text("Notes.\n", encoding="utf-8")
+            code, report = run_script(skill)
+
+        self.assertEqual(0, code)
+        doc1 = next(f for f in report["findings"] if f["id"] == "DOC.1")
+        self.assertEqual("info", doc1["severity"])
+        self.assertEqual("none", report["command_inventory"]["coverage"])
+
+    def test_shipped_skills_keep_full_command_coverage(self) -> None:
+        for skill in (SELF_CHECK_SKILL, SHIP_SAFETY_SKILL):
+            with self.subTest(skill=skill.name):
+                _, report = run_script(skill)
+                self.assertEqual(
+                    "full",
+                    report["command_inventory"]["coverage"],
+                    report["command_inventory"],
+                )
+
+
+class GateBypassSwitchTests(unittest.TestCase):
+    def test_implemented_gate_bypass_switch_is_reported(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "bypass-switch"
+            (skill / "scripts").mkdir(parents=True)
+            (skill / "SKILL.md").write_text(
+                "---\nname: bypass-switch\n"
+                "description: Fixture shipping a gate bypass switch. Use when testing.\n"
+                "---\n\n# Bypass switch\n\n```bash\nnode scripts/render.mjs\n```\n",
+                encoding="utf-8",
+            )
+            (skill / "scripts" / "render.mjs").write_text(
+                "import { spawnSync } from 'node:child_process';\n"
+                "const skip = process.argv.includes('--disable-claim-gate');\n"
+                "if (!skip) { spawnSync('node', ['gate.mjs']); }\n",
+                encoding="utf-8",
+            )
+            code, report = run_script(skill)
+
+        self.assertEqual(0, code)
+        self.assertEqual(
+            [{"file": "scripts/render.mjs", "switch": "--disable-claim-gate"}],
+            report["gate_bypass_switches"],
+        )
+        ext6 = next(f for f in report["findings"] if f["id"] == "EXT.6")
+        self.assertEqual("should_fix", ext6["severity"])
+        self.assertIn("scripts/render.mjs --disable-claim-gate", ext6["evidence"])
+
+    def test_ordinary_flags_are_not_gate_bypass_switches(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "ordinary-flags"
+            (skill / "scripts").mkdir(parents=True)
+            (skill / "SKILL.md").write_text(
+                "---\nname: ordinary-flags\n"
+                "description: Fixture using only ordinary flags. Use when testing.\n"
+                "---\n\n# Ordinary flags\n\n```bash\npython3 scripts/tool.py ping\n```\n",
+                encoding="utf-8",
+            )
+            (skill / "scripts" / "tool.py").write_text(
+                GOOD_TOOL_PY + '\n# supports --pretty --no-color --skip-cache --out-dir\n',
+                encoding="utf-8",
+            )
+            _, report = run_script(skill)
+
+        self.assertEqual([], report["gate_bypass_switches"])
+        self.assertNotIn("EXT.6", [f["id"] for f in report["findings"]])
+
+
 class CleanTargetTests(unittest.TestCase):
     def test_node_shopify_cli_and_graphql_mutation_are_inventoried(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -1,7 +1,8 @@
 # Workflow Prompt Audit
 
 Use this route when the user asks to validate every workflow step that invokes
-a language model. It is optional and does not change `hard_gates.py` results.
+a language model. Its static checker runs in the standard audit and does not
+change `hard_gates.py` results; advisory Prompt/role review remains selected.
 
 ## Authority and scope
 
@@ -31,9 +32,18 @@ The reason is required. This returns `status: not_applicable`, never `pass`.
 When both declaration and manifest exist, the manifest takes precedence and is
 fully audited.
 
+Do not create a manifest merely because `SKILL.md` contains several workflow
+steps, review passes, or headings. A node belongs here only when runtime
+evidence shows that it is invoked as a separate model call. After this scope is
+known, run [role-contract-audit.md](role-contract-audit.md): it checks schema
+1.1 node roles when a manifest exists and a single-context `single_role` or
+`sequential_roles` contract when the Prompt audit is N/A. Sequential functional
+roles still belong to one Agent and shared context; they are not workflow nodes
+or subagents.
+
 Top-level fields:
 
-- `schema_version`: `"1.0"`;
+- `schema_version`: `"1.0"` or `"1.1"`;
 - `workflow_id`: stable workflow identifier;
 - `entry_node`: ID of the first model-call node;
 - `nodes`: non-empty list of model-call contracts.
@@ -45,6 +55,27 @@ Every node declares:
 - `uses_untrusted_sources` and, when true, `source_isolation`;
 - `decision_gates`, `output_schema`, `acceptance_tests`, and `stop_conditions`;
 - `next`, an empty list for a terminal node or declared downstream node IDs.
+
+Schema 1.0 remains supported and runs the original node checks. Schema 1.1
+requires every node to add `role_contract`:
+
+```json
+{
+  "role": "RFQ requirements analyst",
+  "purpose": "Extract and confirm customer requirements.",
+  "responsibilities": ["Extract facts and label missing information."],
+  "out_of_scope": ["Do not quote prices or promise delivery dates."],
+  "decision_authority": ["READY"],
+  "handoff_to": ["draft-reply"]
+}
+```
+
+`role` and `purpose` must be non-empty strings. `responsibilities`,
+`out_of_scope`, and `decision_authority` must be non-empty string lists;
+`handoff_to` is a string list and may be empty for a terminal node. Every
+declared role, purpose, responsibility, exclusion, and authority string must
+appear in the Prompt. `decision_authority` must also appear in
+`decision_gates`, and `handoff_to` must match `next`.
 
 The declared decision, output, acceptance, stop, and source-isolation strings
 act as deterministic markers: each must also appear in `prompt_file` after
@@ -81,6 +112,10 @@ Exit `1` means `needs_work` or `not_assessed`.
 - `WPA.6`: invalid entry, downstream reference, or unreachable node;
 - `WPA.7`: untrusted-source node lacks an instruction/data isolation rule;
 - `WPA.8`: declared control text is absent from the referenced Prompt.
+- `WPA.9`: schema 1.1 role contract is absent or malformed;
+- `WPA.10`: declared role text is absent from the referenced Prompt;
+- `WPA.11`: role handoff does not match the node's `next` list;
+- `WPA.12`: declared decision authority is absent from `decision_gates`.
 
 Report each finding as produced. Do not translate `status: pass` into a package
 gate or behavioral claim.
@@ -91,3 +126,7 @@ Report the manifest path, workflow ID, assessed node count, `status`, every
 error, any N/A reason, and the limitations. If the user needs quality or equivalence evidence,
 the next action is a separate representative behavior evaluation using
 sanitized normal, missing-data, conflicting-source, and injection fixtures.
+For advisory role quality and rewrite guidance, use
+[role-prompt-review.md](role-prompt-review.md) after this static audit. When
+same-fixture before/after artifacts exist, validate their comparison with
+[role-prompt-behavior-eval.md](role-prompt-behavior-eval.md).

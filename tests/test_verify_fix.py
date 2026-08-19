@@ -81,19 +81,32 @@ def write_skill(directory: Path, name: str, body: str) -> Path:
     return skill_dir
 
 
-def capture_baseline(target: Path, destination: Path, encoding: str = "utf-8") -> Path:
-    proc = subprocess.run(
-        [sys.executable, str(HARD_GATES), str(target)],
-        capture_output=True,
-        check=False,
-    )
+def capture_baseline(
+    target: Path,
+    destination: Path,
+    encoding: str = "utf-8",
+    *,
+    repo_root: Path | None = None,
+) -> Path:
+    command = [sys.executable, str(HARD_GATES), str(target)]
+    if repo_root is not None:
+        command.extend(("--repo-root", str(repo_root)))
+    proc = subprocess.run(command, capture_output=True, check=False)
     payload = proc.stdout.decode("utf-8")
     destination.write_bytes(payload.encode(encoding))
     return destination
 
 
-def run_verify(target: Path, baseline: Path, *, strict: bool = False) -> tuple[int, dict]:
+def run_verify(
+    target: Path,
+    baseline: Path,
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+) -> tuple[int, dict]:
     command = [sys.executable, str(VERIFY), str(target), "--baseline", str(baseline)]
+    if repo_root is not None:
+        command.extend(("--repo-root", str(repo_root)))
     if strict:
         command.append("--strict")
     proc = subprocess.run(command, capture_output=True, check=False)
@@ -129,6 +142,80 @@ class UnchangedTargetTests(unittest.TestCase):
             code, report = run_verify(target, baseline)
         self.assertEqual(code, 0)
         self.assertEqual(report["verdict"], "unchanged")
+
+    def test_repo_root_scope_is_preserved_during_verification(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            target = write_skill(repo / "skills", "steady-skill", GOOD_SKILL)
+            shared = repo / "skills" / "shared" / "reference.md"
+            shared.parent.mkdir(parents=True)
+            shared.write_text("# Shared\n", encoding="utf-8")
+            skill_md = target / "SKILL.md"
+            skill_md.write_text(
+                skill_md.read_text(encoding="utf-8")
+                + "\n[Shared](skills/shared/reference.md)\n",
+                encoding="utf-8",
+            )
+            baseline = capture_baseline(
+                target,
+                Path(tmp) / "baseline.json",
+                repo_root=repo,
+            )
+            code, report = run_verify(target, baseline, repo_root=repo)
+        self.assertEqual(code, 0)
+        self.assertEqual(report["verdict"], "unchanged")
+        self.assertEqual(
+            report["repository_scope"],
+            {
+                "baseline_repo_root_enabled": True,
+                "current_repo_root_enabled": True,
+                "comparison": "matched",
+            },
+        )
+        self.assertNotIn(
+            "PKG.5", [item["id"] for item in report["findings"]["introduced"]]
+        )
+
+    def test_repo_root_baseline_requires_explicit_repo_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            target = write_skill(repo / "skills", "steady-skill", GOOD_SKILL)
+            baseline = capture_baseline(
+                target,
+                Path(tmp) / "baseline.json",
+                repo_root=repo,
+            )
+            code, report = run_verify(target, baseline)
+        self.assertEqual(code, 1)
+        self.assertEqual(report["verdict"], "not_verified")
+        self.assertIn("--repo-root", report["error"])
+
+    def test_repo_root_must_contain_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            target = write_skill(repo / "skills", "steady-skill", GOOD_SKILL)
+            baseline = capture_baseline(
+                target,
+                root / "baseline.json",
+                repo_root=repo,
+            )
+            unrelated = root / "unrelated"
+            unrelated.mkdir()
+            code, report = run_verify(target, baseline, repo_root=unrelated)
+        self.assertEqual(code, 1)
+        self.assertEqual(report["verdict"], "not_verified")
+        self.assertIn("必须包含被复检的 Skill", report["error"])
+
+    def test_target_local_baseline_rejects_repo_scope_change(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = write_skill(root, "steady-skill", GOOD_SKILL)
+            baseline = capture_baseline(target, root / "baseline.json")
+            code, report = run_verify(target, baseline, repo_root=root)
+        self.assertEqual(code, 1)
+        self.assertEqual(report["verdict"], "not_verified")
+        self.assertIn("target-local", report["error"])
 
 
 class ImprovementTests(unittest.TestCase):

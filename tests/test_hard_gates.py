@@ -442,6 +442,44 @@ class SupportKitTests(unittest.TestCase):
 
 
 class PackageHealthTests(unittest.TestCase):
+    def test_vcs_and_editor_metadata_dirs_do_not_count_as_package_topology(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "repo-root-skill"
+            root.mkdir()
+            (root / "SKILL.md").write_text(
+                ZH_SKILL.format(name="repo-root-skill"), encoding="utf-8"
+            )
+            (root / "references").mkdir()
+            for metadata_dir in (".git", ".github", ".vscode"):
+                (root / metadata_dir).mkdir()
+                (root / metadata_dir / "config").write_text("x\n", encoding="utf-8")
+
+            code, report = run_script(root)
+
+        topology = report["package_health"]["checks"]["standard_topology"]
+        self.assertEqual("pass", topology["status"])
+        self.assertEqual(1, topology["top_level_directory_count"])
+        self.assertEqual(0, topology["nonstandard_directory_count"])
+        self.assertNotIn("PKG.3b", [item["id"] for item in report["findings"]])
+        self.assertEqual(0, code, report["findings"])
+
+    def test_real_nonstandard_content_dir_is_still_reported(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "extra-dir-skill"
+            root.mkdir()
+            (root / "SKILL.md").write_text(
+                ZH_SKILL.format(name="extra-dir-skill"), encoding="utf-8"
+            )
+            (root / ".git").mkdir()
+            (root / "style-library").mkdir()
+            (root / "style-library" / "look.md").write_text("x\n", encoding="utf-8")
+
+            _, report = run_script(root)
+
+        topology = report["package_health"]["checks"]["standard_topology"]
+        self.assertEqual(1, topology["nonstandard_directory_count"])
+        self.assertIn("PKG.3b", [item["id"] for item in report["findings"]])
+
     def test_explicit_repo_root_resolves_complete_sibling_markdown_target(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp) / "pack"

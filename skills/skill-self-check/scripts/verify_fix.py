@@ -2,7 +2,8 @@
 """Re-check a Skill after fixes and report the score/finding delta.
 
 Usage:
-  python verify_fix.py <skill-dir> --baseline <hard-gates.json>
+  python verify_fix.py <skill-dir> --baseline <hard-gates.json> \
+    [--repo-root <approved-repository>]
 
 The baseline is the `hard_gates.py` report captured before the edits. This
 script re-runs the same deterministic checker and compares the two fact sets;
@@ -85,11 +86,68 @@ def load_baseline(path: Path) -> dict[str, Any]:
     return report
 
 
-def run_hard_gates(script: Path, target: Path) -> dict[str, Any]:
+def is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+    except ValueError:
+        return False
+    return True
+
+
+def approved_repo_root(target: Path, repo_root: Path | None) -> Path | None:
+    if repo_root is None:
+        return None
+    selected = repo_root.expanduser().resolve()
+    if not selected.is_dir():
+        raise ValueError("--repo-root 必须是已存在的目录")
+    if target != selected and not is_relative_to(target, selected):
+        raise ValueError("--repo-root 必须包含被复检的 Skill")
+    return selected
+
+
+def baseline_repo_root_enabled(report: dict[str, Any]) -> bool | None:
+    package = report.get("package_health")
+    if not isinstance(package, dict):
+        return None
+    checks = package.get("checks")
+    if not isinstance(checks, dict):
+        return None
+    resource_links = checks.get("resource_links")
+    if not isinstance(resource_links, dict):
+        return None
+    enabled = resource_links.get("repo_root_enabled")
+    return enabled if isinstance(enabled, bool) else None
+
+
+def resolve_repository_scope(
+    target: Path,
+    baseline: dict[str, Any],
+    repo_root: Path | None,
+) -> tuple[Path | None, bool | None]:
+    baseline_enabled = baseline_repo_root_enabled(baseline)
+    if baseline_enabled is True and repo_root is None:
+        raise ValueError(
+            "基线使用了 --repo-root；复检必须显式提供同一仓库根目录"
+        )
+    if baseline_enabled is False and repo_root is not None:
+        raise ValueError(
+            "基线未使用 --repo-root；复检必须保持 target-local 范围"
+        )
+    return approved_repo_root(target, repo_root), baseline_enabled
+
+
+def run_hard_gates(
+    script: Path,
+    target: Path,
+    repo_root: Path | None,
+) -> dict[str, Any]:
     if not READ_ONLY_DRY_RUN:
         raise ValueError("复检入口必须保持只读预演模式")
+    command = [sys.executable, str(script), str(target)]
+    if repo_root is not None:
+        command.extend(("--repo-root", str(repo_root)))
     result = subprocess.run(
-        [sys.executable, str(script), str(target)],
+        command,
         cwd=script.parent,
         capture_output=True,
         text=True,
@@ -401,14 +459,23 @@ def target_identity(
     }
 
 
-def verify(target: Path, baseline_path: Path, *, strict: bool) -> dict[str, Any]:
+def verify(
+    target: Path,
+    baseline_path: Path,
+    *,
+    repo_root: Path | None,
+    strict: bool,
+) -> dict[str, Any]:
     if not target.is_dir() or not (target / "SKILL.md").is_file():
         raise ValueError("被复检目录必须存在，并且包含 SKILL.md")
     script = Path(__file__).resolve().parent / "hard_gates.py"
     if not script.is_file():
         raise ValueError("缺少 hard_gates.py，无法复检")
     baseline = load_baseline(baseline_path)
-    current = run_hard_gates(script, target)
+    selected_repo_root, baseline_scope = resolve_repository_scope(
+        target, baseline, repo_root
+    )
+    current = run_hard_gates(script, target, selected_repo_root)
 
     scores, _score_up, _score_down = compare_scores(baseline, current)
     findings, finding_up, finding_hard, finding_soft = compare_findings(
@@ -446,6 +513,13 @@ def verify(target: Path, baseline_path: Path, *, strict: bool) -> dict[str, Any]
         "hard_regression": hard_regression,
         "strict": strict,
         "target": target_identity(baseline, current, target),
+        "repository_scope": {
+            "baseline_repo_root_enabled": baseline_scope,
+            "current_repo_root_enabled": selected_repo_root is not None,
+            "comparison": (
+                "matched" if baseline_scope is not None else "baseline_not_recorded"
+            ),
+        },
         "scores": {
             "scoring_effect": "informational_only",
             **scores,
@@ -482,6 +556,14 @@ def main() -> int:
         help="hard_gates.py JSON captured before the fixes",
     )
     parser.add_argument(
+        "--repo-root",
+        type=Path,
+        help=(
+            "Approved repository root used by the baseline; required when the "
+            "baseline records repo-root resolution"
+        ),
+    )
+    parser.add_argument(
         "--out", type=Path, help="Optional path for the delta JSON report"
     )
     parser.add_argument(
@@ -493,7 +575,12 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        report = verify(args.skill_dir.resolve(), args.baseline, strict=args.strict)
+        report = verify(
+            args.skill_dir.resolve(),
+            args.baseline,
+            repo_root=args.repo_root,
+            strict=args.strict,
+        )
     except ValueError as exc:
         print(
             json.dumps(

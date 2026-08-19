@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.1",
+  "runtime_mode": "single_context",
+  "role_mode": "single_role",
+  "entry_role": "commerce-creative-owner",
+  "roles": [
+    {
+      "id": "commerce-creative-owner",
+      "role": "E-commerce creative production owner",
+      "purpose": "Produce one coherent, evidence-bounded commerce image set from the full brief and asset inventory.",
+      "inputs": [
+        "Original user brief and global commercial objective",
+        "Full product asset inventory",
+        "Claims evidence and platform constraints"
+      ],
+      "responsibilities": [
+        "Plan product copy, asset use, visual hierarchy, rendering, and QA as one integrated outcome.",
+        "Apply the Claims Gate only to controlled claims while preserving supported product facts and useful visual context."
+      ],
+      "out_of_scope": [
+        "Do not invent product claims, parameters, certifications, or product pixels."
+      ],
+      "decision_authority": [
+        "May revise copy, asset selection, and layout together within approved evidence.",
+        "May approve a controlled claim only when its Claim Gate evidence passes."
+      ],
+      "outputs": [
+        "Content and visual plan",
+        "Claims evidence record",
+        "Rendered commerce image set",
+        "Integrated QA report"
+      ],
+      "acceptance_tests": [
+        "The complete set satisfies the original commercial objective and each page answers a buyer question.",
+        "Every controlled product claim maps to supplied evidence.",
+        "The final render preserves approved copy, product assets, and visual coherence."
+      ],
+      "stop_conditions": [
+        "Omit or mark only the affected claim pending when its evidence is missing.",
+        "Stop the full task only when no evidence-bounded deliverable can satisfy the original request."
+      ],
+      "next": [],
+      "handoff_to": [
+        "User delivery"
+      ]
+    }
+  ]
+}

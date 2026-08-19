@@ -150,6 +150,8 @@ def audit(
     skill_root = Path(__file__).resolve().parents[1]
     skills_root = skill_root.parent
     hard_script = skill_root / "scripts" / "hard_gates.py"
+    workflow_prompt_script = skill_root / "scripts" / "workflow_prompt_audit.py"
+    role_contract_script = skill_root / "scripts" / "role_contract_audit.py"
     safety_script = (
         skills_root / "skill-ship-safety" / "scripts" / "ship_safety.py"
     )
@@ -159,7 +161,12 @@ def audit(
         / "scripts"
         / "readiness_gates.py"
     )
-    required = [hard_script, safety_script]
+    required = [
+        hard_script,
+        safety_script,
+        workflow_prompt_script,
+        role_contract_script,
+    ]
     if work_package is not None:
         required.append(readiness_script)
     missing = [path.name for path in required if not path.is_file()]
@@ -173,6 +180,8 @@ def audit(
     repo_args = ("--repo-root", str(repo_root)) if repo_root is not None else ()
     hard = run_json_script(hard_script, target, *repo_args)
     safety = run_json_script(safety_script, target, *repo_args)
+    workflow_prompt = run_json_script(workflow_prompt_script, target)
+    role_contract = run_json_script(role_contract_script, target)
     readiness = (
         run_json_script(readiness_script, work_package)
         if work_package is not None
@@ -190,7 +199,7 @@ def audit(
         package_health.get("status") or "not_assessed"
     )
     manifest = {
-        "schema_version": "1.2",
+        "schema_version": "1.4",
         "generated_at": generated_at,
         "audit_mode": "read_only_static",
         "target": {
@@ -217,9 +226,22 @@ def audit(
             ),
             "hard_gates": "completed",
             "ship_safety": "completed",
+            "workflow_prompt": str(
+                workflow_prompt.get("status") or "not_assessed"
+            ),
+            "role_contract": str(
+                role_contract.get("status") or "not_assessed"
+            ),
             "business_readiness": (
                 "completed" if readiness is not None else "not_supplied"
             ),
+        },
+        "role_contract_summary": {
+            "runtime_mode": role_contract.get("runtime_mode")
+            or role_contract.get("mode")
+            or "undetermined",
+            "role_mode": role_contract.get("role_mode"),
+            "role_count": role_contract.get("role_count", 0),
         },
         "limitations": [
             "没有执行被检查的 Skill",
@@ -237,6 +259,8 @@ def audit(
     output.mkdir(parents=True, exist_ok=True)
     write_json(output / "hard-gates.json", hard, pretty)
     write_json(output / "ship-safety.json", safety, pretty)
+    write_json(output / "workflow-prompt.json", workflow_prompt, pretty)
+    write_json(output / "role-contract.json", role_contract, pretty)
     if readiness is not None:
         write_json(output / "readiness.json", readiness, pretty)
     audit_duration_ms = round(

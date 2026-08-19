@@ -1,12 +1,12 @@
 ---
 name: skill-self-check
 description: >-
-  Deterministically audits an Agent Skill package, reports package health,
-  gate_verdict, and ranked paste-ready fixes, then verifies authorized repairs
-  against a saved baseline. Use when users request audit, review, self-check, blocker diagnosis,
-  prompt optimization, workflow prompt validation, context-efficiency review,
-  or pre-share validation. Do not use for Skill creation, behavioral evaluation,
-  visual scorecards, or unauthorized edits.
+  Deterministically audits an Agent Skill package, reports gate_verdict and
+  paste-ready fixes, then verifies authorized repairs against a baseline. Use
+  when users request audit, review, self-check, blocker diagnosis, prompt optimization,
+  context efficiency, workflow Prompt validation, or pre-share validation. Do not use to create
+  Skills, execute behavioral evaluations, make visual scorecards, or edit
+  without approval.
 ---
 
 # Skill Self-Check
@@ -16,15 +16,27 @@ Full checks: [CHECKLIST.md](CHECKLIST.md).
 
 Workflow prompt audit: N/A — one agent instruction context; no separate model calls.
 
+## Role contract
+
+- **Role:** Skill audit verifier
+- **Purpose:** Report script gates and verify approved fixes.
+- **Responsibilities:** Run the standard static checkers before reporting.
+- **Responsibilities:** Separate model advice from script results.
+- **Out of scope:** Do not create Skills, run behavior tests, or make unapproved edits.
+- **Decision authority:** Report only the script gate_verdict.
+- **Decision authority:** Verify approved fixes against a baseline.
+- **Handoff to:** Send business-readiness gaps to agent-work-readiness.
+- **Handoff to:** Send external-action safety to skill-ship-safety.
+
+Machine contract: [references/role-contract.json](references/role-contract.json).
+
 <authority_contract>
 
-- [scripts/hard_gates.py](scripts/hard_gates.py) exclusively owns
-  `package_health`, `gate_verdict`, script findings, severity, and exit code.
-- [scripts/verify_fix.py](scripts/verify_fix.py) exclusively owns fix
-  verification against a saved baseline.
+- [hard_gates.py](scripts/hard_gates.py) owns package health, `gate_verdict`,
+  script findings, severity, and exit code.
+- [verify_fix.py](scripts/verify_fix.py) owns saved-baseline verification.
 - Script scores are informational only.
-- Qualitative review is optional and model-owned; script findings, gate status,
-  counts, severity, and exit code remain unchanged.
+- Model review cannot change script status, counts, severity, or exit code.
 - Edit the target only after explicit user authorization.
 
 </authority_contract>
@@ -43,31 +55,13 @@ Workflow prompt audit: N/A — one agent instruction context; no separate model 
 
 ## Check axes
 
-This audit always reports on:
+[CHECKLIST.md](CHECKLIST.md) owns four result families:
 
-- **Package health preflight** — one installable root, name/root alignment,
-  standard top-level directories, portable paths, valid resource references,
-  filename/residue hygiene, duplicate resources, and static installability
-  (script; blocks maturity assessment)
-- **Hard structure** — frontmatter, name, description shape (script)
-- **Explicit gate** — valid package, named required checks, and no script
-  Criticals; independent of numeric scores (script; blocking)
-- **Basic usable score** — 0–5 informational diagnostic (script)
-- **Contract clarity score** — 0–5 informational diagnostic (script)
-- **Support kit score** — references / examples / memory / scripts; N/A
-  allowed; informational only (script)
-- **Predictability** — completion criteria, no-op, negation, sprawl (model + script hints)
-- **Anatomy** — workflow quality, rationalizations (model + script hints)
-- **PDCA loop** — Plan / Do / Check / Act all explicit (model; see references)
-- **SMART outcomes** — Specific, Measurable, Achievable, Relevant, run-bound exit (model)
-- **Token consumption** — static `SKILL.md` input estimate with a recommended
-  budget ceiling, replaced by trusted input/output/total usage when behavior
-  evidence supplies it (script)
-- **Runtime duration** — target execution time only from trusted behavior
-  evidence; otherwise `not_measured` (script)
-- **Loop guard** — every loop/retry instruction carries a stop condition
-  (max attempts / timeout / escalate); open-ended refinement requires a guard
-  before the Skill ships (script `EFF.*`)
+- **Gate:** package health and `gate_verdict` (script; blocking);
+- **Diagnostics:** structure, contract, support, token, and loops (script);
+- **Qualitative:** Predictability, Anatomy, PDCA, SMART (explicit advisory route);
+- **Role/Prompt:** workflow applicability and role contract (standard static
+  status), plus explicit model-owned optimization.
 
 ## Inputs
 
@@ -79,20 +73,22 @@ This audit always reports on:
 
 ## Process
 
-### Default — fast hard-gate audit
+### Standard audit — three static statuses
 
-Run the bundled checker directly. This Skill operates independently of the
-other shipped Skills:
+For every general audit, review, or self-check, run all three bundled checkers:
 
 ```bash
 python scripts/hard_gates.py /absolute/path/to/target-skill --pretty
+python scripts/workflow_prompt_audit.py /absolute/path/to/target-skill --pretty
+python scripts/role_contract_audit.py /absolute/path/to/target-skill --pretty
 ```
 
-Windows may use `py -3`.
+`hard_gates.py` alone owns `gate_verdict`; workflow and role statuses remain
+separate. Run only `hard_gates.py` when the user explicitly asks for a fast or
+gate-only check.
 
-For multi-Skill packs, pass `--repo-root /absolute/repository`; otherwise links
-stay target-local. It allows only in-root relative links; reports label each
-`resolution_scope` as `target` or `repo`. Absolute/escaping paths stay Critical.
+For multi-Skill packs, pass `--repo-root /absolute/repository` and preserve it
+during [fix verification](references/fix-verification.md). Escaping paths stay Critical.
 
 If fixes may follow, save the same run as a baseline outside the target and
 source repository:
@@ -102,51 +98,44 @@ python scripts/hard_gates.py /absolute/path/to/target-skill \
   --out-json /private/path/baseline.json --pretty
 ```
 
-- Parse stdout JSON. Treat stderr as a human summary only.
+- Parse stdout JSON; stderr is a human summary.
 - Read `package_health`, `gate_verdict`, `gate_reasons`, and `findings` first.
-- Exit code 1 means the gate did not pass; report the fixes normally.
-- Treat scores and operational metrics as informational. Use `gate_verdict` as
-  the exclusive gate authority instead of `scores.ship_floor_met`.
-- Present maturity scores as a package assessment only when package health is
-  valid and assessable.
+- Exit 1 means the gate failed; report fixes normally.
+- Scores/metrics are informational. Show maturity only for an assessable package.
 
-**Completion criterion:** JSON parsed; `package_health`, `gate_verdict`,
-`gate_reasons`, and `findings` are available.
+**Completion criterion:** All three JSON reports are parsed; core gate reasons,
+workflow applicability, and role mode/status are available.
 
 ### Rank and explain deterministic findings
 
-Map script `findings` with `severity: critical|should_fix|nice` into the report.  
-Explain and suggest rewrites; keep every script Critical in failed status.
-Use [references/plain-language-response.md](references/plain-language-response.md)
-to translate the source result without creating a second audit.
+Map script `findings` into [plain-language response](references/plain-language-response.md)
+without changing any Critical or creating a second audit.
 
-`PKG.*` and `EFF.*` are mechanical: the fix does not depend on the user's
-business, so write the rewrite yourself using
-[references/fix-templates.md](references/fix-templates.md) instead of asking.
+For mechanical `PKG.*`/`EFF.*`, write the rewrite from
+[fix-templates.md](references/fix-templates.md) instead of asking.
 
 <output_contract>
 
-1. Gate verdict and plain-language reasons.
+1. Gate verdict plus workflow Prompt and role-contract statuses.
 2. Every script Critical, each with 问题 → 为什么 → 可直接采用的建议改法.
 3. At most three highest-priority Should fix findings.
-4. One next action: say 「按意见改」 to authorize edits, or explicitly ask for
-   deep audit / full static audit.
+4. One next action: 「按意见改」, or request a named advisory/full route.
 
 </output_contract>
 
-**Fast-mode completion criterion:** Every script Critical is covered, no more
-than three Should fix items are shown, and each displayed finding has an
-actionable fix. Stop here unless the user explicitly requests another route.
+## Selected routes
 
-## Optional routes
-
-Load only the reference selected by the user's explicit request:
+Load only selected references. A request that names Prompt, context, workflow,
+role, enhancement, or optimization selects that route. “Did you review X?” also
+means run the read-only X route now unless the user explicitly asks for status
+only; execute it instead of returning `not_run`. Run every named row; “role and Prompt enhancement”
+selects both Prompt optimization and workflow/role review.
 
 | User request | Required reference | Route result |
 | --- | --- | --- |
 | Deep review, Predictability, Anatomy, PDCA, or SMART | [references/deep-qualitative-audit.md](references/deep-qualitative-audit.md) | Advisory; script gate unchanged |
 | Prompt optimization or context efficiency | [references/prompt-optimization.md](references/prompt-optimization.md) | Evidence-bounded; token cuts do not prove quality |
-| Workflow prompt nodes | [references/workflow-prompt-audit.md](references/workflow-prompt-audit.md) | [scripts/workflow_prompt_audit.py](scripts/workflow_prompt_audit.py) validates node manifest |
+| Workflow Prompt, roles, enhancement, or regression comparison | [workflow](references/workflow-prompt-audit.md) + [role contract](references/role-contract-audit.md) + [role synthesis](references/role-prompt-review.md) + [behavior evidence](references/role-prompt-behavior-eval.md) | Select named routes; validate supplied comparisons with `scripts/role_prompt_behavior_check.py`; gate unchanged |
 | Complete installed check pack or saved source reports | [references/full-static-audit.md](references/full-static-audit.md) | Read-only JSON outside target/repo |
 | Apply fixes / 「按意见改」 | [references/fix-verification.md](references/fix-verification.md) | Authorized edits + baseline verification |
 
@@ -156,6 +145,7 @@ For an explicitly requested deep/full technical report, use
 ## Verification
 
 - [ ] `hard_gates.py` was executed on the target directory
+- [ ] `workflow_prompt_audit.py` and `role_contract_audit.py` were executed
 - [ ] `gate_verdict` and `gate_reasons` were read before deprecated score fields
 - [ ] Every script Critical has a paste-ready fix
 - [ ] No more than three Should fix items appear in the default response
@@ -164,13 +154,16 @@ For an explicitly requested deep/full technical report, use
 - [ ] No script Critical was overridden
 - [ ] User was advised whether the deterministic gate passed
 
-Only for explicitly requested routes:
+Only for selected advisory/full/fix routes:
 
 - [ ] Deep audit: model findings are advisory and labeled `source: model_review`
 - [ ] Deep audit: PDCA×SMART matrix gaps map to advisory priorities
 - [ ] Prompt optimization: static reduction, quality, and behavior claims remain separate
 - [ ] Prompt optimization: comparative claims use a saved pre-edit baseline
-- [ ] Workflow prompt audit: node findings remain separate from `gate_verdict`
+- [ ] Workflow Prompt audit: node/role findings remain separate from `gate_verdict`
+- [ ] Role optimization: actual runtime evidence selected `workflow_nodes` or
+      `single_context`; single-context review selected `single_role` or
+      `sequential_roles`, preserved one Agent, and produced a bounded Prompt patch
 - [ ] Full static audit: source JSON is outside the target and source repository
 - [ ] Full static audit: target fingerprint is unchanged
 - [ ] Applied fixes: `verify_fix.py` ran against the pre-fix baseline
@@ -183,6 +176,7 @@ Only for explicitly requested routes:
 | "I can judge frontmatter myself" | Deterministic gates are script-owned. Run the script. |
 | "Script failed, I'll estimate the gate" | Report the error and mark `gate_verdict` unavailable. |
 | "The score is high, so the gate passed" | Scores are informational. Read `gate_verdict` and Criticals. |
+| "They only asked whether the role/Prompt audit ran" | Run the named read-only route now unless they explicitly requested status only. |
 | "User didn't say when NOT to use it — I'll write a sensible default" | Exclusions, triggers and acceptance evidence are the user's business decisions. Ask one question; a plausible invention scores well and still runs wrong. |
 | "改完读一遍就知道修好了" | 分数和 finding 由脚本判定。跑 `verify_fix.py`，用前后对照说话。 |
 | "PKG/EFF 也得先问用户" | 这两类是机械问题，答案与业务无关。照 fix-templates 直接改。 |
@@ -190,6 +184,7 @@ Only for explicitly requested routes:
 ## Red Flags
 
 - Writing a gate verdict without running the script
+- Reporting a named read-only route as `not_run` instead of executing it
 - Running PDCA×SMART or the full static audit without an explicit request
 - Letting model review change `gate_verdict`, Critical counts, or exit status
 - Inventing exclusions, triggers, or acceptance evidence
@@ -199,6 +194,6 @@ Only for explicitly requested routes:
 ## Out of scope
 
 - Creating a skill from scratch
-- Automated multi-case behavioral evals (v2)
+- Executing target or model behavior tests; supplied evidence validation only
 - Editing the target unless the user explicitly asks
 - Inventing quarterly OKRs for a skill that only needs a session exit criterion

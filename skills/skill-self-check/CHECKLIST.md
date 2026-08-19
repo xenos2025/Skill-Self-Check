@@ -7,7 +7,11 @@ Plain-language items for auditing a target skill. Optional Matt-style terms appe
 | Kind | Owner | Notes |
 |------|-------|-------|
 | `gate_verdict`, findings, scores, regex hints | `scripts/hard_gates.py` | Model must not override |
+| Workflow Prompt applicability and node contracts | `scripts/workflow_prompt_audit.py` | Separate from `gate_verdict` |
+| Runtime/role topology and declared Prompt linkage | `scripts/role_contract_audit.py` | Schema 1.0/1.1; separate from `gate_verdict` |
+| Same-fixture role/Prompt behavior evidence | `scripts/role_prompt_behavior_check.py` | Optional comparison; separate from `gate_verdict` |
 | Qualitative predictability / anatomy / PDCA+SMART | Model | Explicit deep audit only; never blocks |
+| Role count, boundary quality, and Prompt synthesis | Model | Explicit advisory route; target evidence required |
 
 **Deterministic gate (script)**
 
@@ -72,7 +76,7 @@ Optional model review uses `priority: high|medium|low`, not script severity.
 | PKG.1 | Exactly one installable Skill root | Root missing, competing root, or declared-name child makes the root ambiguous | Critical |
 | PKG.2 | Frontmatter name equals root basename | Names differ | Critical |
 | PKG.3 | Top-level layout is installable | Generated/runtime files are inside the Skill package | Critical |
-| PKG.3b | Non-standard directories are consolidated | Unclassified top-level content remains | Should fix |
+| PKG.3b | Non-standard directories are consolidated | Unclassified top-level content remains (dot directories such as `.git` are excluded as non-installed metadata) | Should fix |
 | PKG.4 | Bundled instructions use portable paths | Real machine-specific absolute path appears | Critical |
 | PKG.5 | Explicit resource links resolve | Referenced path is missing, escapes the target without approval, or escapes an approved repository root | Critical |
 | PKG.6 | Filenames and residue are portable | Archive/temp/system residue or unsafe filename remains | Should fix |
@@ -228,14 +232,25 @@ is [references/gap-questions.md](references/gap-questions.md).
 
 | Route | What it covers | Blocking? |
 | --- | --- | --- |
-| **Fast audit** (default) | Deterministic PKG / hard gate / EFF checks; all Criticals; top three Should fix | Yes, script only |
+| **Standard audit** (default) | PKG / hard gate / EFF plus workflow Prompt applicability and role-contract status | Core gate only; other statuses separate |
+| **Fast / gate-only** (explicit) | Deterministic PKG / hard gate / EFF checks only | Yes, script only |
 | **Apply + verify** | Authorized edits plus Pass 7 | Yes, script only |
 | **Deep review** (explicit) | Predictability / anatomy / PDCA+SMART | No, advisory |
 | **Prompt optimization** (explicit) | Static efficiency and model-owned contract review | No, advisory |
-| **Workflow prompt audit** (explicit) | Declared model-call nodes, or reasoned `not_applicable`; prompt resources, controls, and graph | Separate route status only |
+| **Workflow Prompt / role review** (explicit advisory) | Reuse static status, inventory work units, select model-call topology separately from single/sequential role topology, then synthesize the contract and Prompt patch | No, advisory |
+| **Role/Prompt behavior comparison** (explicit) | Validate supplied same-fixture evidence for global purpose, shared context, ownership, authority, integration, and implicit delegation | No, separate advisory verdict |
 
-Default audit success = package valid + named required checks + zero script Critical.
+Questions such as “did you audit role/Prompt?” select those read-only routes
+unless the user asks for status only. Run all named routes in the same turn.
+
+Core gate success = package valid + named required checks + zero script Critical.
 Missing behavior JSON does **not** mean “tonight’s certification failed.”
+
+Before a role split, record the global objective and integration coupling.
+`single_context` must remain one Agent; role labels and `next` never authorize
+subagents. High-coupling work defaults to one end-to-end role with internal
+gates. Validate authorized rewrites with
+`scripts/role_prompt_behavior_check.py` when same-fixture artifacts exist.
 
 ## Pass 7 — Fix verification (script-owned)
 

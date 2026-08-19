@@ -13,8 +13,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 SKILL = REPO / "skills" / "agent-work-readiness"
 SCRIPT = SKILL / "scripts" / "readiness_gates.py"
-ORAL_FIXTURE = SKILL / "examples" / "fixtures" / "oral-process"
-READY_FIXTURE = SKILL / "examples" / "fixtures" / "agent-ready"
+ORAL_FIXTURE = SKILL / "examples" / "oral-process"
+READY_FIXTURE = SKILL / "examples" / "agent-ready"
 
 
 def run_script(target: Path) -> tuple[int, dict]:

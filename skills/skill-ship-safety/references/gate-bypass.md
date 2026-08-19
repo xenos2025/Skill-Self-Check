@@ -9,6 +9,11 @@ inside a trusted isolation runner supplied by the current platform or CI.
 A temporary directory, copied project, `DRY_RUN=1`, or stripped environment
 alone does not prevent network access or writes elsewhere.
 
+`ship_safety.py` reports every bypass switch it finds in target code as `EXT.6`
+(`gate_bypass_switches`). Treat each one as a required probe below: a switch that
+turns a gate off is only acceptable if it is OFF by default and its output is
+labelled undeliverable.
+
 ## Hard rules
 
 1. If trusted isolation is unavailable, do not run the target. Report

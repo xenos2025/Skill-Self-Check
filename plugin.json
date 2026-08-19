@@ -1,7 +1,7 @@
 {
   "name": "skill-self-check",
-  "version": "0.2.0",
-  "description": "Standalone Skill hard-gate audit with focused fixes, work-readiness checks, and static external-action preflight. Target code is never executed by the built-in scripts.",
+  "version": "0.4.1",
+  "description": "Standalone Skill hard-gate audit with workflow Prompt checks, functional-role discovery and Prompt synthesis, focused fixes, work-readiness checks, and static external-action preflight. Target code is never executed by the built-in scripts.",
   "homepage": "https://github.com/xenos2025/Skill-Self-Check",
   "repository": "https://github.com/xenos2025/Skill-Self-Check",
   "license": "MIT",

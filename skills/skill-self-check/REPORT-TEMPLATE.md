@@ -4,7 +4,7 @@
 **Date:** `<YYYY-MM-DD>`  
 **Script:** `python scripts/hard_gates.py <skill-dir>`  
 **Route:** `explicit deep/full report`
-**Passes covered:** 0 Script · 1 Hard gates · optional 2–5 model review · 7 Fix verification（改过才有）
+**Passes covered:** 0 Script · 1 Hard gates · standard workflow/role status · optional 2–5 model review · 7 Fix verification（改过才有）
 **Schema:** `<schema_version>` · **Audit level:** `<audit_level>`
 
 > 本报告面向开发、测试和技能维护者。需要白话摘要时，按

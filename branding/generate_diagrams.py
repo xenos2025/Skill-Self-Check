@@ -74,6 +74,45 @@ def svg_shell(w: int, h: int, body: str, win_title: str, corner: str) -> str:
 """)
 
 
+def accessible_svg_shell(
+    w: int,
+    h: int,
+    body: str,
+    win_title: str,
+    corner: str,
+    *,
+    slug: str,
+    title: str,
+    desc: str,
+) -> str:
+    """Render the project SVG shell with an explicit accessible name."""
+    total_h = h + TITLE_H
+    return dedent(f"""\
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {total_h}"
+     width="{w}" height="{total_h}" role="img"
+     aria-labelledby="{_esc(slug)}-title {_esc(slug)}-desc">
+  <title id="{_esc(slug)}-title">{_esc(title)}</title>
+  <desc id="{_esc(slug)}-desc">{_esc(desc)}</desc>
+  <defs>
+    <style>
+      .label {{ fill: {TEXT}; font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", system-ui, sans-serif; font-weight: 600; }}
+      .label-sub {{ fill: {TEXT_MUTED}; font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", system-ui, sans-serif; font-weight: 400; }}
+      .label-tiny {{ fill: {TEXT_TINY}; font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", system-ui, sans-serif; font-weight: 400; }}
+      .label-accent {{ fill: {ACCENT}; font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", system-ui, sans-serif; font-weight: 600; }}
+      .mono {{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Microsoft YaHei", monospace; }}
+    </style>
+  </defs>
+  <rect width="{w}" height="{total_h}" rx="2" fill="{CANVAS}" stroke="{BOX_BORDER}" stroke-width="1"/>
+  {window_chrome(w, win_title)}
+  <g transform="translate(0, {TITLE_H})">
+{body}
+    <text x="{w - 20}" y="{h - 16}" text-anchor="end" class="label-tiny mono">{_esc(corner)}</text>
+  </g>
+</svg>
+""")
+
+
 def card(cx, cy, w, h, eyebrow, title, lines, *, focal=False) -> str:
     x, y = cx - w / 2, cy - h / 2
     fill = BOX_FOCAL if focal else BOX
@@ -565,6 +604,215 @@ def three_lights(zh: bool) -> str:
     return svg_shell(w, h, "\n".join(parts), title, corner)
 
 
+def workflow_prompt_audit(zh: bool) -> str:
+    if zh:
+        banner = "先判定模型调用拓扑，再判定功能角色拓扑；两个维度相互独立"
+        manifest_title = "运行证据"
+        manifest_lines = ["实际调用入口", "Prompt / manifest", "权限 + 交付边界"]
+        stages = [
+            ("维度 01", "模型调用拓扑"),
+            ("维度 02", "功能角色拓扑"),
+            ("合成", "角色 + Prompt"),
+        ]
+        stage_slots = [
+            [
+                ("EVIDENCE", "实际模型调用入口"),
+                ("MODE", "single_context / workflow_nodes"),
+                ("RULE", "标题与步骤不等于调用"),
+                ("OUTPUT", "runtime_mode"),
+                ("BOUNDARY", "不虚构模型节点"),
+            ],
+            [
+                ("EVIDENCE", "工作单元 + 权限边界"),
+                ("MODE", "single_role / sequential_roles"),
+                ("CHAIN", "entry_role + next"),
+                ("OUTPUT", "role_count + roles"),
+                ("BOUNDARY", "保持最少必要角色"),
+            ],
+            [
+                ("CONTRACT", "输入 + 权限 + 输出"),
+                ("PROMPT", "十段角色提示词"),
+                ("VERIFY", "验收 + 停止 + 交接"),
+                ("OUTPUT", "JSON + paste-ready patch"),
+                ("CLAIM", "静态审阅不证明提升"),
+            ],
+        ]
+        result_title = "独立角色摘要"
+        result_note = "静态 JSON · 不调用模型"
+        outcomes = ["pass", "needs_work", "not_assessed", "not_applicable"]
+        summary = [
+            ("单上下文", "顺序角色不等于多次调用"),
+            ("WORKFLOW", "真实节点才逐节点分角色"),
+            ("角色链", "唯一入口 · 连通 · 无环"),
+            ("守边界", "不执行目标 · 不改门禁"),
+        ]
+        title = "模型调用拓扑 × 功能角色拓扑"
+        desc = "流程图展示模型调用拓扑与功能角色拓扑的独立判断、角色合同和 Prompt 合成，以及独立于核心门禁的静态结果。"
+        corner = "07 · 双维度角色审计"
+    else:
+        banner = "Decide model-call topology first, then functional-role topology; keep both axes independent"
+        manifest_title = "Runtime evidence"
+        manifest_lines = ["actual invocation", "Prompt / manifest", "authority + delivery"]
+        stages = [
+            ("AXIS 01", "Model-call topology"),
+            ("AXIS 02", "Functional roles"),
+            ("SYNTHESIS", "Role + Prompt"),
+        ]
+        stage_slots = [
+            [
+                ("EVIDENCE", "actual model invocation"),
+                ("MODE", "single_context / workflow_nodes"),
+                ("RULE", "headings and steps are not calls"),
+                ("OUTPUT", "runtime_mode"),
+                ("BOUNDARY", "do not invent model nodes"),
+            ],
+            [
+                ("EVIDENCE", "work units + authority"),
+                ("MODE", "single_role / sequential_roles"),
+                ("CHAIN", "entry_role + next"),
+                ("OUTPUT", "role_count + roles"),
+                ("BOUNDARY", "fewest necessary roles"),
+            ],
+            [
+                ("CONTRACT", "input + authority + output"),
+                ("PROMPT", "ten required role sections"),
+                ("VERIFY", "accept + stop + handoff"),
+                ("OUTPUT", "JSON + paste-ready patch"),
+                ("CLAIM", "static review ≠ improvement"),
+            ],
+        ]
+        result_title = "Independent role summary"
+        result_note = "static JSON · no model call"
+        outcomes = ["pass", "needs_work", "not_assessed", "not_applicable"]
+        summary = [
+            ("ONE CONTEXT", "sequential roles are not calls"),
+            ("WORKFLOW", "roles follow actual model nodes"),
+            ("ROLE CHAIN", "one entry · connected · acyclic"),
+            ("BOUNDARY", "no target run · no gate change"),
+        ]
+        title = "Model-call topology × functional-role topology"
+        desc = "Process diagram showing independent model-call and functional-role topology decisions, role-contract and Prompt synthesis, and a static result separate from the core gate."
+        corner = "07 · two-axis role audit"
+
+    w, h = 1480, 560
+    y = 72
+    stage_w = 224
+    stage_h = 324
+    stage_xs = [252, 516, 780]
+    input_x, input_w = 32, 176
+    result_x, result_w = 1076, 372
+    flow_y = y + stage_h / 2
+
+    parts = [
+        f'<text x="{w/2}" y="36" text-anchor="middle" class="label-sub" font-size="15">{_esc(banner)}</text>',
+        arrow_h(input_x + input_w, flow_y, stage_xs[0]),
+        arrow_h(stage_xs[0] + stage_w, flow_y, stage_xs[1]),
+        arrow_h(stage_xs[1] + stage_w, flow_y, stage_xs[2]),
+        arrow_h(stage_xs[2] + stage_w, flow_y, result_x),
+    ]
+
+    # Manifest input.
+    parts.extend(
+        [
+            f'<rect x="{input_x}" y="96" width="{input_w}" height="276" rx="2" fill="{BOX}" stroke="{BOX_BORDER}" stroke-width="1"/>',
+            f'<text x="{input_x + input_w/2}" y="128" text-anchor="middle" class="label-accent mono" font-size="11" letter-spacing="0.08em">MANIFEST</text>',
+            f'<text x="{input_x + input_w/2}" y="160" text-anchor="middle" class="label" font-size="17">{_esc(manifest_title)}</text>',
+        ]
+    )
+    for index, line in enumerate(manifest_lines):
+        row_y = 200 + index * 40
+        parts.append(
+            f'<rect x="{input_x + 16}" y="{row_y - 20}" width="{input_w - 32}" height="28" rx="2" fill="{BOX_FOCAL}" stroke="{BOX_BORDER}" stroke-width="1"/>'
+        )
+        parts.append(
+            f'<text x="{input_x + input_w/2}" y="{row_y}" text-anchor="middle" class="label-tiny mono" font-size="11">{_esc(line)}</text>'
+        )
+
+    # Repeated per-node semantic slots.
+    for stage_index, (x, (eyebrow, stage_title)) in enumerate(zip(stage_xs, stages)):
+        focal = stage_index == 1
+        stroke = ACCENT if focal else BOX_BORDER
+        fill = BOX_FOCAL if focal else BOX
+        stroke_width = 1.6 if focal else 1
+        parts.append(
+            f'<rect x="{x}" y="{y}" width="{stage_w}" height="{stage_h}" rx="2" fill="{fill}" stroke="{stroke}" stroke-width="{stroke_width}"/>'
+        )
+        parts.append(
+            f'<text x="{x + stage_w/2}" y="{y + 24}" text-anchor="middle" class="label-tiny mono" font-size="10" letter-spacing="0.08em">{_esc(eyebrow)}</text>'
+        )
+        parts.append(
+            f'<text x="{x + stage_w/2}" y="{y + 48}" text-anchor="middle" class="label" font-size="16">{_esc(stage_title)}</text>'
+        )
+        parts.append(
+            f'<line x1="{x}" y1="{y + 64}" x2="{x + stage_w}" y2="{y + 64}" stroke="{BOX_BORDER}" stroke-width="1"/>'
+        )
+        for slot_index, (slot_label, slot_value) in enumerate(
+            stage_slots[stage_index]
+        ):
+            slot_y = y + 64 + slot_index * 52
+            if slot_index:
+                parts.append(
+                    f'<line x1="{x + 12}" y1="{slot_y}" x2="{x + stage_w - 12}" y2="{slot_y}" stroke="{BOX_BORDER}" stroke-width="1"/>'
+                )
+            parts.append(
+                f'<text x="{x + 16}" y="{slot_y + 20}" class="label-accent mono" font-size="10" letter-spacing="0.06em">{_esc(slot_label)}</text>'
+            )
+            parts.append(
+                f'<text x="{x + 16}" y="{slot_y + 40}" class="label-tiny" font-size="12">{_esc(slot_value)}</text>'
+            )
+
+    # Independent output status.
+    parts.extend(
+        [
+            f'<rect x="{result_x}" y="96" width="{result_w}" height="276" rx="2" fill="{BOX_FOCAL}" stroke="{ACCENT}" stroke-width="1.6"/>',
+            f'<text x="{result_x + result_w/2}" y="128" text-anchor="middle" class="label-accent mono" font-size="11" letter-spacing="0.08em">STATIC RESULT</text>',
+            f'<text x="{result_x + result_w/2}" y="160" text-anchor="middle" class="label" font-size="18">{_esc(result_title)}</text>',
+        ]
+    )
+    for index, outcome in enumerate(outcomes):
+        chip_x = result_x + 18 + index * 84
+        parts.append(
+            f'<rect x="{chip_x}" y="192" width="78" height="32" rx="2" fill="{BOX}" stroke="{BOX_BORDER}" stroke-width="1"/>'
+        )
+        parts.append(
+            f'<text x="{chip_x + 39}" y="213" text-anchor="middle" class="label-tiny mono" font-size="8.5">{_esc(outcome)}</text>'
+        )
+    parts.append(
+        f'<text x="{result_x + result_w/2}" y="272" text-anchor="middle" class="label-tiny mono" font-size="12">runtime_mode · role_mode · role_count</text>'
+    )
+    parts.append(
+        f'<text x="{result_x + result_w/2}" y="300" text-anchor="middle" class="label-sub" font-size="12">{_esc(result_note)}</text>'
+    )
+
+    # Bottom authority strip.
+    parts.append(
+        f'<rect x="40" y="424" width="1400" height="96" rx="2" fill="{BOX}" stroke="{BOX_BORDER}" stroke-width="1"/>'
+    )
+    for index, (summary_title, summary_line) in enumerate(summary):
+        cell_x = 40 + index * 350
+        if index:
+            parts.append(
+                f'<line x1="{cell_x}" y1="440" x2="{cell_x}" y2="504" stroke="{BOX_BORDER}" stroke-width="1"/>'
+            )
+        parts.append(
+            f'<text x="{cell_x + 175}" y="458" text-anchor="middle" class="label-accent mono" font-size="11" letter-spacing="0.08em">{_esc(summary_title)}</text>'
+        )
+        parts.append(
+            f'<text x="{cell_x + 175}" y="488" text-anchor="middle" class="label-tiny" font-size="12">{_esc(summary_line)}</text>'
+        )
+
+    return accessible_svg_shell(
+        w,
+        h,
+        "\n".join(parts),
+        "skill-self-check.app -> role -> topology-audit.svg",
+        corner,
+        slug="workflow-prompt-audit-zh" if zh else "workflow-prompt-audit-en",
+        title=title,
+        desc=desc,
+    )
+
+
 def main() -> None:
     pairs = [
         ("01-how-to-use.svg", how_to_use),
@@ -573,6 +821,7 @@ def main() -> None:
         ("04-5w2h.svg", five_w2h),
         ("05-three-lights.svg", three_lights),
         ("06-fix-loop.svg", fix_loop),
+        ("07-workflow-prompt-audit.svg", workflow_prompt_audit),
     ]
     for name, fn in pairs:
         write(OUT / name, fn(False))

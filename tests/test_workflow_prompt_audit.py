@@ -22,6 +22,7 @@ SCRIPT = (
 PRODUCT_SKILL = REPO / "skills" / "skill-self-check"
 SKILL_MD = PRODUCT_SKILL / "SKILL.md"
 ROUTE_REFERENCE = PRODUCT_SKILL / "references" / "workflow-prompt-audit.md"
+ROLE_REVIEW_REFERENCE = PRODUCT_SKILL / "references" / "role-prompt-review.md"
 EXAMPLE_MANIFEST = PRODUCT_SKILL / "examples" / "workflow-prompts.example.json"
 SHIP_SAFETY_SKILL = REPO / "skills" / "skill-ship-safety"
 WORK_READINESS_SKILL = REPO / "skills" / "agent-work-readiness"
@@ -109,26 +110,64 @@ def write_manifest(skill: Path, manifest: dict) -> None:
     )
 
 
+def add_complete_role_contract(skill: Path) -> None:
+    manifest = read_manifest(skill)
+    manifest["schema_version"] = "1.1"
+    manifest["nodes"][0]["role_contract"] = {
+        "role": "RFQ requirements analyst",
+        "purpose": "Extract and confirm customer requirements.",
+        "responsibilities": ["Extract facts and label missing information."],
+        "out_of_scope": ["Do not quote prices or promise delivery dates."],
+        "decision_authority": ["READY"],
+        "handoff_to": [],
+    }
+    write_manifest(skill, manifest)
+    prompt = skill / "references" / "prompts" / "extract.md"
+    prompt.write_text(
+        prompt.read_text(encoding="utf-8").replace(
+            "<task_module>\n",
+            "<task_module>\n"
+            "<role_contract>\n"
+            "Role: RFQ requirements analyst\n"
+            "Purpose: Extract and confirm customer requirements.\n"
+            "Responsibilities: Extract facts and label missing information.\n"
+            "Out of scope: Do not quote prices or promise delivery dates.\n"
+            "Decision authority: READY\n"
+            "</role_contract>\n",
+        ),
+        encoding="utf-8",
+    )
+
+
 class WorkflowPromptAuditTests(unittest.TestCase):
     def test_skill_routes_node_level_prompt_audits_to_documented_cli(self) -> None:
         skill_text = SKILL_MD.read_text(encoding="utf-8")
         route_text = ROUTE_REFERENCE.read_text(encoding="utf-8")
 
         self.assertTrue(ROUTE_REFERENCE.is_file())
+        self.assertTrue(ROLE_REVIEW_REFERENCE.is_file())
+        role_review_text = ROLE_REVIEW_REFERENCE.read_text(encoding="utf-8")
         self.assertTrue(EXAMPLE_MANIFEST.is_file())
         self.assertEqual(
-            "1.0",
+            "1.1",
             json.loads(EXAMPLE_MANIFEST.read_text(encoding="utf-8"))["schema_version"],
         )
         self.assertIn("references/workflow-prompt-audit.md", skill_text)
+        self.assertIn("references/role-prompt-review.md", skill_text)
         self.assertIn("scripts/workflow_prompt_audit.py", skill_text)
+        self.assertIn("scripts/role_contract_audit.py", skill_text)
+        self.assertIn("For every general audit", skill_text)
         self.assertIn("Workflow prompt audit: N/A", route_text)
         self.assertIn("not_applicable", route_text)
         self.assertIn("manifest takes precedence", route_text.lower())
+        self.assertIn("role_contract", route_text)
+        self.assertIn("schema 1.0", route_text.lower())
+        self.assertIn("source: model_review", role_review_text)
+        self.assertIn("behavior evaluation", role_review_text.lower())
         self.assertLessEqual(
             (len(SKILL_MD.read_bytes()) + 3) // 4,
             2500,
-            "The optional route must keep the default Skill prompt within budget",
+            "The standard route must keep the default Skill prompt within budget",
         )
 
     def test_shipped_pack_declares_workflow_prompt_applicability(self) -> None:
@@ -141,9 +180,9 @@ class WorkflowPromptAuditTests(unittest.TestCase):
         self.assertIn("one agent instruction context", self_report["applicability_reason"])
 
         self.assertEqual(0, safety_code, safety_report["findings"])
-        self.assertEqual("pass", safety_report["status"])
-        self.assertEqual("ship-safety-model-review", safety_report["workflow"]["id"])
-        self.assertEqual(2, safety_report["workflow"]["node_count"])
+        self.assertEqual("not_applicable", safety_report["status"])
+        self.assertIn("one agent instruction context", safety_report["applicability_reason"])
+        self.assertIn("does not orchestrate", safety_report["applicability_reason"])
 
         self.assertEqual(0, readiness_code, readiness_report["findings"])
         self.assertEqual("not_applicable", readiness_report["status"])
@@ -159,9 +198,130 @@ class WorkflowPromptAuditTests(unittest.TestCase):
         self.assertEqual(0, code, report["findings"])
         self.assertEqual("pass", report["status"])
         self.assertEqual("workflow_prompt_static", report["audit_level"])
+        self.assertEqual("1.1", report["schema_version"])
+        self.assertEqual("1.0", report["manifest_schema_version"])
         self.assertEqual(1, report["workflow"]["node_count"])
         self.assertEqual(0, report["counts"]["error"])
         self.assertIn("does not execute model calls", " ".join(report["limitations"]))
+
+    def test_schema_1_1_complete_role_contract_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = write_clean_workflow(Path(tmp))
+            add_complete_role_contract(skill)
+            code, report = run_audit(skill)
+
+        self.assertEqual(0, code, report["findings"])
+        self.assertEqual("pass", report["status"])
+        self.assertEqual("1.1", report["schema_version"])
+        self.assertEqual("1.1", report["manifest_schema_version"])
+        self.assertEqual("RFQ requirements analyst", report["nodes"][0]["role"])
+
+    def test_schema_1_1_requires_role_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = write_clean_workflow(Path(tmp))
+            manifest = read_manifest(skill)
+            manifest["schema_version"] = "1.1"
+            write_manifest(skill, manifest)
+            code, report = run_audit(skill)
+
+        self.assertEqual(1, code)
+        finding = next(item for item in report["findings"] if item["id"] == "WPA.9")
+        self.assertEqual("extract", finding["node_id"])
+        self.assertEqual("role_contract", finding["field"])
+
+    def test_role_contract_fields_require_supported_types(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = write_clean_workflow(Path(tmp))
+            add_complete_role_contract(skill)
+            manifest = read_manifest(skill)
+            role_contract = manifest["nodes"][0]["role_contract"]
+            role_contract["role"] = ""
+            del role_contract["purpose"]
+            role_contract["responsibilities"] = "Extract facts"
+            role_contract["out_of_scope"] = []
+            role_contract["decision_authority"] = []
+            role_contract["handoff_to"] = "draft_reply"
+            write_manifest(skill, manifest)
+            code, report = run_audit(skill)
+
+        self.assertEqual(1, code)
+        fields = {
+            item["field"] for item in report["findings"] if item["id"] == "WPA.9"
+        }
+        self.assertEqual(
+            {
+                "role_contract.role",
+                "role_contract.purpose",
+                "role_contract.responsibilities",
+                "role_contract.out_of_scope",
+                "role_contract.decision_authority",
+                "role_contract.handoff_to",
+            },
+            fields,
+        )
+
+    def test_role_contract_rules_must_appear_in_prompt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = write_clean_workflow(Path(tmp))
+            add_complete_role_contract(skill)
+            prompt = skill / "references" / "prompts" / "extract.md"
+            prompt.write_text(
+                prompt.read_text(encoding="utf-8").replace(
+                    "Out of scope: Do not quote prices or promise delivery dates.\n",
+                    "",
+                ),
+                encoding="utf-8",
+            )
+            code, report = run_audit(skill)
+
+        self.assertEqual(1, code)
+        finding = next(item for item in report["findings"] if item["id"] == "WPA.10")
+        self.assertEqual("extract", finding["node_id"])
+        self.assertEqual("role_contract.out_of_scope", finding["field"])
+        self.assertEqual(
+            ["Do not quote prices or promise delivery dates."], finding["evidence"]
+        )
+
+    def test_role_handoff_must_match_next_nodes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = write_clean_workflow(Path(tmp))
+            add_complete_role_contract(skill)
+            manifest = read_manifest(skill)
+            manifest["nodes"][0]["role_contract"]["handoff_to"] = ["draft_reply"]
+            write_manifest(skill, manifest)
+            code, report = run_audit(skill)
+
+        self.assertEqual(1, code)
+        finding = next(item for item in report["findings"] if item["id"] == "WPA.11")
+        self.assertEqual("extract", finding["node_id"])
+        self.assertEqual("role_contract.handoff_to", finding["field"])
+        self.assertEqual(
+            {"handoff_to": ["draft_reply"], "next": []}, finding["evidence"]
+        )
+
+    def test_decision_authority_must_be_used_by_decision_gates(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = write_clean_workflow(Path(tmp))
+            add_complete_role_contract(skill)
+            manifest = read_manifest(skill)
+            manifest["nodes"][0]["role_contract"]["decision_authority"] = [
+                "APPROVE"
+            ]
+            write_manifest(skill, manifest)
+            prompt = skill / "references" / "prompts" / "extract.md"
+            prompt.write_text(
+                prompt.read_text(encoding="utf-8").replace(
+                    "Decision authority: READY", "Decision authority: APPROVE"
+                ),
+                encoding="utf-8",
+            )
+            code, report = run_audit(skill)
+
+        self.assertEqual(1, code)
+        finding = next(item for item in report["findings"] if item["id"] == "WPA.12")
+        self.assertEqual("extract", finding["node_id"])
+        self.assertEqual("role_contract.decision_authority", finding["field"])
+        self.assertEqual(["APPROVE"], finding["evidence"])
 
     def test_node_missing_required_prompt_contract_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

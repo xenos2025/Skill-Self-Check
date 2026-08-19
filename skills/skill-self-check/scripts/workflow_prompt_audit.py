@@ -15,7 +15,8 @@ from pathlib import Path
 from typing import Any
 
 
-SCHEMA_VERSION = "1.0"
+REPORT_SCHEMA_VERSION = "1.1"
+SUPPORTED_MANIFEST_SCHEMA_VERSIONS = ("1.0", "1.1")
 DEFAULT_MANIFEST = Path("references/workflow-prompts.json")
 AUDIT_LEVEL = "workflow_prompt_static"
 PROMPT_FORMATS = {"text", "markdown", "xml_tags"}
@@ -53,7 +54,8 @@ def not_assessed_report(
     skill_dir: Path, manifest_path: Path, message: str
 ) -> dict[str, Any]:
     return {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": REPORT_SCHEMA_VERSION,
+        "manifest_schema_version": None,
         "audit_level": AUDIT_LEVEL,
         "target": str(skill_dir),
         "manifest": str(manifest_path),
@@ -89,7 +91,8 @@ def not_applicable_report(
     skill_dir: Path, manifest_path: Path, reason: str
 ) -> dict[str, Any]:
     return {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": REPORT_SCHEMA_VERSION,
+        "manifest_schema_version": None,
         "audit_level": AUDIT_LEVEL,
         "target": str(skill_dir),
         "manifest": str(manifest_path),
@@ -108,8 +111,8 @@ def manifest_findings(manifest: dict[str, Any]) -> list[dict[str, Any]]:
     checks = (
         (
             "schema_version",
-            manifest.get("schema_version") == SCHEMA_VERSION,
-            f"Manifest schema_version must be {SCHEMA_VERSION}",
+            manifest.get("schema_version") in SUPPORTED_MANIFEST_SCHEMA_VERSIONS,
+            "Manifest schema_version must be one of: 1.0, 1.1",
         ),
         (
             "workflow_id",
@@ -222,6 +225,109 @@ def contract_findings(node: dict[str, Any]) -> list[dict[str, Any]]:
     return findings
 
 
+def role_contract_findings(
+    node: dict[str, Any], manifest_schema_version: object
+) -> list[dict[str, Any]]:
+    if manifest_schema_version != "1.1":
+        return []
+    role_contract = node.get("role_contract")
+    node_id = node.get("id") if isinstance(node.get("id"), str) else None
+    if not isinstance(role_contract, dict):
+        return [
+            {
+                "id": "WPA.9",
+                "severity": "error",
+                "scope": "role_contract",
+                "node_id": node_id,
+                "field": "role_contract",
+                "evidence": role_contract,
+                "message": "Schema 1.1 nodes require a role_contract object",
+            }
+        ]
+
+    findings: list[dict[str, Any]] = []
+
+    def add(field: str, message: str) -> None:
+        findings.append(
+            {
+                "id": "WPA.9",
+                "severity": "error",
+                "scope": "role_contract",
+                "node_id": node_id,
+                "field": f"role_contract.{field}",
+                "evidence": role_contract.get(field),
+                "message": message,
+            }
+        )
+
+    for field in ("role", "purpose"):
+        value = role_contract.get(field)
+        if not isinstance(value, str) or not value.strip():
+            add(field, f"role_contract.{field} must be a non-empty string")
+    for field in ("responsibilities", "out_of_scope", "decision_authority"):
+        value = role_contract.get(field)
+        if not isinstance(value, list) or not value or not all(
+            isinstance(item, str) and item.strip() for item in value
+        ):
+            add(field, f"role_contract.{field} must be a non-empty string list")
+    handoff_to = role_contract.get("handoff_to")
+    if not isinstance(handoff_to, list) or not all(
+        isinstance(item, str) and item.strip() for item in handoff_to
+    ):
+        add("handoff_to", "role_contract.handoff_to must be a string list")
+    next_nodes = node.get("next")
+    if (
+        isinstance(handoff_to, list)
+        and all(isinstance(item, str) and item.strip() for item in handoff_to)
+        and isinstance(next_nodes, list)
+        and all(isinstance(item, str) and item.strip() for item in next_nodes)
+        and set(handoff_to) != set(next_nodes)
+    ):
+        findings.append(
+            {
+                "id": "WPA.11",
+                "severity": "error",
+                "scope": "role_handoff",
+                "node_id": node_id,
+                "field": "role_contract.handoff_to",
+                "evidence": {"handoff_to": handoff_to, "next": next_nodes},
+                "message": "role_contract.handoff_to must match the node next list",
+            }
+        )
+    decision_authority = role_contract.get("decision_authority")
+    decision_gates = node.get("decision_gates")
+    if (
+        isinstance(decision_authority, list)
+        and all(
+            isinstance(item, str) and item.strip() for item in decision_authority
+        )
+        and isinstance(decision_gates, list)
+    ):
+        normalized_gates = re.sub(
+            r"\s+",
+            " ",
+            " ".join(item for item in decision_gates if isinstance(item, str)),
+        ).casefold()
+        missing_authority = [
+            item
+            for item in decision_authority
+            if re.sub(r"\s+", " ", item).casefold() not in normalized_gates
+        ]
+        if missing_authority:
+            findings.append(
+                {
+                    "id": "WPA.12",
+                    "severity": "error",
+                    "scope": "role_decision_authority",
+                    "node_id": node_id,
+                    "field": "role_contract.decision_authority",
+                    "evidence": missing_authority,
+                    "message": "Decision authority is not represented in decision_gates",
+                }
+            )
+    return findings
+
+
 def prompt_file_findings(
     skill_dir: Path, node: dict[str, Any]
 ) -> list[dict[str, Any]]:
@@ -320,6 +426,37 @@ def prompt_content_findings(
                     "message": "Declared control text is not present in prompt_file",
                 }
             )
+    role_contract = node.get("role_contract")
+    if isinstance(role_contract, dict):
+        role_fields: list[tuple[str, list[str]]] = []
+        for field in ("role", "purpose"):
+            value = role_contract.get(field)
+            if isinstance(value, str) and value.strip():
+                role_fields.append((field, [value]))
+        for field in ("responsibilities", "out_of_scope", "decision_authority"):
+            value = role_contract.get(field)
+            if isinstance(value, list):
+                role_fields.append(
+                    (field, [item for item in value if isinstance(item, str)])
+                )
+        for field, rules in role_fields:
+            missing_rules = [
+                rule
+                for rule in rules
+                if re.sub(r"\s+", " ", rule).casefold() not in normalized_prompt
+            ]
+            if missing_rules:
+                findings.append(
+                    {
+                        "id": "WPA.10",
+                        "severity": "error",
+                        "scope": "role_prompt_linkage",
+                        "node_id": node_id,
+                        "field": f"role_contract.{field}",
+                        "evidence": missing_rules,
+                        "message": "Declared role text is not present in prompt_file",
+                    }
+                )
     placeholders = {match.strip() for match in PLACEHOLDER_RE.findall(prompt)}
     variables = node.get("variables")
     declared = (
@@ -486,6 +623,7 @@ def audit(skill_dir: Path, manifest_path: Path) -> dict[str, Any]:
         if not isinstance(node, dict):
             continue
         findings.extend(contract_findings(node))
+        findings.extend(role_contract_findings(node, manifest.get("schema_version")))
         findings.extend(prompt_file_findings(skill_dir, node))
         findings.extend(prompt_content_findings(skill_dir, node))
     findings.extend(graph_findings(manifest, nodes))
@@ -496,7 +634,8 @@ def audit(skill_dir: Path, manifest_path: Path) -> dict[str, Any]:
         finding.get("severity") == "warning" for finding in findings
     )
     return {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": REPORT_SCHEMA_VERSION,
+        "manifest_schema_version": manifest.get("schema_version"),
         "audit_level": AUDIT_LEVEL,
         "target": str(skill_dir),
         "manifest": str(manifest_path),
@@ -509,6 +648,11 @@ def audit(skill_dir: Path, manifest_path: Path) -> dict[str, Any]:
         "nodes": [
             {
                 "id": node.get("id"),
+                "role": (
+                    node.get("role_contract", {}).get("role")
+                    if isinstance(node.get("role_contract"), dict)
+                    else None
+                ),
                 "status": (
                     "fail"
                     if any(

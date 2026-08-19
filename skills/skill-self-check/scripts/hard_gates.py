@@ -584,8 +584,12 @@ def assess_package_health(
             )
         )
 
+    # Dot directories are VCS or editor metadata and are never installed, so a Skill
+    # whose repository root is the package itself must not be penalised for them.
     top_dirs = sorted(
-        path.name for path in skill_dir.iterdir() if path.is_dir()
+        path.name
+        for path in skill_dir.iterdir()
+        if path.is_dir() and not path.name.startswith(".")
     )
     runtime_dirs = [
         name for name in top_dirs if name.casefold() in RUNTIME_DIR_NAMES

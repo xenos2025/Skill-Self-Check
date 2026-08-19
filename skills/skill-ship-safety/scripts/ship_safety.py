@@ -91,6 +91,16 @@ CAPABILITY_SEVERITY = {
     "graphql_mutation_definition": "info",
 }
 GUARD_RE = re.compile(r"(?i)dry[_-]?run|--preview\b")
+GATE_BYPASS_RE = re.compile(
+    r"--(?:disable|no|skip|ignore|bypass|unsafe|force)[a-z0-9]*"
+    r"(?:[-_][a-z0-9]+)*?"
+    r"[-_](?:claim|claims|gate|gates|check|checks|validation|validate|verify"
+    r"|verification|safety|compliance|guard|guards|audit|policy|approval|review)"
+    r"[a-z0-9-]*",
+    re.IGNORECASE,
+)
+MAX_PLACEHOLDER_EVIDENCE = 10
+MAX_BYPASS_EVIDENCE = 10
 
 
 def _read(path: Path) -> str:
@@ -171,9 +181,33 @@ def _resolve_script(target: Path, raw: str, repo_root: Path | None = None) -> tu
     return None, None
 
 
-def _extract_commands(target: Path) -> list[dict]:
-    """Collect documented (script, subcommand) pairs, deduped."""
+def _placeholder_script(target: Path, raw: str) -> str | None:
+    """Resolve a placeholder command path to a real script in the target, if any.
+
+    `<skill dir>/scripts/render.mjs` names a script this Skill owns, so dropping it
+    loses real coverage. `scripts/<sender>.py` is a generic template for some other
+    Skill and resolves to nothing, so it is not this Skill's missing command.
+    """
+    kept = [
+        part
+        for part in raw.replace("\\", "/").split("/")
+        if part and not any(mark in part for mark in ("<", ">", "{", "}"))
+    ]
+    if not kept:
+        return None
+    resolved, _scope = _resolve_script(target, "/".join(kept))
+    if resolved is None:
+        return None
+    try:
+        return resolved.relative_to(target.resolve()).as_posix()
+    except ValueError:
+        return None
+
+
+def _extract_commands(target: Path) -> tuple[list[dict], list[dict]]:
+    """Collect documented (script, subcommand) pairs plus unresolvable placeholders."""
     seen: dict[tuple[str, str, str], dict] = {}
+    placeholders: dict[tuple[str, str], dict] = {}
     for doc in _doc_files(target):
         for lineno, line in enumerate(_read(doc).splitlines(), start=1):
             for kind, command_re in (
@@ -185,6 +219,21 @@ def _extract_commands(target: Path) -> list[dict]:
               for m in command_re.finditer(line):
                 raw = m.group("dq") or m.group("sq") or m.group("bare") or ""
                 if any(mark in raw for mark in ("<", ">", "{", "}")):
+                    # A placeholder path cannot be inventoried. Report it only when it
+                    # names a script this Skill actually ships, which is real lost
+                    # coverage rather than an illustrative template.
+                    owned = _placeholder_script(target, raw)
+                    if owned:
+                        placeholders.setdefault(
+                            (kind, owned),
+                            {
+                                "kind": kind,
+                                "script": raw.replace("\\", "/"),
+                                "resolved_script": owned,
+                                "doc_file": doc.name,
+                                "doc_line": lineno,
+                            },
+                        )
                     continue
                 rest = (m.group("rest") or "").strip()
                 sub = ""
@@ -217,7 +266,7 @@ def _extract_commands(target: Path) -> list[dict]:
                         "doc_file": doc.name,
                         "doc_line": lineno,
                     }
-    return list(seen.values())
+    return list(seen.values()), list(placeholders.values())
 
 
 def _command_flag_value(command: str, *flags: str) -> str | None:
@@ -363,6 +412,36 @@ def _imported_modules(src: str) -> set[str]:
     return modules
 
 
+def _scan_gate_bypass_switches(target: Path) -> list[dict]:
+    """Find flags implemented in target code that turn a safety or compliance gate off.
+
+    A dry-run guard defaults an action to safe; a bypass switch does the opposite, so
+    it is detected from source rather than prose to avoid matching prohibitions.
+    """
+    results: dict[tuple[str, str], dict] = {}
+    patterns = (
+        "*.py",
+        "*.js",
+        "*.mjs",
+        "*.cjs",
+        "*.ts",
+        "*.mts",
+        "*.cts",
+        "*.ps1",
+        "*.sh",
+    )
+    for pattern in patterns:
+        for source in _iter_source_files(target, pattern):
+            rel = source.relative_to(target).as_posix()
+            for match in GATE_BYPASS_RE.finditer(_read(source)):
+                flag = match.group(0)
+                results.setdefault(
+                    (rel, flag.casefold()),
+                    {"file": rel, "switch": flag},
+                )
+    return sorted(results.values(), key=lambda item: (item["file"], item["switch"]))
+
+
 def _scan_external_actions(target: Path) -> list[dict]:
     results = []
     for py in _iter_source_files(target, "*.py"):
@@ -439,7 +518,8 @@ def _scan_external_actions(target: Path) -> list[dict]:
 
 def audit(target: Path, exec_requested: bool = False, repo_root: Path | None = None) -> dict:
     findings: list[dict] = []
-    commands = _extract_commands(target)
+    commands, placeholder_commands = _extract_commands(target)
+    gate_bypass_switches = _scan_gate_bypass_switches(target)
 
     for cmd in commands:
         if cmd.get("kind") == "shopify_cli":
@@ -580,7 +660,43 @@ def audit(target: Path, exec_requested: bool = False, repo_root: Path | None = N
                 }
             )
 
-    if not commands:
+    if gate_bypass_switches:
+        findings.append(
+            {
+                "id": "EXT.6",
+                "severity": "should_fix",
+                "message": (
+                    "gate-bypass switch implemented: model must verify it is OFF by "
+                    "default, that bypassed output is labelled unusable for delivery, "
+                    "and that acceptance still requires the gate to pass"
+                ),
+                "evidence": [
+                    f'{item["file"]} {item["switch"]}'
+                    for item in gate_bypass_switches[:MAX_BYPASS_EVIDENCE]
+                ],
+                "source": "script",
+            }
+        )
+
+    if placeholder_commands:
+        findings.append(
+            {
+                "id": "DOC.2",
+                "severity": "should_fix",
+                "message": (
+                    f"{len(placeholder_commands)} documented command(s) use placeholder "
+                    "paths and stayed outside the inventory: this preflight covered "
+                    f"{len(commands)} command(s), so a static pass does not mean the "
+                    "documented commands were checked"
+                ),
+                "evidence": [
+                    f'{item["doc_file"]}:{item["doc_line"]} {item["script"]}'
+                    for item in placeholder_commands[:MAX_PLACEHOLDER_EVIDENCE]
+                ],
+                "source": "script",
+            }
+        )
+    elif not commands:
         findings.append(
             {
                 "id": "DOC.1",
@@ -628,7 +744,20 @@ def audit(target: Path, exec_requested: bool = False, repo_root: Path | None = N
             "status": "not_safely_verified",
         },
         "commands": commands,
+        "command_inventory": {
+            "documented": len(commands),
+            "skipped_placeholder": len(placeholder_commands),
+            "coverage": (
+                "none"
+                if not commands
+                else "partial"
+                if placeholder_commands
+                else "full"
+            ),
+            "placeholders": placeholder_commands[:MAX_PLACEHOLDER_EVIDENCE],
+        },
         "external_actions": external,
+        "gate_bypass_switches": gate_bypass_switches,
         "counts": counts,
         "findings": findings,
         "verdict": verdict,
@@ -671,7 +800,14 @@ def main(argv: list[str]) -> int:
                 "status": "not_safely_verified",
             },
             "commands": [],
+            "command_inventory": {
+                "documented": 0,
+                "skipped_placeholder": 0,
+                "coverage": "none",
+                "placeholders": [],
+            },
             "external_actions": [],
+            "gate_bypass_switches": [],
             "counts": {"critical": 1, "should_fix": 0, "info": 0},
             "findings": [
                 {
@@ -693,6 +829,7 @@ def main(argv: list[str]) -> int:
     print(json.dumps(report, ensure_ascii=False, indent=indent))
     print(
         f"ship_safety: {report['verdict']} · commands={len(report['commands'])} · "
+        f"coverage={report['command_inventory']['coverage']} · "
         f"critical={report['counts']['critical']} "
         f"should_fix={report['counts']['should_fix']}",
         file=sys.stderr,

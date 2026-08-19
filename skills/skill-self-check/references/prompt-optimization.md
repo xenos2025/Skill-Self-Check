@@ -35,18 +35,24 @@ Define measurement scope explicitly:
 
 ## Review axes
 
-1. **Trigger precision** — positive triggers, exclusions, and neighboring
+1. **Role and work boundary** — when the Skill contains materially different
+   evidence, authority, output, acceptance, or handoff units, run
+   [role-prompt-review.md](role-prompt-review.md) first. Preserve the global
+   objective and assess integration coupling before splitting. Keep runtime
+   topology separate from functional-role topology; do not prune a faulty
+   design into a shorter faulty Prompt.
+2. **Trigger precision** — positive triggers, exclusions, and neighboring
    workflow boundaries are explicit in frontmatter.
-2. **Default-path economy** — the common path contains only instructions needed
+3. **Default-path economy** — the common path contains only instructions needed
    on most runs while retaining required safety, authority, and completion
    steps.
-3. **Progressive disclosure** — low-frequency variants, examples, and detailed
+4. **Progressive disclosure** — low-frequency variants, examples, and detailed
    procedures move to directly linked references with clear load conditions.
-4. **Authority and output contracts** — scripts, model judgment, user decisions,
+5. **Authority and output contracts** — scripts, model judgment, user decisions,
    and final report fields each have one owner.
-5. **Instruction quality** — remove duplication and low-value explanation;
+6. **Instruction quality** — remove duplication and low-value explanation;
    preserve exact commands, stop conditions, permissions, and failure handling.
-6. **Behavior preservation** — compare representative triggers, exclusions,
+7. **Behavior preservation** — compare representative triggers, exclusions,
    outputs, authorization boundaries, and failure paths before claiming
    equivalence.
 
@@ -56,15 +62,20 @@ model review so it cannot be confused with script-owned Critical findings.
 
 ## Workflow
 
-1. Run the fast hard-gate audit and preserve its JSON when edits may follow.
-2. Map what loads by default and what loads only for explicit routes.
-3. Separate measured facts, model inferences, and items needing behavior or
+1. Run the hard-gate, workflow-Prompt, and role-contract audits; preserve the
+   hard-gate JSON when edits may follow.
+2. If role enhancement is named or work-unit boundaries differ, complete role
+   discovery and Prompt synthesis before context pruning.
+3. Map what loads by default and what loads only for explicit routes.
+4. Separate measured facts, model inferences, and items needing behavior or
    platform confirmation.
-4. Propose the smallest cuts, moves, or contract rewrites that preserve the
+5. Propose the smallest cuts, moves, or contract rewrites that preserve the
    common path.
-5. Apply edits only when authorized.
-6. Run `verify_fix.py` against the saved baseline. Then run representative
-   behavior cases when the claim includes output quality or equivalence.
+6. Apply edits only when authorized.
+7. Run `verify_fix.py` against the saved baseline. Then run representative
+   behavior cases when the claim includes output quality or equivalence. When
+   comparison artifacts exist, validate the record with
+   [role-prompt-behavior-eval.md](role-prompt-behavior-eval.md).
 
 Stop after one verified edit cycle. If validation is mixed, follow
 [fix-verification.md](fix-verification.md): address new Critical findings once,

@@ -20,14 +20,14 @@
 - **`exp/`** — sandbox for productizing **PM / workflow planning** (外贸 / 工厂 / 电商).
   Not on the default install path. See [exp/README.md](../exp/README.md).
 
-## Independent core with optional routes
+## Independent standard core with optional advisory routes
 
 ```text
                          Skill 目录
                              │
                              ▼
                     skill-self-check
-                  独立快速门禁 + 整改
+               门禁 + workflow Prompt + 角色状态
                              │
               ┌──────────────┴──────────────┐
               │明确深审                      │明确安全预检
@@ -43,8 +43,9 @@
 - `agent-work-readiness` 独立评估业务目标、步骤、职责、标准、委派边界和运行复盘。
 - `skill-ship-safety` 保留静态承诺差距和外部动作预检。
 
-普通用户默认只需要 `skill-self-check/scripts/hard_gates.py`。核心 Skill
-不得要求另外两个 Skill 已安装。只有用户明确要求完整静态检查时，
+普通审计默认运行 `hard_gates.py`、`workflow_prompt_audit.py` 和
+`role_contract_audit.py`，但只有前者拥有 `gate_verdict`。核心 Skill 不得要求另外
+两个 Skill 已安装。只有用户明确要求完整静态检查时，
 `skill-self-check/scripts/run_full_audit.py` 才调用结构门禁和安全预检；提供工作包
 时再调用 readiness。它只保存各检查器的源 JSON 和审计清单，会比较审计前后的
 目标指纹，并拒绝把真实报告写进目标或其源码仓库。
@@ -57,7 +58,8 @@ Seam；`run_full_audit.py` 只编排，不复制任何评分或门禁 Implementa
 ```text
 User / Agent
     │
-    ├─default─► hard_gates.py ──► gate_verdict + ranked fixes (deterministic)
+    ├─default─► hard_gates.py + workflow_prompt_audit.py + role_contract_audit.py
+    │           └─► gate verdict + separate workflow/role statuses
     │
     ├─apply fixes─► verify_fix.py ──► gate/finding delta
     │
@@ -66,9 +68,33 @@ User / Agent
     └─explicit full static audit─► hard-gates + ship-safety JSON
 ```
 
+Role review uses two independent axes:
+
+```text
+Runtime topology
+├─ single_context
+│  └─ functional role topology: single_role | sequential_roles
+└─ workflow_nodes
+   └─ one role contract per actual model-call node
+```
+
+`sequential_roles` means one Agent invocation performs bounded functional roles
+in order. It must not be reported as multiple model calls. Schema 1.1 uses
+`next` for the internal role chain and `handoff_to` for external downstream
+destinations.
+
+Role synthesis first preserves one global objective, shared context, an
+end-to-end owner, and integration acceptance. High-coupling work defaults to
+`single_role`; `single_context` can never be implemented by dispatching
+subagents. Optional `role_prompt_behavior_check.py` validates independent
+same-fixture evidence and keeps its verdict outside the static gate.
+
 | Concern | Owner |
 | --- | --- |
 | `gate_verdict`, required checks, Criticals, exit code | `hard_gates.py` only |
+| Workflow Prompt applicability and node findings | `workflow_prompt_audit.py` only |
+| Runtime topology, role topology, and contract findings | `role_contract_audit.py` only |
+| Same-fixture role/Prompt behavior verdict | `role_prompt_behavior_check.py`; no core gate effect |
 | Numeric scores | Script-produced, informational only |
 | Completion-criterion quality, leading words, prose pruning | Optional model review; non-blocking |
 | Full static report set | `run_full_audit.py`, preserving each checker result |

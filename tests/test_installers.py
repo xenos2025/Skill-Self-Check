@@ -16,9 +16,23 @@ REPO = Path(__file__).resolve().parents[1]
 POWERSHELL_INSTALLER = REPO / "install.ps1"
 BASH_INSTALLER = REPO / "install.sh"
 SHIP_SAFETY_SKILL = REPO / "skills" / "skill-ship-safety"
+SHIPPED_SKILLS = (
+    "agent-work-readiness",
+    "skill-self-check",
+    "skill-ship-safety",
+)
 
 
 class InstallerTests(unittest.TestCase):
+    def test_shipped_skills_do_not_link_installer_excluded_fixtures(self) -> None:
+        for skill_name in SHIPPED_SKILLS:
+            skill_md = REPO / "skills" / skill_name / "SKILL.md"
+            self.assertNotIn(
+                "(examples/fixtures/",
+                skill_md.read_text(encoding="utf-8"),
+                f"{skill_name} links content removed by both installers",
+            )
+
     def test_shipped_ship_safety_retains_a_runtime_example(self) -> None:
         examples = SHIP_SAFETY_SKILL / "examples"
         retained = [
@@ -45,6 +59,9 @@ class InstallerTests(unittest.TestCase):
                     "---\n\n# Fixture\n"
                 ),
                 "examples/before-after.md": "retained example\n",
+                "examples/role-contract.example.json": "{}\n",
+                "references/role-prompt-review.md": "retained role review\n",
+                "references/role-archetypes.md": "retained role library\n",
                 "scripts/run.py": "print('fixture')\n",
             }
             excluded_files = {
@@ -69,6 +86,15 @@ class InstallerTests(unittest.TestCase):
     def assert_runtime_package(self, installed: Path) -> None:
         self.assertTrue((installed / "SKILL.md").is_file())
         self.assertTrue((installed / "examples" / "before-after.md").is_file())
+        self.assertTrue(
+            (installed / "examples" / "role-contract.example.json").is_file()
+        )
+        self.assertTrue(
+            (installed / "references" / "role-prompt-review.md").is_file()
+        )
+        self.assertTrue(
+            (installed / "references" / "role-archetypes.md").is_file()
+        )
 
         skill_files = sorted(path.relative_to(installed) for path in installed.rglob("SKILL.md"))
         self.assertEqual(skill_files, [Path("SKILL.md")])

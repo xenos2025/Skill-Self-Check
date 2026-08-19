@@ -10,6 +10,8 @@ python scripts/ship_safety.py path/to/target-skill --pretty
 Interpret the result conservatively:
 
 - `static_pass` means the documented static gates were found.
+- `static_pass` with `command_inventory.coverage` of `none` or `partial` means the
+  documented commands were skipped, so nothing about them was verified.
 - `stop` means a blocking static defect was found.
 - `not_safely_verified` means isolated behavior evidence is still missing.
 

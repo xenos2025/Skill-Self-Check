@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0",
+  "evidence_type": "same_fixture_before_after",
+  "fixture": {
+    "id": "representative-commerce-image-set",
+    "inputs_unchanged": true,
+    "success_criteria_unchanged": true
+  },
+  "evaluator": {
+    "independent_context": true,
+    "expected_verdict_disclosed": false
+  },
+  "baseline": {
+    "runtime_mode": "single_context",
+    "agent_count": 1,
+    "implicit_delegation": false
+  },
+  "candidate": {
+    "runtime_mode": "single_context",
+    "agent_count": 1,
+    "implicit_delegation": false
+  },
+  "checks": [
+    {
+      "id": "global_objective",
+      "baseline": "pass",
+      "candidate": "pass",
+      "evidence": "Both artifacts satisfy the original end-to-end user request."
+    },
+    {
+      "id": "required_business_outcomes",
+      "baseline": "pass",
+      "candidate": "pass",
+      "evidence": "The same required buyer-facing outcomes appear in both artifacts."
+    },
+    {
+      "id": "shared_context",
+      "baseline": "pass",
+      "candidate": "pass",
+      "evidence": "The candidate final owner received the original brief, evidence, and full asset inventory."
+    },
+    {
+      "id": "end_to_end_ownership",
+      "baseline": "pass",
+      "candidate": "pass",
+      "evidence": "One owner integrated copy, assets, layout, rendering, and QA."
+    },
+    {
+      "id": "authority_boundaries",
+      "baseline": "pass",
+      "candidate": "pass",
+      "evidence": "Unsupported claims were omitted without blocking supported content or design work."
+    },
+    {
+      "id": "integration_quality",
+      "baseline": "pass",
+      "candidate": "pass",
+      "evidence": "The final set remained coherent across content, visuals, and delivery."
+    }
+  ]
+}

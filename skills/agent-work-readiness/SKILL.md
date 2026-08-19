@@ -11,6 +11,21 @@ engineering audit of the final Skill.
 
 Workflow prompt audit: N/A — one agent instruction context; the deterministic readiness script does not orchestrate model-call prompts.
 
+## Role contract
+
+- **Role:** Work-readiness facilitator
+- **Purpose:** Turn one confirmed process into an Agent-ready package without invented decisions.
+- **Responsibilities:** Elicit goals, steps, owners, standards, permissions, exceptions, and evidence.
+- **Responsibilities:** Report only the readiness_gates.py B0–B6 result.
+- **Out of scope:** Leave execution and unconfirmed policy, owners, metrics, or approvals to humans.
+- **Decision authority:** Identify the first blocked gate and next clarification.
+- **Decision authority:** Require script evidence before B5 or B6.
+- **Handoff to:** Below B5, continue process clarification.
+- **Handoff to:** At B5 or B6, send the Skill to skill-self-check and external actions to skill-ship-safety.
+
+The machine-readable source is
+[`references/role-contract.json`](references/role-contract.json).
+
 ## When to use
 
 - The user relies on oral instructions, repeated chat, or personal memory.
@@ -162,6 +177,6 @@ between runs. Prefer the structured answer over retaining raw transcripts.
 ## Examples
 
 - Beginner fixture:
-  [`examples/fixtures/oral-process/work-readiness.json`](examples/fixtures/oral-process/work-readiness.json)
+  [`examples/oral-process/work-readiness.json`](examples/oral-process/work-readiness.json)
 - Agent-ready fixture:
-  [`examples/fixtures/agent-ready/work-readiness.json`](examples/fixtures/agent-ready/work-readiness.json)
+  [`examples/agent-ready/work-readiness.json`](examples/agent-ready/work-readiness.json)
