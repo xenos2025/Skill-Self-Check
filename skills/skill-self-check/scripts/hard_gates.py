@@ -27,6 +27,20 @@ WHEN_TRIGGER_RE = re.compile(
     r"(?i)\b(use when|when the user|when users?|when working with|"
     r"when asked|when reviewing|when implementing|triggers?:)\b"
 )
+def has_use_for_trigger(description: str) -> bool:
+    """Recognize a scoped task phrase; broad ability claims are not triggers."""
+    for match in re.finditer(r"(?i)(?:^|[.!?]\s+)use for\s+([^.!?]+)", description):
+        phrase = match.group(1).strip()
+        if re.search(r"(?i)\b(anything|everything|whatever|all tasks|general (?:help|assistance)|various tasks)\b", phrase):
+            continue
+        # Require a task and an object/context, not just a vague capability.
+        if re.search(r"(?i)\b(audit(?:s|ing)?|crawl(?:s|ing)?|review(?:s|ing)?|validat(?:e|ing|ion)|"
+                     r"research|generat(?:e|ing|ion)|translat(?:e|ing|ion)|models?/pricing|"
+                     r"scheduled tasks|configur(?:e|ing|ation)|debug(?:ging)?|deploy(?:ing|ment)?)\b", phrase) and len(phrase.split()) >= 2:
+            return True
+    return False
+
+
 # Chinese has no word boundaries, so these are matched without \b.
 WHEN_TRIGGER_ZH_RE = re.compile(
     r"(用于|适用|适合|用来|当用户|当需要|需要.{0,6}时|使用场景|适用场景|触发条件)"
@@ -1292,7 +1306,7 @@ def check_skill(skill_dir: Path, repo_root: Path | None = None) -> dict:
         else:
             voice_ok = True
 
-        has_when = bool(WHEN_TRIGGER_RE.search(desc) or WHEN_TRIGGER_ZH_RE.search(desc))
+        has_when = bool(WHEN_TRIGGER_RE.search(desc) or WHEN_TRIGGER_ZH_RE.search(desc) or has_use_for_trigger(desc))
         has_what = bool(WHAT_SIGNAL_RE.search(desc) or WHAT_SIGNAL_ZH_RE.search(desc))
         if disable_model:
             # User-invoked: human-facing one-liner allowed; still prefer non-empty
