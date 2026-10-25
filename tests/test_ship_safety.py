@@ -17,7 +17,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "skills" / "skill-ship-safety" / "scripts" / "ship_safety.py"
 BAD_FIXTURE = (
-    REPO / "skills" / "skill-ship-safety" / "examples" / "fixtures" / "promise-gap"
+    REPO / "tests" / "fixtures" / "promise-gap"
 )
 SELF_CHECK_SKILL = REPO / "skills" / "skill-self-check"
 SHIP_SAFETY_SKILL = REPO / "skills" / "skill-ship-safety"

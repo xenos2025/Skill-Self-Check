@@ -1,3 +1,5 @@
+> Fixture relocation: the recorded output below predates isolation. The current source fixture is `tests/fixtures/bad-commit-helper`, outside the installable skill tree.
+
 # Skill Self-Check Report
 
 > Technical companion to

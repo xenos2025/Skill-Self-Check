@@ -18,7 +18,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "skills" / "skill-self-check" / "scripts" / "hard_gates.py"
 PRODUCT_SKILL = REPO / "skills" / "skill-self-check"
-BAD_FIXTURE = PRODUCT_SKILL / "examples" / "fixtures" / "bad-commit-helper"
+BAD_FIXTURE = REPO / "tests" / "fixtures" / "bad-commit-helper"
 
 ZH_SKILL = """---
 name: {name}

@@ -104,7 +104,7 @@ Or against the bundled fixture from this repo:
 
 ```bash
 python skills/skill-self-check/scripts/hard_gates.py \
-  skills/skill-self-check/examples/fixtures/bad-commit-helper --pretty
+  tests/fixtures/bad-commit-helper --pretty
 ```
 
 `skill-ship-safety` performs static safety checks only:

@@ -115,7 +115,7 @@ Prefer positive shape: short summary that states the change; body explains why.
 
 ```bash
 python skills/skill-self-check/scripts/hard_gates.py \
-  skills/skill-self-check/examples/fixtures/bad-commit-helper --pretty
+  tests/fixtures/bad-commit-helper --pretty
 ```
 
 Expect `gate_verdict: invalid_skill_package`, legacy

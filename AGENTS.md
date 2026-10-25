@@ -14,7 +14,7 @@ Guidance for coding agents working **on this repository**.
 | `skills/skill-self-check/` | Structure/contract audit + `run_full_audit.py` |
 | `skills/skill-ship-safety/` | Static external-action preflight |
 | `exp/` | Experiments — do not install by default; may be unstable |
-| `tests/` | Stdlib regression suite (mirrors CI intent) |
+| `tests/` | Stdlib regression suite and maintainer-only fixtures, outside installable skills |
 | `docs/` | Human docs including platform compatibility |
 | `install.ps1` / `install.sh` | Copy shipped skills into Cursor skills dirs |
 
@@ -41,7 +41,7 @@ Guidance for coding agents working **on this repository**.
 python -m unittest discover tests -v
 python skills/skill-self-check/scripts/hard_gates.py skills/skill-self-check --pretty
 python skills/skill-self-check/scripts/hard_gates.py \
-  skills/skill-self-check/examples/fixtures/bad-commit-helper --pretty
+  tests/fixtures/bad-commit-helper --pretty
 python skills/skill-ship-safety/scripts/ship_safety.py skills/skill-self-check --pretty
 python skills/skill-self-check/scripts/hard_gates.py skills/skill-self-check \
  > "$HOME/Documents/skill-audits/baseline.json"

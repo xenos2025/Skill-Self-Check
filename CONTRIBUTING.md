@@ -21,7 +21,7 @@ chmod +x install.sh && ./install.sh --force
 
 ```bash
 python skills/skill-self-check/scripts/hard_gates.py \
-  skills/skill-self-check/examples/fixtures/bad-commit-helper --pretty
+  tests/fixtures/bad-commit-helper --pretty
 ```
 
 Expect `basic_usable 2/5`, `contract_clarity 0/5`, `ship_floor_met: false`, and
